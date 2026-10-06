@@ -53,7 +53,7 @@ export function ProfileSettings({ redirectAfterSave }: { redirectAfterSave: bool
       setProfile(payload.data);
       setExists(true);
       setSaved(true);
-      if (redirectAfterSave) router.replace("/dashboard");
+      if (redirectAfterSave) window.location.replace("/dashboard");
       else router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Profil bisnis belum dapat disimpan.");
