@@ -17,7 +17,13 @@ const envSchema = z.object({
   }),
 });
 
-export const THREADS_SCOPES = ["threads_basic", "threads_keyword_search", "threads_content_publish"] as const;
+export const THREADS_SCOPES = [
+  "threads_basic",
+  "threads_keyword_search",
+  "threads_content_publish",
+  "threads_read_replies",
+  "threads_manage_replies",
+] as const;
 
 let appCredentialCache: { fingerprint: string; checkedAt: number; status: "valid" | "invalid" | "unavailable" } | null = null;
 

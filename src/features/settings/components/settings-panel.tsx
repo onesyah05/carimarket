@@ -21,6 +21,7 @@ type ThreadsState = {
   requiresHttps?: boolean;
   credentialsInvalid?: boolean;
   connected: boolean;
+  needsReconnectForReplies?: boolean;
   searchPreviewAvailable?: boolean;
   username?: string | null;
   publishingLimit?: {
@@ -131,7 +132,8 @@ export function SettingsPanel({ hasPassword, profileComplete }: { hasPassword: b
         <div className="panel-heading"><div><h2>Integrasi Threads</h2><p>Kelola akun yang digunakan untuk pencarian dan pengiriman balasan.</p></div></div>
         <div className="settings-section-body settings-section-body--threads" aria-live="polite">
           {threads.loading ? <div className="integration-loading"><span className="integration-state__icon"><LoaderCircle className="spin" /></span><h3>Memeriksa koneksi</h3><p>Tunggu sebentar, kami sedang memeriksa akun Threads Anda.</p></div> : threads.connected ?
-            <div className="integration-connected"><div className="integration-connected__account"><span className="integration-state__icon"><AtSign /></span><div><span className="integration-eyebrow">Akun terhubung</span><h3>{threads.username ? `@${threads.username}` : "Threads"}</h3><p>Pencarian dan pengiriman balasan siap digunakan sesuai izin akun dan status App Review.</p></div></div><button className="button button--danger button--small" type="button" onClick={() => void disconnectThreads()}>Putuskan koneksi</button>
+            <div className="integration-connected"><div className="integration-connected__account"><span className="integration-state__icon"><AtSign /></span><div><span className="integration-eyebrow">Akun terhubung</span><h3>{threads.username ? `@${threads.username}` : "Threads"}</h3><p>Ketersediaan pencarian dan balasan mengikuti izin yang diberikan Meta.</p></div></div><button className="button button--danger button--small" type="button" onClick={() => void disconnectThreads()}>Putuskan koneksi</button>
+              {threads.needsReconnectForReplies && <div className="integration-alert" role="alert"><Shield size={17} /><span>Koneksi ini dibuat sebelum izin membaca dan mengelola balasan diminta. <a href="/api/integrations/threads/connect">Hubungkan ulang Threads</a> agar Meta meminta izin tersebut.</span></div>}
               {threads.publishingLimit && <div className="integration-quota" aria-live="polite">
                 <div className="integration-quota__row"><span>Kuota posting (24 jam)</span><strong>{threads.publishingLimit.quotaUsage} / {threads.publishingLimit.quotaLimit}</strong></div>
                 <div className="integration-quota__bar"><span style={{ width: `${pct(threads.publishingLimit.quotaUsage, threads.publishingLimit.quotaLimit)}%` }} /></div>
