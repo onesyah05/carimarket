@@ -79,7 +79,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="section beta-access"><div className="container beta-access__inner"><div><p className="eyebrow">Akses beta</p><h2 className="section-title">Harga belum ditetapkan.</h2><p>Masuk untuk menyiapkan workspace dan menjadi bagian dari akses awal Cari Market.</p></div><div><Link className="button button--primary" href="/masuk">Masuk akses beta</Link><Link className="text-link" href="/harga">Baca kebijakan harga beta</Link></div></div></section>
 
         <section className="section"><div className="container faq-layout"><div><p className="eyebrow">Pertanyaan sebelum mencoba</p><h2 className="section-title">Batas produknya kami jelaskan sejak awal.</h2></div><div className="faq-list"><Faq q="Apakah balasan harus diperiksa satu per satu?" a="Mode Tinjau dulu memeriksa setiap draft satu per satu. Mode Balas otomatis memproses draft yang lolos ambang relevansi dan aturan keamanan workspace, dan baru berjalan setelah integrasi resmi Meta tersedia. Selama itu, seluruh draft siap Anda kirim manual." /><Faq q="Apa yang terjadi jika draft otomatis berisiko?" a="Draft dapat ditahan dan dialihkan ke antrian tinjauan. Anda juga dapat mengatur batas harian serta jeda sebelum pengiriman." /><Faq q="Apakah pencarian postingan publik sudah aktif?" a="Ya. Pencarian berjalan di seluruh Threads untuk kata kunci yang Anda atur, dan hasilnya masuk ke feed lead untuk ditinjau atau dibalas." /></div></div></section>
 

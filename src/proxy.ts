@@ -8,7 +8,7 @@ export function proxy(request: NextRequest) {
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
 
   const protectedGroup = pathname.startsWith("/dashboard") || pathname.startsWith("/admin") || pathname.startsWith("/superadmin") || pathname.startsWith("/onboarding");
-  const authPage = pathname === "/masuk" || pathname === "/daftar";
+  const authPage = pathname === "/masuk";
 
   if (protectedGroup && !hasSession) {
     const url = new URL("/masuk", request.url);
@@ -24,5 +24,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/superadmin/:path*", "/onboarding/:path*", "/masuk", "/daftar"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/superadmin/:path*", "/onboarding/:path*", "/masuk"],
 };
