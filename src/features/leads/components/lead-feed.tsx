@@ -14,6 +14,7 @@ export function LeadFeed() {
   const [items, setItems] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [lastSearch, setLastSearch] = useState<{ query: string; resultCount: number }>();
 
   useEffect(() => {
     let active = true;
@@ -34,18 +35,21 @@ export function LeadFeed() {
 
   async function searchThreads(event: FormEvent) {
     event.preventDefault();
-    if (query.trim().length < 2) return;
+    const searchedQuery = query.trim();
+    if (searchedQuery.length < 2) return;
     setLoading(true);
     setError(undefined);
+    setLastSearch(undefined);
     try {
       const response = await fetch("/api/threads/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query: searchedQuery }),
       });
       const payload = await response.json() as ApiResponse;
       if (!response.ok) throw new Error(payload.error ?? "Pencarian Threads gagal.");
       setItems(payload.data ?? []);
+      setLastSearch({ query: searchedQuery, resultCount: payload.meta?.resultCount ?? 0 });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Pencarian Threads gagal.");
     } finally {
@@ -65,6 +69,6 @@ export function LeadFeed() {
     </form>
     {error && <div className="inline-error" role="alert"><strong>Pencarian belum dapat dijalankan.</strong><span>{error}</span></div>}
     <div className="result-summary"><span><strong>{filtered.length}</strong> lead ditemukan</span><label>Urutkan <select value={sort} onChange={event => setSort(event.target.value)}><option value="relevansi">Paling relevan</option><option value="terbaru">Terbaru</option></select></label></div>
-    <div className="lead-list">{filtered.map(lead => <LeadCard key={lead.id} lead={lead} />)}{!loading && filtered.length === 0 && <div className="empty-state"><Search /><h2>Belum ada lead</h2><p>Hubungkan Threads, lalu cari kata kunci pertama Anda.</p></div>}</div>
+    <div className="lead-list">{filtered.map(lead => <LeadCard key={lead.id} lead={lead} />)}{!loading && filtered.length === 0 && <div className="empty-state"><Search /><h2>{lastSearch?.resultCount === 0 ? "Tidak ada hasil dari Threads" : "Belum ada lead"}</h2><p>{lastSearch?.resultCount === 0 ? `Pencarian “${lastSearch.query}” selesai, tetapi Threads tidak mengembalikan postingan. Sebelum izin pencarian publik disetujui Meta, hasil dapat terbatas pada postingan akun Anda sendiri.` : "Jalankan pencarian Threads untuk menemukan percakapan yang sesuai dengan bisnis Anda."}</p></div>}</div>
   </>;
 }
