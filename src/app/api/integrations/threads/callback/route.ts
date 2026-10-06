@@ -5,6 +5,8 @@ import { saveThreadsConnection } from "@/server/integrations/threads/connection-
 import { exchangeAuthorizationCode, exchangeLongLivedToken, getThreadsProfile } from "@/server/integrations/threads/oauth";
 import { getWorkspaceUser } from "@/server/workspace-user";
 import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
+import { prisma } from "@/lib/prisma";
+import { createSession } from "@/server/auth/session";
 
 export const runtime = "nodejs";
 
@@ -50,7 +52,7 @@ export async function GET(request: NextRequest) {
 
   let stage: FailureReason = "session_expired";
   try {
-    const user = await getWorkspaceUser();
+    const user = await getWorkspaceUser().catch(() => null);
     stage = "token_exchange";
     const shortToken = await exchangeAuthorizationCode(code);
     stage = "token_extend";
@@ -58,13 +60,48 @@ export async function GET(request: NextRequest) {
     stage = "profile";
     const profile = await getThreadsProfile(longToken.access_token);
     stage = "save_failed";
+
+    let targetUserId = user?.id;
+    if (!targetUserId) {
+      const existingConnection = await prisma.threadsConnection.findUnique({ where: { externalAccountId: profile.id } });
+      if (existingConnection) {
+        targetUserId = existingConnection.userId;
+      } else {
+        const newUser = await prisma.user.create({
+          data: {
+            email: `${profile.id}@threads.local`,
+            name: profile.username,
+            role: "USER",
+            status: "ACTIVE",
+            businessProfile: {
+              create: {
+                name: profile.username,
+                category: "Lainnya",
+                description: "Akun bisnis dari Threads",
+              }
+            }
+          }
+        });
+        targetUserId = newUser.id;
+      }
+      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+      await createSession(targetUserId, { ip, userAgent: request.headers.get("user-agent") ?? undefined });
+      await prisma.user.update({ where: { id: targetUserId }, data: { lastLoginAt: new Date() } });
+    }
+
     await saveThreadsConnection({
-      userId: user.id,
+      userId: targetUserId,
       externalAccountId: profile.id,
       username: profile.username,
       accessToken: longToken.access_token,
       expiresIn: longToken.expires_in,
     });
+
+    if (!user) {
+      const response = NextResponse.redirect(new URL("/dashboard", getThreadsConfig().appUrl));
+      response.cookies.set("threads_oauth_state", "", { httpOnly: true, sameSite: "lax", secure: true, path: "/api/integrations/threads/callback", maxAge: 0 });
+      return response;
+    }
 
     return redirectResult("connected");
   } catch (error) {

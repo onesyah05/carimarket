@@ -17,8 +17,8 @@ export async function GET(request: Request) {
         400,
       );
     }
-    const user = await getWorkspaceUser();
-    if (user.role !== "USER") {
+    const user = await getWorkspaceUser().catch(() => null);
+    if (user && user.role !== "USER") {
       throw new ThreadsIntegrationError("FORBIDDEN", "Hanya akun pengguna bisnis yang dapat menghubungkan Threads.", 403);
     }
     if (await getThreadsAppCredentialStatus() === "invalid") {

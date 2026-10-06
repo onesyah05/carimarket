@@ -21,7 +21,7 @@ export default function HomePage() {
               <p className="eyebrow">Pencarian lead dari percakapan Threads</p>
               <h1>Temukan orang yang sedang mencari <span>layanan Anda.</span></h1>
               <p>Cari Market menemukan postingan yang cocok, menyiapkan draft, lalu memprosesnya sesuai pilihan Anda: tinjau terlebih dahulu atau balas otomatis dengan aturan yang terkontrol. Pengiriman otomatis baru berjalan setelah integrasi resmi Meta tersedia; selama itu, draft siap dikirim manual.</p>
-              <div className="hero__actions"><Link className="button button--primary" href="/daftar">Buat akun</Link><Link className="text-link" href="/#cara-kerja">Pelajari alurnya</Link></div>
+              <div className="hero__actions"><Link className="button button--primary" href="/masuk">Masuk</Link><Link className="text-link" href="/#cara-kerja">Pelajari alurnya</Link></div>
               <p className="hero__note"><ShieldCheck size={17} /> Anda menentukan kapan balasan perlu ditinjau dan kapan boleh berjalan otomatis.</p>
             </div>
             <div className="hero__visual" aria-label="Pratinjau tampilan lead Cari Market">
@@ -67,7 +67,7 @@ export default function HomePage() {
               <div className="landing-mode-option"><UserCheck /><div><strong>Tinjau dulu</strong><span>Setiap draft menunggu persetujuan Anda.</span></div></div>
               <div className="landing-mode-option active"><Bot /><div><strong>Balas otomatis</strong><span>Untuk lead yang memenuhi seluruh aturan; aktif setelah integrasi resmi.</span></div><Check size={17} /></div>
               <div className="landing-safety-list"><span><Gauge size={15} /> Maksimal 10 balasan per hari</span><span><ShieldCheck size={15} /> Relevansi minimal 90%</span><span><MessageSquareText size={15} /> Jeda pengiriman 15 menit</span></div>
-              <Link className="button button--primary" href="/daftar">Atur mode balasan</Link>
+              <Link className="button button--primary" href="/masuk">Atur mode balasan</Link>
             </div>
           </div>
         </section>
@@ -79,11 +79,11 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="section beta-access"><div className="container beta-access__inner"><div><p className="eyebrow">Akses beta</p><h2 className="section-title">Harga belum ditetapkan.</h2><p>Daftar untuk menyiapkan workspace dan menjadi bagian dari akses awal Cari Market.</p></div><div><Link className="button button--primary" href="/daftar">Daftar akses beta</Link><Link className="text-link" href="/harga">Baca kebijakan harga beta</Link></div></div></section>
+        <section className="section beta-access"><div className="container beta-access__inner"><div><p className="eyebrow">Akses beta</p><h2 className="section-title">Harga belum ditetapkan.</h2><p>Masuk untuk menyiapkan workspace dan menjadi bagian dari akses awal Cari Market.</p></div><div><Link className="button button--primary" href="/masuk">Masuk akses beta</Link><Link className="text-link" href="/harga">Baca kebijakan harga beta</Link></div></div></section>
 
         <section className="section"><div className="container faq-layout"><div><p className="eyebrow">Pertanyaan sebelum mencoba</p><h2 className="section-title">Batas produknya kami jelaskan sejak awal.</h2></div><div className="faq-list"><Faq q="Apakah balasan harus diperiksa satu per satu?" a="Mode Tinjau dulu memeriksa setiap draft satu per satu. Mode Balas otomatis memproses draft yang lolos ambang relevansi dan aturan keamanan workspace, dan baru berjalan setelah integrasi resmi Meta tersedia. Selama itu, seluruh draft siap Anda kirim manual." /><Faq q="Apa yang terjadi jika draft otomatis berisiko?" a="Draft dapat ditahan dan dialihkan ke antrian tinjauan. Anda juga dapat mengatur batas harian serta jeda sebelum pengiriman." /><Faq q="Apakah pencarian postingan publik sudah aktif?" a="Ya. Pencarian berjalan di seluruh Threads untuk kata kunci yang Anda atur, dan hasilnya masuk ke feed lead untuk ditinjau atau dibalas." /></div></div></section>
 
-        <section className="container cta-band"><div><h2>Mulai manual, otomatis saat Anda siap.</h2><p>Buat profil bisnis, atur kata kunci, lalu pilih cara balasan diproses.</p></div><Link className="button button--accent" href="/daftar">Buat akun</Link></section>
+        <section className="container cta-band"><div><h2>Mulai manual, otomatis saat Anda siap.</h2><p>Masuk untuk atur kata kunci, lalu pilih cara balasan diproses.</p></div><Link className="button button--accent" href="/masuk">Masuk</Link></section>
       </main>
       <PublicFooter />
     </>

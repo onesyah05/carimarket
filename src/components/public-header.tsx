@@ -20,14 +20,12 @@ export function PublicHeader() {
         </nav>
         <div className="public-header__actions">
           <ThemeToggle />
-          <Link className="button button--ghost hide-mobile" href="/masuk">Masuk</Link>
-          <Link className="button button--primary public-cta" href="/daftar">Buat akun</Link>
+          <Link className="button button--primary hide-mobile" href="/masuk">Masuk</Link>
           <details className="mobile-menu">
             <summary aria-label="Buka menu"><Menu size={20} /></summary>
             <nav>
               {nav.map(([label, href]) => <Link key={label} href={href}>{label}</Link>)}
               <Link href="/masuk">Masuk</Link>
-              <Link href="/daftar">Buat akun</Link>
             </nav>
           </details>
         </div>

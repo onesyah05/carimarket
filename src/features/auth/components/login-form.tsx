@@ -47,7 +47,6 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
   return (
     <div className="auth-card">
       <h2>Masuk ke akun</h2>
-      <p>Belum punya akun? <Link href="/daftar">Buat akun</Link></p>
       <form className="form-grid" onSubmit={onSubmit} noValidate={false}>
         <div className="field">
           <label htmlFor="email">Email</label>
@@ -64,9 +63,8 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
         </div>
         <button className="button button--primary" type="submit" value="login" disabled={pending}>{pending ? "Memproses…" : "Masuk"}</button>
         <div className="auth-divider">atau</div>
-        <button className="oauth-button" type="submit" value="threads" disabled={pending}><AtSign size={17} /> Masuk &amp; hubungkan Threads</button>
+        <button className="oauth-button" type="button" disabled={pending} onClick={() => router.push("/api/integrations/threads/connect")}><AtSign size={17} /> Masuk dengan Threads</button>
       </form>
-      <p className="auth-note">Gunakan email dan kata sandi Cari Market di atas. Setelah masuk, Anda akan diminta memberi izin di Threads.</p>
     </div>
   );
 }
