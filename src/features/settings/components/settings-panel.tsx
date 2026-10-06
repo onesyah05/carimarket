@@ -47,7 +47,7 @@ const connectionErrors: Record<string, string> = {
   save_failed: "Koneksi berhasil diotorisasi, tetapi belum dapat disimpan. Silakan coba lagi.",
 };
 
-export function SettingsPanel() {
+export function SettingsPanel({ hasPassword }: { hasPassword: boolean }) {
   const [active, setActive] = useState("profil");
   const navRef = useRef<HTMLElement>(null);
   const [threads, setThreads] = useState<ThreadsState>({ loading: true, configured: false, connected: false });
@@ -144,7 +144,7 @@ export function SettingsPanel() {
       </>}
 
       {active === "notifikasi" && <NotificationSettings />}
-      {active === "keamanan" && <SecuritySettings />}
+      {active === "keamanan" && <SecuritySettings initialHasPassword={hasPassword} />}
     </section>
   </div>;
 }
