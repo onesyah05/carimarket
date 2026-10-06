@@ -9,7 +9,7 @@ type ResponseBody = { data?: Profile; exists?: boolean; error?: string };
 
 const emptyProfile: Profile = { name: "", category: "", serviceArea: "", description: "" };
 
-export function ProfileSettings() {
+export function ProfileSettings({ redirectAfterSave }: { redirectAfterSave: boolean }) {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [loading, setLoading] = useState(true);
@@ -53,7 +53,8 @@ export function ProfileSettings() {
       setProfile(payload.data);
       setExists(true);
       setSaved(true);
-      router.refresh();
+      if (redirectAfterSave) router.replace("/dashboard");
+      else router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Profil bisnis belum dapat disimpan.");
     } finally {
@@ -63,10 +64,10 @@ export function ProfileSettings() {
 
   return <>
     <div className="panel-heading"><div><h2>Profil bisnis</h2><p>Digunakan untuk menilai relevansi dan menyusun draft balasan.</p></div></div>
-    {!loading && !exists && <p className="settings-empty-note">Profil bisnis akun ini belum tersimpan. Data yang dimasukkan lewat alur pendaftaran lama tidak tercatat; lengkapi sekali agar pencarian dan draft memakai konteks bisnis Anda.</p>}
+    {!loading && !exists && <p className="settings-empty-note">Isi seluruh profil bisnis sesuai usaha Anda sebelum membuka dashboard.</p>}
     <form className="form-grid" onSubmit={event => void save(event)}>
       <div className="field"><label htmlFor="business-name">Nama bisnis</label><input className="input" id="business-name" value={profile.name} onChange={event => update("name", event.target.value)} disabled={loading || saving} minLength={2} maxLength={140} required /></div>
-      <div className="form-two"><div className="field"><label htmlFor="business-category">Kategori</label><select className="input" id="business-category" value={profile.category} onChange={event => update("category", event.target.value)} disabled={loading || saving} required><option value="">Pilih kategori</option>{businessCategoryOptions(profile.category).map(category => <option key={category} value={category}>{category}</option>)}</select></div><div className="field"><label htmlFor="business-area">Area layanan</label><input className="input" id="business-area" value={profile.serviceArea} onChange={event => update("serviceArea", event.target.value)} disabled={loading || saving} maxLength={255} /></div></div>
+      <div className="form-two"><div className="field"><label htmlFor="business-category">Kategori</label><select className="input" id="business-category" value={profile.category} onChange={event => update("category", event.target.value)} disabled={loading || saving} required><option value="">Pilih kategori</option>{businessCategoryOptions(profile.category).map(category => <option key={category} value={category}>{category}</option>)}</select></div><div className="field"><label htmlFor="business-area">Area layanan</label><input className="input" id="business-area" value={profile.serviceArea} onChange={event => update("serviceArea", event.target.value)} disabled={loading || saving} minLength={2} maxLength={255} required /></div></div>
       <div className="field"><label htmlFor="business-description">Deskripsi</label><textarea className="input" id="business-description" value={profile.description} onChange={event => update("description", event.target.value)} disabled={loading || saving} minLength={2} maxLength={5000} required /></div>
       {error && <p className="form-feedback form-feedback--error" role="alert">{error}</p>}
       {saved && <p className="form-feedback form-feedback--success" role="status">Profil bisnis tersimpan.</p>}

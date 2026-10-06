@@ -47,7 +47,7 @@ const connectionErrors: Record<string, string> = {
   save_failed: "Koneksi berhasil diotorisasi, tetapi belum dapat disimpan. Silakan coba lagi.",
 };
 
-export function SettingsPanel({ hasPassword }: { hasPassword: boolean }) {
+export function SettingsPanel({ hasPassword, profileComplete }: { hasPassword: boolean; profileComplete: boolean }) {
   const [active, setActive] = useState("profil");
   const navRef = useRef<HTMLElement>(null);
   const [threads, setThreads] = useState<ThreadsState>({ loading: true, configured: false, connected: false });
@@ -73,11 +73,11 @@ export function SettingsPanel({ hasPassword }: { hasPassword: boolean }) {
         setThreads(current => ({ ...current, error: current.credentialsInvalid ? connectionErrors.invalid_app_secret : connectionErrors[connectionReason ?? ""] ?? "Akun Threads belum berhasil dihubungkan. Silakan coba lagi." }));
       }
     });
-    if (connectionResult) {
+    if (connectionResult && profileComplete) {
       const frame = window.requestAnimationFrame(() => setActive("threads"));
       return () => window.cancelAnimationFrame(frame);
     }
-  }, [loadThreadsStatus]);
+  }, [loadThreadsStatus, profileComplete]);
 
   useEffect(() => {
     navRef.current?.querySelector("button.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -101,11 +101,11 @@ export function SettingsPanel({ hasPassword }: { hasPassword: boolean }) {
 
   return <div className="settings-grid">
     <nav className="settings-nav" aria-label="Bagian pengaturan" ref={navRef}>
-      {tabs.map(tab => { const Icon = tab.icon; return <button className={active === tab.id ? "active" : ""} aria-current={active === tab.id ? "page" : undefined} key={tab.id} onClick={() => setActive(tab.id)}><Icon /> <span>{tab.label}</span></button>; })}
+      {tabs.map(tab => { const Icon = tab.icon; return <button className={active === tab.id ? "active" : ""} aria-current={active === tab.id ? "page" : undefined} key={tab.id} onClick={() => setActive(tab.id)} disabled={!profileComplete && tab.id !== "profil"}><Icon /> <span>{tab.label}</span></button>; })}
     </nav>
 
     <section className={`panel settings-form settings-form--${active}`}>
-      {active === "profil" && <ProfileSettings />}
+      {active === "profil" && <ProfileSettings redirectAfterSave={!profileComplete} />}
 
       {active === "balasan" && <>
         <div className="panel-heading"><div><h2>Mode balasan</h2><p>Tentukan kapan draft boleh dikirim dan kapan harus menunggu Anda.</p></div><span className={`mode-status mode-status--${settings.mode}`}>{settings.mode === "review" ? "Tinjau dulu" : "Otomatis aktif"}</span></div>

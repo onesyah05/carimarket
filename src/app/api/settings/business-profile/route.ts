@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 const profileSchema = z.object({
   name: z.string().trim().min(2, "Nama bisnis minimal 2 karakter.").max(140),
   category: z.string().trim().min(2, "Kategori minimal 2 karakter.").max(100),
-  serviceArea: z.string().trim().max(255),
+  serviceArea: z.string().trim().min(2, "Area layanan minimal 2 karakter.").max(255),
   description: z.string().trim().min(2, "Deskripsi minimal 2 karakter.").max(5000),
 });
 
@@ -40,7 +40,7 @@ export async function PUT(request: Request) {
     const input = profileSchema.safeParse(await request.json().catch(() => null));
     if (!input.success) return NextResponse.json({ error: input.error.issues[0]?.message ?? "Profil bisnis tidak valid." }, { status: 400 });
     const user = await getSettingsUser();
-    const data = { ...input.data, serviceArea: input.data.serviceArea || null };
+    const data = input.data;
     const profile = await prisma.businessProfile.upsert({
       where: { userId: user.id },
       update: data,

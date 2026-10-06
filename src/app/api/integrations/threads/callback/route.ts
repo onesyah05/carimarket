@@ -7,6 +7,7 @@ import { getWorkspaceUser } from "@/server/workspace-user";
 import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 import { prisma } from "@/lib/prisma";
 import { createSession } from "@/server/auth/session";
+import { hasCompleteBusinessProfile } from "@/server/settings/business-profile";
 
 export const runtime = "nodejs";
 
@@ -73,13 +74,6 @@ export async function GET(request: NextRequest) {
             name: profile.username,
             role: "USER",
             status: "ACTIVE",
-            businessProfile: {
-              create: {
-                name: profile.username,
-                category: "Lainnya",
-                description: "Akun bisnis dari Threads",
-              }
-            }
           }
         });
         targetUserId = newUser.id;
@@ -98,7 +92,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user) {
-      const response = NextResponse.redirect(new URL("/dashboard", getThreadsConfig().appUrl));
+      const businessProfile = await prisma.businessProfile.findUnique({ where: { userId: targetUserId } });
+      const destination = hasCompleteBusinessProfile(businessProfile) ? "/dashboard" : "/dashboard/pengaturan";
+      const response = NextResponse.redirect(new URL(destination, getThreadsConfig().appUrl));
       response.cookies.set("threads_oauth_state", "", { httpOnly: true, sameSite: "lax", secure: true, path: "/api/integrations/threads/callback", maxAge: 0 });
       return response;
     }
