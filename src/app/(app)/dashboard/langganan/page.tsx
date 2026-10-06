@@ -1,0 +1,5 @@
+import Link from "next/link";
+import { Check, CircleDollarSign } from "lucide-react";
+import { PageHeading } from "@/components/dashboard-ui";
+
+export default function SubscriptionPage() { return <><PageHeading eyebrow="Akses beta" title="Langganan" copy="Workspace Anda saat ini menggunakan akses beta tanpa penagihan." /><div className="subscription-grid"><section className="panel current-plan"><div className="current-plan__header"><div><span>Akses aktif</span><h2>Beta</h2><p>Tanpa biaya dan tanpa penagihan</p></div><i><CircleDollarSign /></i></div><ul>{["Profil bisnis", "Kata kunci pencarian", "Feed lead", "Mode tinjau dan otomatis"].map(item => <li key={item}><Check size={16} />{item}</li>)}</ul><Link className="button button--ghost" href="/harga">Baca kebijakan harga beta</Link></section><section className="panel quota-panel"><div className="panel-heading"><div><h2>Batas penggunaan</h2><p>Belum ditetapkan untuk tahap beta.</p></div></div><p className="billing-note">Batas penggunaan akan diumumkan sebelum paket berbayar tersedia.</p><Link className="button button--primary" href="/kontak">Diskusikan kebutuhan tim</Link></section></div></>; }
