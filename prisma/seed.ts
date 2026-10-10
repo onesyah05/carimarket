@@ -1,4 +1,5 @@
 import { PrismaClient, Role, AccountStatus, ReplyMode, AdminPermissionKey, ArticleStatus, SubscriptionStatus } from "@prisma/client";
+import { syncPlans } from "./seed-plans";
 import { randomBytes, scrypt } from "node:crypto";
 import { promisify } from "node:util";
 
@@ -86,20 +87,10 @@ Akhiri dengan ajakan yang mudah dipenuhi: bertukar pesan, mengirim contoh hasil,
 async function main() {
   const passwordHash = await devPasswordHash();
 
-  // Batas paket ini benar-benar ditegakkan server (lihat src/server/usage/limits.ts),
-  // jadi angkanya dibuat cukup longgar untuk pengembangan lokal.
-  const starterPlan = await prisma.plan.upsert({
-    where: { code: "STARTER" },
-    update: { monthlySearchLimit: 500, monthlyReplyLimit: 100, keywordLimit: 15 },
-    create: {
-      code: "STARTER",
-      name: "Starter",
-      monthlyPrice: 0,
-      monthlySearchLimit: 500,
-      monthlyReplyLimit: 100,
-      keywordLimit: 15,
-    },
-  });
+  // Katalog paket dipakai bersama produksi; lihat prisma/plan-catalog.ts.
+  await syncPlans(prisma);
+  // Akun fiktif pengembangan berlangganan paket Bisnis agar kuotanya realistis.
+  const seedPlan = await prisma.plan.findUniqueOrThrow({ where: { code: "BISNIS" } });
 
   const businessUser = await prisma.user.upsert({
     where: { email: "nadia@langitvisual.id" },
@@ -142,7 +133,7 @@ async function main() {
     await prisma.subscription.create({
       data: {
         userId: businessUser.id,
-        planId: starterPlan.id,
+        planId: seedPlan.id,
         status: SubscriptionStatus.TRIAL,
         currentPeriodStart: periodStart,
         currentPeriodEnd: periodEnd,

@@ -151,6 +151,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .pricing-list { padding: 0; margin: 0; display: grid; gap: 12px; list-style: none; color: #34405c; font-size: .82rem; }
 .pricing-list li { display: flex; align-items: center; gap: 9px; }
 .pricing-list svg { color: var(--success); }
+.pricing-note { max-width: 820px; margin: 34px auto 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; display: flex; gap: 12px; align-items: flex-start; background: var(--brand-soft); }
+.pricing-note svg { flex: 0 0 auto; margin-top: 2px; color: var(--brand-strong); }
+.pricing-note p { margin: 0; color: var(--ink); font-size: .83rem; line-height: 1.65; }
 .faq-list { max-width: 820px; margin: 44px auto 0; display: grid; gap: 10px; }
 .faq-list details { padding: 0 22px; border: 1px solid var(--line); border-radius: 14px; background: white; }
 .faq-list summary { padding: 20px 0; cursor: pointer; font-size: .95rem; font-weight: 750; }

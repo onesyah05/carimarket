@@ -13,6 +13,16 @@ export function formatDate(value: Date | string | null | undefined) {
   return dateFormatter.format(new Date(value));
 }
 
+const rupiahFormatter = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
+
+/** Harga dalam Rupiah tanpa desimal, mis. "Rp 98.000". Nol ditulis "Gratis". */
+export function formatRupiah(value: number, options?: { zeroLabel?: string }) {
+  if (!Number.isFinite(value)) return "—";
+  if (value === 0) return options?.zeroLabel ?? "Gratis";
+  // Intl memakai spasi tak-putus setelah "Rp"; diganti spasi biasa agar konsisten.
+  return rupiahFormatter.format(value).replace(/\u00a0/g, " ");
+}
+
 export const STATUS_LABELS: Record<string, string> = {
   PENDING_VERIFICATION: "Menunggu verifikasi",
   ACTIVE: "Aktif",
