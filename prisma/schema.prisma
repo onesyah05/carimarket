@@ -161,6 +161,8 @@ model User {
   subscriptions      Subscription[]
   monthlyUsage       MonthlyUsage[]
   usageEvents        UsageEvent[]
+  apiCredentials     ApiCredential[]          @relation("ApiCredentialOwner")
+  issuedApiCredentials ApiCredential[]        @relation("ApiCredentialIssuer")
   authoredArticles   Article[]                @relation("ArticleAuthor")
   approvedArticles   Article[]                @relation("ArticleApprover")
   blacklistTerms     BlacklistTerm[]          @relation("BlacklistAuthor")
@@ -558,6 +560,34 @@ model SupportMessage {
   author    User          @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
   @@index([ticketId, createdAt])
+}
+
+/**
+ * Kredensial API untuk aplikasi mobile.
+ *
+ * Hanya Superadmin yang menerbitkan. Kunci disimpan sebagai hash SHA-256;
+ * nilai aslinya hanya ditampilkan satu kali saat penerbitan dan tidak pernah
+ * dapat dibaca ulang. `keyPrefix` dipakai untuk mengenali kunci di panel.
+ */
+model ApiCredential {
+  id          String    @id @default(cuid())
+  /** Workspace pengguna yang dapat diakses kunci ini. */
+  userId      String
+  /** Superadmin yang menerbitkan. */
+  createdById String?
+  name        String    @db.VarChar(120)
+  keyPrefix   String    @db.VarChar(24)
+  keyHash     String    @unique @db.VarChar(191)
+  lastUsedAt  DateTime? @db.DateTime(3)
+  expiresAt   DateTime? @db.DateTime(3)
+  revokedAt   DateTime? @db.DateTime(3)
+  createdAt   DateTime  @default(now()) @db.DateTime(3)
+  updatedAt   DateTime  @updatedAt @db.DateTime(3)
+  user        User      @relation("ApiCredentialOwner", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy   User?     @relation("ApiCredentialIssuer", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([userId, revokedAt])
+  @@index([keyPrefix])
 }
 
 model Notification {

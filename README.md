@@ -304,6 +304,62 @@ Endpoint aplikasi:
 
 Pengiriman dari halaman detail lead dipublikasikan langsung. Aturan mode otomatis sudah tersimpan dan dipakai untuk menentukan kelayakan draft; eksekusi terjadwal tanpa interaksi pengguna memerlukan proses worker/cron terpisah sebelum dipakai di produksi.
 
+## API aplikasi mobile
+
+API tersedia di `/api/v1` dan cakupannya hanya **menu pengguna bisnis**: tidak
+ada endpoint admin maupun superadmin, dan satu kredensial hanya membuka satu
+workspace.
+
+### Kredensial
+
+Kredensial **hanya diterbitkan Superadmin** melalui Superadmin → **API Mobile**
+(`/superadmin/api`). Pengguna tidak dapat membuat kunci sendiri.
+
+- Format kunci `cmk_<8 heks>_<64 heks>`, dikirim sebagai `Authorization: Bearer <kunci>`.
+- Hanya hash SHA-256 yang disimpan; nilai kunci tampil satu kali saat diterbitkan
+  dan tidak pernah dapat ditampilkan ulang.
+- Kunci dapat diberi masa berlaku dan dapat dicabut kapan saja. Penerbitan dan
+  pencabutan tercatat di audit log sebagai `API_CREDENTIAL_ISSUED` dan
+  `API_CREDENTIAL_REVOKED`, tanpa nilai kunci.
+- Batas laju 120 permintaan per menit per kredensial.
+
+### Format respons
+
+Setiap respons, berhasil maupun gagal, memakai amplop yang sama:
+
+```json
+{ "success": true, "data": { }, "meta": { "requestId": "…", "timestamp": "…" } }
+{ "success": false, "error": { "code": "QUOTA_EXCEEDED", "message": "…", "details": null }, "meta": { "requestId": "…", "timestamp": "…" } }
+```
+
+`meta.page` ditambahkan pada endpoint berbentuk daftar, `error.details` memuat
+pemetaan kolom ke pesan saat validasi gagal, waktu selalu ISO 8601 UTC, dan
+metrik yang tidak diketahui bernilai null bukan nol. Header `X-Request-Id`
+berisi nilai yang sama dengan `meta.requestId`.
+
+### Dokumentasi
+
+Dokumentasi lengkap hanya dapat diakses Superadmin:
+
+- Halaman referensi: Superadmin → **API Mobile** (daftar endpoint, parameter,
+  contoh respons, contoh curl, dan tabel kode error).
+- Berkas OpenAPI 3.1: `GET /api/admin/api-docs` (butuh sesi Superadmin).
+
+Halaman dokumentasi dan berkas OpenAPI dihasilkan dari katalog yang sama
+(`src/server/api/catalog.ts`), dan pengujian memastikan setiap endpoint yang ada
+benar-benar terdaftar di katalog.
+
+### Memverifikasi API
+
+```bash
+npm run api:smoke -- https://carimarket.id
+```
+
+Skrip menerbitkan kredensial sementara, memanggil seluruh endpoint baca,
+memastikan kunci asing dan kunci tercabut ditolak, lalu mencabut kredensial itu
+kembali. Tidak ada endpoint yang mengubah data workspace atau memakai kuota yang
+dipanggil.
+
 ## Mode pra-App-Review (pencarian Threads tanpa persetujuan Meta)
 
 Sebelum Meta menyetujui App Review, pencarian keyword tetap jalan dengan memakai sesi web Threads. Tidak butuh `THREADS_APP_ID`/`THREADS_APP_SECRET`; yang dibutuhkan adalah cookie sesi browser yang sudah masuk Threads.

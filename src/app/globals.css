@@ -1516,3 +1516,44 @@ html[data-theme="dark"] .app-shell--superadmin .internal-count { color: #bbd0ff;
   .notification-popover { width: min(320px, calc(100vw - 48px)); }
   .app-shell--user .security-settings__data { justify-items: stretch; }
 }
+
+/* API Mobile: penerbitan kredensial dan dokumentasi (khusus Superadmin) */
+.api-credential-form { margin-top: 16px; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, .7fr) auto; gap: 12px; align-items: end; }
+.api-credential-form .button { min-height: 44px; }
+.api-issued { margin-top: 16px; padding: 20px; border: 1px solid color-mix(in srgb, var(--brand-strong) 45%, var(--line)); background: var(--brand-soft); display: grid; gap: 12px; }
+.api-issued__head { display: flex; gap: 11px; align-items: flex-start; }
+.api-issued__head svg { flex: 0 0 auto; margin-top: 2px; color: var(--brand-strong); }
+.api-issued__head div { display: grid; gap: 3px; }
+.api-issued__head span { color: var(--muted); font-size: .79rem; line-height: 1.5; }
+.api-issued__key { padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; display: block; overflow-wrap: anywhere; background: var(--surface-raised); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; }
+.api-issued__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.api-reference { margin-top: 22px; display: grid; gap: 16px; }
+.api-doc-panel { padding: 24px; display: grid; gap: 14px; }
+.api-doc-panel h2 { margin: 0; font-size: 1.12rem; }
+.api-doc-panel > p { margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.65; }
+.api-code { margin: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; background: var(--canvas); font-size: .76rem; line-height: 1.6; }
+.api-code code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.api-note { margin: 0; color: var(--muted); font-size: .79rem; line-height: 1.6; }
+.api-field-list { margin: 0; padding-left: 18px; display: grid; gap: 7px; color: var(--muted); font-size: .8rem; line-height: 1.55; }
+.api-field-list code { color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; }
+.api-field-list em { font-style: normal; font-size: .72rem; opacity: .8; }
+.api-endpoint-list { display: grid; gap: 14px; }
+.api-endpoint { padding: 18px; border: 1px solid var(--line); border-radius: 12px; display: grid; gap: 10px; background: var(--surface-raised); }
+.api-endpoint header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.api-endpoint header code { overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .84rem; font-weight: 650; }
+.api-endpoint h4 { margin: 4px 0 0; font-size: .82rem; }
+.api-endpoint__summary { margin: 0; font-size: .86rem; font-weight: 650; }
+.api-endpoint__description, .api-endpoint__errors { margin: 0; color: var(--muted); font-size: .79rem; line-height: 1.6; }
+.api-endpoint__errors code { margin-right: 6px; color: var(--warning); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .75rem; }
+.api-endpoint__curl summary { color: var(--brand-strong); font-size: .78rem; font-weight: 700; cursor: pointer; }
+.api-endpoint__curl .api-code { margin-top: 10px; }
+.api-method { padding: 4px 9px; border-radius: 999px; color: white; font-size: .68rem; font-weight: 850; letter-spacing: .04em; }
+.api-method--get { background: var(--brand-strong); }
+.api-method--post { background: var(--success); }
+.api-method--put, .api-method--patch { background: var(--warning); }
+.api-method--delete { background: var(--danger); }
+
+@media (max-width: 860px) {
+  .api-credential-form { grid-template-columns: 1fr; }
+  .api-credential-form .button { width: 100%; }
+}

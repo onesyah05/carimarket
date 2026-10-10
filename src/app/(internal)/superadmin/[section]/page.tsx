@@ -18,6 +18,9 @@ import { getWorkerStatus } from "@/server/jobs/runtime";
 import { getUnofficialCredentialsStatus } from "@/server/integrations/threads/unofficial-credentials";
 import { getThreadsConfig, getThreadsOAuthReadiness } from "@/server/integrations/threads/config";
 import { AuditTable, ConnectionsTable, ContactSubmissionsTable, ModerationQueue, PlansTable, SystemStateTable, UsersTable } from "@/features/admin/components/internal-tables";
+import { ApiCredentialsManager } from "@/features/admin/components/api-credentials-manager";
+import { ApiReference } from "@/features/admin/components/api-reference";
+import { listCredentialTargets, listCredentials } from "@/server/api/credentials";
 import { AdminsManager } from "@/features/admin/components/admins-manager";
 import { BlacklistManager } from "@/features/admin/components/blacklist-manager";
 import { ThreadsCredentialsManager } from "@/features/admin/components/threads-credentials-manager";
@@ -31,6 +34,7 @@ const HEADINGS: Record<string, { title: string; copy: string }> = {
   kepatuhan: { title: "Kepatuhan", copy: "Kelola istilah terlarang dan pantau antrean moderasi lintas tim." },
   sistem: { title: "Pengaturan Sistem", copy: "Kondisi integrasi yang sebenarnya; nilai rahasia tidak pernah ditampilkan." },
   integrasi: { title: "Integrasi Threads", copy: "Periksa koneksi resmi Threads dan pencarian pratinjau sebelum App Review." },
+  api: { title: "API Mobile", copy: "Terbitkan kredensial aplikasi mobile dan baca dokumentasinya. Halaman ini hanya dapat diakses Superadmin." },
   kontak: { title: "Pesan kontak", copy: "Pesan dari formulir kontak publik, tersimpan di database platform." },
   audit: { title: "Audit Log", copy: "Jejak aktivitas kritikal platform, terekam otomatis dari aplikasi." },
   konten: { title: "Manajemen Konten", copy: "Tulis, jadwalkan, dan terbitkan artikel blog. Admin mengajukan review, Superadmin menerbitkan." },
@@ -111,6 +115,19 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
         {callbackUrl && <div className="status-row"><span>URL callback:</span><span>{callbackUrl}</span></div>}
       </section>
       <ThreadsCredentialsManager status={credentialsStatus} />
+    </>;
+  }
+
+  if (section === "api") {
+    const [credentials, targets] = await Promise.all([listCredentials(), listCredentialTargets()]);
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    return <>
+      <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} action={<a className="button button--ghost" href="/api/admin/api-docs" download>Unduh OpenAPI</a>} />
+      <ApiCredentialsManager
+        credentials={credentials}
+        targets={targets}
+      />
+      <ApiReference baseUrl={baseUrl} />
     </>;
   }
 
