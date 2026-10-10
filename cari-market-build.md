@@ -38,6 +38,7 @@ Deliver a polished, responsive Cari Market MVP from `PRD.md` as one Next.js appl
 - Prisma migrations are baselined in `prisma/migrations/0_init`, and Vitest covers the pure logic modules.
 - Threads OAuth signup marks placeholder emails explicitly, records an audit entry, exposes the state to Superadmin, allows claiming a real email, and can be disabled via `THREADS_SIGNUP_ENABLED`.
 - In-app notifications are stored and shown in the dashboard bell; email remains an unconfigured adapter.
+- Subscription plans are real: Starter (free), Bisnis (Rp 98.000), and Pro (Rp 149.000) live in `prisma/plan-catalog.ts`, sync to MySQL through `npm run db:plans`, and drive the public pricing page and server-side quota enforcement. Payment collection is still manual.
 
 ## Delivery Status
 - Complete: PRD architecture and MySQL data-model revision.

@@ -335,6 +335,14 @@ Skema dinormalisasi dan dikelola hanya melalui Prisma schema serta Prisma migrat
 
 ## 12. Hal yang Masih Perlu Diputuskan
 
-- Model bisnis: berapa tier paket & batas kuota masing-masing?
+- ~~Model bisnis: berapa tier paket & batas kuota masing-masing?~~ **Diputuskan 10 Oktober 2026:** tiga tier dengan kuota yang ditegakkan server dan tetap di bawah batas Meta per 24 jam. Katalognya ada di `prisma/plan-catalog.ts` dan disinkronkan ke database lewat `npm run db:plans`.
+
+  | Paket | Harga/bulan | Kata kunci | Pencarian/bulan | Balasan/bulan |
+  | --- | --- | --- | --- | --- |
+  | Starter | Rp 0 | 3 | 300 | 30 |
+  | Bisnis | Rp 98.000 | 10 | 2.000 | 300 |
+  | Pro | Rp 149.000 | 25 | 6.000 | 800 |
+
+  Penagihan otomatis tetap masuk Fase 3; paket berbayar diaktifkan manual oleh tim sampai penyedia pembayaran tersedia.
 - Aturan risiko apa saja yang wajib selalu menahan draft meskipun mode otomatis aktif?
 - Siapa yang akan mengisi konten blog secara rutin, dan seberapa sering publish artikel baru?
