@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { BookOpen, CircleHelp, CreditCard, FileCheck2, FileText, Gauge, History, KeyRound, LayoutDashboard, Mail, Menu, MessageSquareText, Plug, Search, Settings, ShieldCheck, Smartphone, Tags, UserCog, Users, X } from "lucide-react";
+import { BookOpen, CircleHelp, CreditCard, Receipt, FileCheck2, FileText, Gauge, History, KeyRound, LayoutDashboard, Mail, Menu, MessageSquareText, Plug, Search, Settings, ShieldCheck, Smartphone, Tags, UserCog, Users, X } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoutButton } from "@/features/auth/components/logout-button";
@@ -36,6 +36,7 @@ const superNav: NavItem[] = [
   { label: "Admin", href: "/superadmin/admin", icon: ShieldCheck },
   { label: "Pengguna", href: "/superadmin/users", icon: Users },
   { label: "Paket & billing", href: "/superadmin/paket", icon: CreditCard },
+  { label: "Pembayaran", href: "/superadmin/pembayaran", icon: Receipt },
   { label: "Kuota API", href: "/superadmin/kuota", icon: Gauge },
   { label: "Kepatuhan", href: "/superadmin/kepatuhan", icon: FileCheck2 },
   { label: "Sistem", href: "/superadmin/sistem", icon: KeyRound },

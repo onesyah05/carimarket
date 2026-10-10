@@ -1632,3 +1632,64 @@ html[data-theme="dark"] .app-shell--superadmin .internal-count { color: #bbd0ff;
 @media (max-width: 980px) {
   .profile-layout { grid-template-columns: 1fr; }
 }
+
+/* Upgrade paket dan verifikasi pembayaran */
+.upgrade-panel { margin-top: 16px; padding: 22px; display: grid; gap: 16px; }
+.upgrade-panel > .panel-heading { padding: 0; border: 0; }
+.upgrade-form { display: grid; gap: 18px; }
+.upgrade-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.upgrade-option { position: relative; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); cursor: pointer; display: flex; gap: 10px; align-items: flex-start; }
+.upgrade-option--active { border-color: var(--brand-strong); box-shadow: 0 0 0 1px var(--brand-strong) inset; background: var(--brand-soft); }
+.upgrade-option input { margin-top: 3px; }
+.upgrade-option__body { display: grid; gap: 7px; }
+.upgrade-option__body strong { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; font-size: .95rem; }
+.upgrade-badge { padding: 3px 7px; border-radius: 999px; color: var(--brand-deep); background: white; font-size: .62rem; font-style: normal; font-weight: 800; }
+.upgrade-option__price { font-size: 1.05rem; font-weight: 750; letter-spacing: -.02em; }
+.upgrade-option__price small { color: var(--muted); font-size: .72rem; font-weight: 500; }
+.upgrade-option ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; color: var(--muted); font-size: .76rem; }
+.upgrade-option li { display: flex; gap: 6px; align-items: flex-start; }
+.upgrade-option li svg { flex: 0 0 auto; margin-top: 2px; color: var(--success); }
+.upgrade-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.upgrade-total { padding: 14px 16px; border: 1px dashed var(--line); border-radius: 12px; background: var(--canvas); display: grid; gap: 4px; }
+.upgrade-total > span { color: var(--muted); font-size: .74rem; }
+.upgrade-total > strong { font-size: 1.5rem; letter-spacing: -.03em; }
+.upgrade-total > small { color: var(--muted); font-size: .74rem; line-height: 1.5; }
+.billing-empty { margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; color: var(--muted); background: var(--canvas); font-size: .78rem; line-height: 1.55; }
+
+.invoice { border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; background: var(--surface); }
+.invoice__head { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; justify-content: space-between; }
+.invoice__head > div { display: grid; gap: 4px; }
+.invoice__head span { color: var(--muted); font-size: .74rem; }
+.invoice__head strong { font-size: 1rem; }
+.invoice__amount { padding: 14px 16px; border-radius: 12px; background: var(--brand-soft); display: grid; gap: 6px; justify-items: start; }
+.invoice__amount > span { color: var(--brand-deep); font-size: .74rem; font-weight: 700; }
+.invoice__amount > strong { font-size: 1.9rem; letter-spacing: -.04em; }
+.invoice__amount > small { color: var(--muted); font-size: .73rem; }
+.invoice__warning { margin: 0; display: flex; gap: 8px; align-items: flex-start; color: var(--warning); font-size: .77rem; line-height: 1.55; }
+.invoice__warning svg, .invoice__expiry svg { flex: 0 0 auto; margin-top: 2px; }
+.invoice__method { margin: 0; display: grid; gap: 10px; }
+.invoice__method > div { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 9px; }
+.invoice__method > div:last-child { border-bottom: 0; padding-bottom: 0; }
+.invoice__method dt { color: var(--muted); font-size: .76rem; }
+.invoice__method dd { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .8rem; font-weight: 650; text-align: right; }
+.invoice__account { font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.invoice__expiry { margin: 0; display: flex; gap: 8px; align-items: flex-start; color: var(--muted); font-size: .77rem; line-height: 1.55; }
+.invoice__confirm { padding-top: 14px; border-top: 1px solid var(--line); display: grid; gap: 12px; max-width: 520px; }
+.invoice__confirm h3 { margin: 0; font-size: .92rem; }
+.invoice__confirm > p { margin: 0; color: var(--muted); font-size: .77rem; line-height: 1.55; }
+.invoice__actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.invoice__actions > p { margin: 0; display: flex; gap: 7px; align-items: center; color: var(--muted); font-size: .78rem; }
+
+.billing-history { display: grid; gap: 10px; }
+.billing-history h3 { margin: 0; display: flex; gap: 7px; align-items: center; font-size: .92rem; }
+.pay-badge { display: inline-flex; padding: 4px 9px; border-radius: 999px; font-size: .67rem; font-weight: 800; white-space: nowrap; }
+.pay-badge--ok { color: var(--success); background: var(--success-soft); }
+.pay-badge--warn { color: var(--warning); background: var(--warning-soft); }
+.pay-badge--error { color: var(--danger); background: var(--danger-soft); }
+.pay-badge--muted { color: var(--muted); background: var(--canvas); }
+
+@media (max-width: 720px) {
+  .upgrade-panel { padding: 18px; }
+  .invoice__amount > strong { font-size: 1.5rem; }
+  .invoice__method dd { text-align: left; }
+}

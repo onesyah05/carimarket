@@ -125,6 +125,16 @@ async function main() {
     },
   });
 
+  // Metode pembayaran fiktif agar alur upgrade dapat dicoba tanpa rekening
+  // sungguhan. Produksi mengisinya dari Superadmin, Pembayaran.
+  for (const method of [
+    { channel: "BANK_TRANSFER" as const, label: "Bank Contoh", accountName: "PT Cari Market Fiktif", accountNumber: "0000111122", instructions: "Rekening contoh untuk pengembangan lokal. Jangan pakai di produksi.", sortOrder: 0 },
+    { channel: "EWALLET" as const, label: "E-wallet Contoh", accountName: "Cari Market Fiktif", accountNumber: "08000000000", instructions: null, sortOrder: 1 },
+  ]) {
+    const existing = await prisma.paymentMethod.findFirst({ where: { label: method.label } });
+    if (!existing) await prisma.paymentMethod.create({ data: method });
+  }
+
   // Langganan fiktif agar jalur "batas dari langganan" ikut terpakai saat dev.
   const periodStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
   const periodEnd = new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() + 1, 1));

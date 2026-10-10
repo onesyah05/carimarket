@@ -21,7 +21,11 @@ import { getUnofficialCredentialsStatus } from "@/server/integrations/threads/un
 import { getThreadsConfig, getThreadsOAuthReadiness } from "@/server/integrations/threads/config";
 import { AuditTable, ConnectionsTable, ContactSubmissionsTable, ModerationQueue, SystemStateTable, UsersTable } from "@/features/admin/components/internal-tables";
 import { PlansManager } from "@/features/admin/components/plans-manager";
+import { PaymentMethodsManager } from "@/features/billing/components/payment-methods-manager";
+import { TransactionsReview } from "@/features/billing/components/transactions-review";
 import { listPlansForAdmin } from "@/server/plans/admin";
+import { listPaymentMethodsForAdmin } from "@/server/billing/payment-methods";
+import { listTransactionsForAdmin } from "@/server/billing/transactions";
 import { PLAN_CATALOG } from "../../../../../prisma/plan-catalog";
 import { ApiDocs } from "@/features/admin/components/api-docs";
 import { listCredentials } from "@/server/api/credentials";
@@ -34,6 +38,7 @@ const HEADINGS: Record<string, { title: string; copy: string }> = {
   admin: { title: "Manajemen Admin", copy: "Promosikan akun pengguna menjadi Admin dan atur permission mereka." },
   users: { title: "Manajemen Pengguna", copy: "Pantau akun, paket, dan status koneksi. Token tidak pernah ditampilkan di panel ini." },
   paket: { title: "Paket dan billing", copy: "Tambah dan ubah paket langganan. Harga serta kuota di sini langsung berlaku di halaman harga dan penegakan kuota." },
+  pembayaran: { title: "Pembayaran", copy: "Kelola metode pembayaran dan verifikasi transaksi upgrade. Menyetujui pembayaran langsung mengaktifkan paket pelanggan." },
   kuota: { title: "Kuota API", copy: "Status koneksi Threads dan pemakaian agregat per pengguna." },
   kepatuhan: { title: "Kepatuhan", copy: "Kelola istilah terlarang dan pantau antrean moderasi lintas tim." },
   sistem: { title: "Pengaturan Sistem", copy: "Kondisi integrasi yang sebenarnya; nilai rahasia tidak pernah ditampilkan." },
@@ -79,6 +84,15 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
       <PlansManager plans={plans} />
+    </>;
+  }
+
+  if (section === "pembayaran") {
+    const [methods, transactions] = await Promise.all([listPaymentMethodsForAdmin(), listTransactionsForAdmin()]);
+    return <>
+      <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
+      <TransactionsReview initial={transactions} />
+      <PaymentMethodsManager methods={methods} />
     </>;
   }
 

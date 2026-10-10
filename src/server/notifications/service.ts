@@ -29,12 +29,18 @@ export type SerializedNotification = {
   createdAt: string;
 };
 
-const PREFERENCE_BY_TYPE: Record<NotificationType, "emailLead" | "emailReply" | "emailQuota"> = {
+/**
+ * Preferensi email per jenis notifikasi. `null` berarti selalu dikirim karena
+ * notifikasi itu transaksional: status pembayaran menentukan paket yang
+ * berlaku, jadi tidak disembunyikan oleh preferensi pemasaran.
+ */
+const PREFERENCE_BY_TYPE: Record<NotificationType, "emailLead" | "emailReply" | "emailQuota" | null> = {
   LEAD_DISCOVERED: "emailLead",
   REPLY_SENT: "emailReply",
   REPLY_FAILED: "emailReply",
   MODERATION_DECISION: "emailReply",
   QUOTA_WARNING: "emailQuota",
+  PAYMENT_UPDATE: null,
 };
 
 export function serializeNotification(notification: Notification): SerializedNotification {
@@ -87,8 +93,9 @@ async function sendEmailCopy(input: NotificationInput) {
   });
   // Email placeholder berasal dari pendaftaran lewat Threads dan tidak dapat dihubungi.
   if (!user || user.emailIsPlaceholder) return;
+  const preferenceKey = PREFERENCE_BY_TYPE[input.type];
   const preference = user.notification;
-  if (preference && preference[PREFERENCE_BY_TYPE[input.type]] === false) return;
+  if (preferenceKey && preference && preference[preferenceKey] === false) return;
 
   await mailer.send({ to: user.email, subject: input.title, body: input.body });
 }

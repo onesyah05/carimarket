@@ -25,6 +25,10 @@ export const metadata: Metadata = {
 
 const FAQ = [
   {
+    q: "Bagaimana cara membayar?",
+    a: "Tagihan dibuat dari dashboard dan memuat nominal dengan kode unik tiga digit, mis. Rp 98.417. Transfer tepat sampai tiga angka terakhir agar pembayaran Anda dikenali pada mutasi, lalu tekan tombol konfirmasi. Tagihan yang belum dibayar dalam 24 jam otomatis kedaluwarsa dan dapat dibuat ulang.",
+  },
+  {
     q: "Bagaimana kuota dihitung?",
     a: "Satu pencarian dihitung setiap kali sebuah kata kunci dijalankan, baik manual maupun terjadwal. Satu balasan dihitung saat balasan benar-benar terkirim ke Threads. Kuota berjalan per bulan kalender dan direset setiap awal bulan.",
   },
@@ -42,7 +46,7 @@ const FAQ = [
   },
   {
     q: "Bisakah berpindah paket?",
-    a: "Bisa. Hubungi tim melalui halaman kontak dan paket workspace Anda akan disesuaikan. Penagihan otomatis belum tersedia, jadi perpindahan dilakukan manual bersama tim.",
+    a: "Bisa, langsung dari menu Langganan di dashboard. Pilih paket dan durasi, lalu bayar ke metode yang tersedia. Pembayaran untuk paket yang sama menambah masa aktif sehingga sisa periode tidak hangus, sedangkan pindah paket membuat kuota paket baru berlaku sejak pembayaran disetujui.",
   },
 ];
 
@@ -54,7 +58,7 @@ function PlanCard({ plan }: { plan: PublicPlan }) {
       <h3>{plan.name}</h3>
       <p className="price">{formatRupiah(plan.monthlyPrice)}{!free && <small> / bulan</small>}</p>
       <p>{plan.tagline}</p>
-      <Link className={`button ${plan.featured ? "button--primary" : "button--ghost"}`} href={free ? "/masuk" : "/kontak"}>
+      <Link className={`button ${plan.featured ? "button--primary" : "button--ghost"}`} href={free ? "/masuk" : "/masuk?next=/dashboard/langganan"}>
         {free ? "Mulai gratis" : `Ambil paket ${plan.name}`}
       </Link>
       <ul className="pricing-list">
@@ -87,7 +91,7 @@ export default async function PricingPage() {
 
           <div className="pricing-note">
             <ShieldCheck size={18} />
-            <p><strong>Penagihan otomatis belum tersedia.</strong> Paket berbayar diaktifkan manual oleh tim setelah Anda menghubungi kami, dan kuota langsung berlaku di workspace begitu paket disetel. Mode tinjau dulu tetap menjadi bawaan di semua paket.</p>
+            <p><strong>Pembayaran diverifikasi manual.</strong> Upgrade dibuat sendiri dari dashboard: pilih paket dan durasi, bayar lewat transfer bank, e-wallet, atau QRIS sesuai nominal berkode unik, lalu tandai sudah membayar. Tim memverifikasi mutasi, biasanya dalam 1x24 jam kerja, dan kuota baru berlaku begitu pembayaran disetujui. Mode tinjau dulu tetap menjadi bawaan di semua paket.</p>
           </div>
 
           <div className="faq-list">

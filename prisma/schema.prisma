@@ -131,12 +131,36 @@ enum ApiCredentialSource {
   USER_PAIRING
 }
 
+/** Saluran pembayaran yang dipakai pelanggan Indonesia. */
+enum PaymentChannel {
+  BANK_TRANSFER
+  EWALLET
+  QRIS
+}
+
+/**
+ * Daur hidup satu tagihan upgrade.
+ *
+ * PENDING: pelanggan belum membayar dan tagihan masih berlaku.
+ * REVIEW: pelanggan mengaku sudah membayar, menunggu verifikasi Superadmin.
+ * PAID: pembayaran terverifikasi dan langganan sudah aktif.
+ */
+enum TransactionStatus {
+  PENDING
+  REVIEW
+  PAID
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
 enum NotificationType {
   LEAD_DISCOVERED
   REPLY_SENT
   REPLY_FAILED
   MODERATION_DECISION
   QUOTA_WARNING
+  PAYMENT_UPDATE
 }
 
 model User {
@@ -166,6 +190,8 @@ model User {
   reviewedReplies    ReplyDraft[]             @relation("ReplyReviewer")
   adminPermissions   AdminPermission[]
   subscriptions      Subscription[]
+  transactions       Transaction[]            @relation("TransactionPayer")
+  reviewedTransactions Transaction[]          @relation("TransactionReviewer")
   monthlyUsage       MonthlyUsage[]
   usageEvents        UsageEvent[]
   apiCredentials     ApiCredential[]          @relation("ApiCredentialOwner")
@@ -445,6 +471,7 @@ model Plan {
   createdAt            DateTime       @default(now()) @db.DateTime(3)
   updatedAt            DateTime       @updatedAt @db.DateTime(3)
   subscriptions        Subscription[]
+  transactions         Transaction[]
 }
 
 model Subscription {
@@ -460,9 +487,80 @@ model Subscription {
   updatedAt           DateTime           @updatedAt @db.DateTime(3)
   user                User               @relation(fields: [userId], references: [id], onDelete: Restrict)
   plan                Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
+  transactions        Transaction[]
 
   @@index([userId, status])
   @@index([currentPeriodEnd])
+}
+
+/**
+ * Tujuan pembayaran yang dikelola Superadmin.
+ *
+ * Nilai di sini tampil apa adanya kepada pelanggan sebagai instruksi transfer,
+ * jadi hanya Superadmin yang boleh mengubahnya dan setiap perubahan tercatat
+ * di audit log.
+ */
+model PaymentMethod {
+  id            String         @id @default(cuid())
+  channel       PaymentChannel
+  /// Nama singkat yang dikenal pelanggan, mis. BCA atau GoPay.
+  label         String         @db.VarChar(80)
+  /// Nama pemilik rekening atau akun tujuan.
+  accountName   String         @db.VarChar(120)
+  /// Nomor rekening, nomor telepon e-wallet, atau keterangan QRIS.
+  accountNumber String         @db.VarChar(80)
+  instructions  String?        @db.Text
+  isActive      Boolean        @default(true)
+  sortOrder     Int            @default(0)
+  createdAt     DateTime       @default(now()) @db.DateTime(3)
+  updatedAt     DateTime       @updatedAt @db.DateTime(3)
+  transactions  Transaction[]
+
+  @@index([isActive, sortOrder])
+}
+
+/**
+ * Tagihan upgrade paket.
+ *
+ * Pembayaran diverifikasi manual: nominal transfer dibubuhi kode unik tiga
+ * digit (`uniqueCode`) sehingga satu mutasi bank hanya cocok dengan satu
+ * tagihan. `baseAmount` dan `totalAmount` membekukan harga saat tagihan dibuat
+ * agar perubahan harga paket tidak mengubah tagihan yang sedang berjalan.
+ */
+model Transaction {
+  id              String            @id @default(cuid())
+  invoiceNumber   String            @unique @db.VarChar(40)
+  userId          String
+  planId          String
+  paymentMethodId String?
+  subscriptionId  String?
+  status          TransactionStatus @default(PENDING)
+  baseAmount      Decimal           @db.Decimal(12, 2)
+  uniqueCode      Int               @default(0)
+  totalAmount     Decimal           @db.Decimal(12, 2)
+  periodMonths    Int               @default(1)
+  payerName       String?           @db.VarChar(120)
+  payerNote       String?           @db.VarChar(500)
+  reviewNote      String?           @db.VarChar(500)
+  submittedAt     DateTime?         @db.DateTime(3)
+  reviewedAt      DateTime?         @db.DateTime(3)
+  reviewedById    String?
+  expiresAt       DateTime          @db.DateTime(3)
+  createdAt       DateTime          @default(now()) @db.DateTime(3)
+  updatedAt       DateTime          @updatedAt @db.DateTime(3)
+  user            User              @relation("TransactionPayer", fields: [userId], references: [id], onDelete: Cascade)
+  plan            Plan              @relation(fields: [planId], references: [id], onDelete: Restrict)
+  paymentMethod   PaymentMethod?    @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+  subscription    Subscription?     @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  reviewedBy      User?             @relation("TransactionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([expiresAt])
+  @@index([paymentMethodId])
+  @@index([planId])
+  @@index([reviewedById])
+  @@index([subscriptionId])
 }
 
 model MonthlyUsage {

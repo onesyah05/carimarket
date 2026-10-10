@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { Check, CircleDollarSign } from "lucide-react";
 import { PageHeading, QuotaMeter } from "@/components/dashboard-ui";
+import { formatDate } from "@/lib/format";
+import { getBillingOverview } from "@/server/billing/transactions";
 import { getQuotaSnapshot } from "@/server/usage/limits";
 import { getWorkspaceUser } from "@/server/workspace-user";
+import { UpgradeCenter } from "@/features/billing/components/upgrade-center";
 
 const PLAN_FEATURES = ["Profil bisnis", "Kata kunci pencarian", "Feed lead", "Mode tinjau dan otomatis"];
 
@@ -12,7 +15,7 @@ function periodLabel(periodStart: Date) {
 
 export default async function SubscriptionPage() {
   const user = await getWorkspaceUser();
-  const quota = await getQuotaSnapshot(user.id);
+  const [quota, billing] = await Promise.all([getQuotaSnapshot(user.id), getBillingOverview(user.id)]);
   const plan = quota.plan;
 
   return <>
@@ -23,7 +26,11 @@ export default async function SubscriptionPage() {
           <div>
             <span>{plan?.source === "subscription" ? "Langganan aktif" : "Paket bawaan platform"}</span>
             <h2>{plan?.name ?? "Tanpa batas"}</h2>
-            <p>{plan?.source === "subscription" ? "Terhubung ke langganan akun Anda" : plan ? "Dipakai selama Anda belum memiliki langganan sendiri" : "Tambahkan paket dari panel Superadmin untuk menetapkan batas"}</p>
+            <p>{billing.subscription
+              ? `${billing.subscription.statusLabel}, berlaku sampai ${formatDate(billing.subscription.currentPeriodEnd)}`
+              : plan
+                ? "Dipakai selama Anda belum memiliki langganan sendiri"
+                : "Tambahkan paket dari panel Superadmin untuk menetapkan batas"}</p>
           </div>
           <i><CircleDollarSign /></i>
         </div>
@@ -48,5 +55,7 @@ export default async function SubscriptionPage() {
         <Link className="button button--primary" href="/kontak">Diskusikan kebutuhan tim</Link>
       </section>
     </div>
+
+    <UpgradeCenter initial={billing} />
   </>;
 }

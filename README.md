@@ -324,6 +324,50 @@ dan daftar keunggulan) tetap berasal dari `prisma/plan-catalog.ts`; paket yang
 dibuat lewat panel dan belum ada di katalog ditampilkan di halaman harga dengan
 ringkasan kuota otomatis.
 
+## Transaksi dan pembayaran upgrade
+
+Pelanggan mengambil paket berbayar sendiri dari dashboard, menu **Langganan**.
+Alurnya jujur terhadap kenyataan bahwa payment gateway belum terpasang:
+
+1. Pelanggan memilih paket, durasi (1, 3, 6, atau 12 bulan), dan metode
+   pembayaran, lalu menerima tagihan `INV-YYYYMMDD-XXXX`.
+2. Nominal tagihan memuat **kode unik tiga digit** (mis. Rp 98.417) sehingga
+   satu mutasi rekening hanya cocok dengan satu tagihan.
+3. Pelanggan menekan "Saya sudah transfer" dan mengisi nama pengirim; tagihan
+   masuk antrean verifikasi.
+4. Superadmin memverifikasi di Superadmin → **Pembayaran**. Menyetujui
+   mengaktifkan paket, menolak mengirim notifikasi beserta alasannya.
+
+Aturan yang ditegakkan server:
+
+- Satu akun hanya boleh memiliki **satu tagihan terbuka**.
+- Tagihan yang belum dibayar kedaluwarsa setelah **24 jam** (ditandai saat
+  daftar dibaca dan oleh worker). Tagihan yang sudah dikonfirmasi tidak pernah
+  kedaluwarsa karena menunggu verifikasi manusia.
+- Harga dibekukan saat tagihan dibuat, jadi perubahan harga paket tidak
+  mengubah tagihan yang sedang berjalan.
+- Persetujuan mengubah status tagihan dan langganan dalam satu transaksi
+  database, dengan pengunci status agar dua Superadmin tidak menambah periode
+  dua kali.
+- Pembayaran untuk paket yang sama **memperpanjang** periode berjalan (sisa
+  masa aktif tidak hangus); pindah paket mengakhiri langganan lama dan memulai
+  periode baru sejak verifikasi.
+- Paket gratis ditolak sebagai tagihan, dan pelanggan hanya dapat
+  mengonfirmasi atau membatalkan tagihannya sendiri.
+
+Metode pembayaran (transfer bank, e-wallet, QRIS) dikelola Superadmin pada
+menu yang sama. Nomor dan nama pemilik akun tampil apa adanya kepada pelanggan
+sebagai instruksi transfer. Metode yang pernah dipakai tagihan tidak dapat
+dihapus, hanya dinonaktifkan, dan penonaktifan ditolak selama masih ada tagihan
+terbuka yang memakainya. **Instalasi baru belum memiliki metode pembayaran,
+sehingga pelanggan belum dapat membuat tagihan sampai minimal satu metode
+aktif ditambahkan.**
+
+Seluruh pembuatan, konfirmasi, pembatalan, dan keputusan verifikasi tercatat di
+audit log. Dari aplikasi mobile, alur yang sama tersedia di
+`GET /api/v1/me/billing`, `POST /api/v1/me/transactions`, dan
+`PATCH /api/v1/me/transactions/{id}`.
+
 ## Profil akun internal
 
 Akun Admin dan Superadmin memiliki halaman profil sendiri di `/admin/profil`
