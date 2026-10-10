@@ -29,6 +29,10 @@ const FAQ = [
     a: "Satu pencarian dihitung setiap kali sebuah kata kunci dijalankan, baik manual maupun terjadwal. Satu balasan dihitung saat balasan benar-benar terkirim ke Threads. Kuota berjalan per bulan kalender dan direset setiap awal bulan.",
   },
   {
+    q: "Seberapa sering kata kunci dicari ulang?",
+    a: "Jaraknya ditentukan paket: Starter sekali sehari, Bisnis tiap 6 jam, dan Pro tiap 3 jam. Jadwal ini dipilih agar kuota bulanan benar-benar cukup untuk seluruh kata kunci pada paket tersebut. Pencarian manual dari halaman Lead tetap dapat dijalankan kapan saja dan ikut memakai kuota.",
+  },
+  {
     q: "Apa yang terjadi jika kuota habis?",
     a: "Pencarian dan pengiriman balasan baru ditolak sampai periode berikutnya, sedangkan data lead dan draft yang sudah ada tetap dapat dibuka. Peringatan muncul saat pemakaian mencapai 80 persen.",
   },

@@ -2,6 +2,7 @@ import "server-only";
 import { KeywordKind, SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
+import { DEFAULT_PLAN_INTERVAL_HOURS } from "@/server/leads/schedule";
 import { createNotificationOnce } from "@/server/notifications/service";
 import { currentPeriodStart, evaluateQuota, type PlanLimits, type QuotaCheck } from "./quota";
 
@@ -17,6 +18,8 @@ import { currentPeriodStart, evaluateQuota, type PlanLimits, type QuotaCheck } f
 export type WorkspacePlan = PlanLimits & {
   code: string;
   name: string;
+  /** Jarak minimum antar pencarian terjadwal, dalam jam. */
+  searchIntervalHours: number;
   source: "subscription" | "default";
 };
 
@@ -36,11 +39,13 @@ export async function resolveWorkspacePlan(userId: string): Promise<WorkspacePla
     orderBy: { createdAt: "desc" },
     include: { plan: true },
   });
-  if (subscription?.plan) return { ...toLimits(subscription.plan), code: subscription.plan.code, name: subscription.plan.name, source: "subscription" };
+  if (subscription?.plan) {
+    return { ...toLimits(subscription.plan), code: subscription.plan.code, name: subscription.plan.name, searchIntervalHours: subscription.plan.searchIntervalHours, source: "subscription" };
+  }
 
   const fallback = await prisma.plan.findFirst({ where: { isActive: true }, orderBy: { monthlyPrice: "asc" } });
   if (!fallback) return null;
-  return { ...toLimits(fallback), code: fallback.code, name: fallback.name, source: "default" };
+  return { ...toLimits(fallback), code: fallback.code, name: fallback.name, searchIntervalHours: fallback.searchIntervalHours, source: "default" };
 }
 
 function toLimits(plan: PlanLimits): PlanLimits {
@@ -122,6 +127,15 @@ export async function assertKeywordQuota(userId: string, kind: KeywordKind, norm
       429,
     );
   }
+}
+
+/**
+ * Jarak minimum antar pencarian terjadwal menurut paket pengguna.
+ * Tanpa paket aktif, tidak ada lantai selain bawaan satu jam.
+ */
+export async function resolveSearchIntervalHours(userId: string): Promise<number> {
+  const plan = await resolveWorkspacePlan(userId);
+  return plan?.searchIntervalHours ?? DEFAULT_PLAN_INTERVAL_HOURS;
 }
 
 /** Dipakai worker: melewati pengguna yang kuotanya sudah habis tanpa melempar error. */

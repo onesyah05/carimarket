@@ -202,6 +202,14 @@ ditegakkan di server (`src/server/usage/limits.ts`):
   habis, bukan menandai pencarian sebagai gagal.
 - Pemakaian bulan berjalan tampil di `/dashboard/langganan`, dan peringatan
   dikirim sebagai notifikasi saat pemakaian mencapai 80 persen.
+- Paket juga menentukan jarak minimum antar pencarian terjadwal
+  (`Plan.searchIntervalHours`): Starter 24 jam, Bisnis 6 jam, Pro 3 jam.
+  Pilihan frekuensi pengguna hanya dapat membuat pencarian lebih jarang, tidak
+  lebih sering, sehingga jadwal penuh selalu muat dalam kuota bulanan. Invarian
+  ini dijaga oleh pengujian katalog paket.
+- `npm run db:audit-quota` memeriksa kesesuaian batas dengan paket di database:
+  pergeseran harga/kuota terhadap katalog, proyeksi jadwal terhadap kuota, dan
+  selisih antara penghitung kuota dengan jejak eksekusi.
 
 ## Notifikasi
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PLAN_CATALOG, findPlan } from "../../../prisma/plan-catalog";
+import { projectedMonthlySearches, runsPerDay } from "../leads/schedule";
 
 /** Batas Meta per akun Threads yang terhubung, per 24 jam. */
 const META_DAILY_SEARCH_LIMIT = 2_200;
@@ -39,6 +40,29 @@ describe("katalog paket", () => {
     // Minimal setara satu pencarian harian per kata kunci selama sebulan.
     for (const plan of PLAN_CATALOG) {
       expect(plan.monthlySearchLimit).toBeGreaterThanOrEqual(plan.keywordLimit * DAYS_IN_MONTH);
+    }
+  });
+
+  it("menjaga jadwal penuh tetap muat dalam kuota pencarian", () => {
+    // Inilah invarian yang dulu terlewat: kata kunci sebanyak batas paket,
+    // semuanya terjadwal pada interval paket, tidak boleh melampaui kuota.
+    for (const plan of PLAN_CATALOG) {
+      const keywords = Array.from({ length: plan.keywordLimit }, () => ({ frequency: "HOURLY" as const }));
+      const projected = projectedMonthlySearches(keywords, plan.searchIntervalHours);
+      expect(projected, `paket ${plan.code} memproyeksikan ${projected} pencarian`).toBeLessThanOrEqual(plan.monthlySearchLimit);
+    }
+  });
+
+  it("menjaga pemakaian harian di bawah batas Meta pada jadwal penuh", () => {
+    for (const plan of PLAN_CATALOG) {
+      const perDay = plan.keywordLimit * runsPerDay("HOURLY", plan.searchIntervalHours);
+      expect(perDay).toBeLessThan(META_DAILY_SEARCH_LIMIT);
+    }
+  });
+
+  it("mempercepat interval pencarian pada paket yang lebih mahal", () => {
+    for (let index = 1; index < PLAN_CATALOG.length; index += 1) {
+      expect(PLAN_CATALOG[index].searchIntervalHours).toBeLessThan(PLAN_CATALOG[index - 1].searchIntervalHours);
     }
   });
 

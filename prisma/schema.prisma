@@ -427,6 +427,10 @@ model Plan {
   monthlySearchLimit   Int
   monthlyReplyLimit    Int
   keywordLimit         Int
+  /// Jarak minimum antar pencarian terjadwal (jam). Paket menentukan seberapa
+  /// cepat kata kunci boleh dijalankan ulang; pengguna hanya dapat memilih
+  /// lebih jarang, tidak lebih sering.
+  searchIntervalHours  Int            @default(24)
   isActive             Boolean        @default(true)
   createdAt            DateTime       @default(now()) @db.DateTime(3)
   updatedAt            DateTime       @updatedAt @db.DateTime(3)

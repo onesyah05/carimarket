@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { getThreadsAdapter } from "@/server/integrations/threads";
 import { isThreadsAvailable } from "@/server/integrations/threads/config";
 import { createNotification } from "@/server/notifications/service";
-import { assertSearchQuota, hasSearchQuota } from "@/server/usage/limits";
+import { assertSearchQuota, hasSearchQuota, resolveSearchIntervalHours } from "@/server/usage/limits";
 import { recordUsage } from "@/server/usage/service";
 import { matchedExcludedTerm, relevanceScore } from "./matching";
+import { nextRunAt } from "./schedule";
 
 export { relevanceScore } from "./matching";
 
@@ -18,12 +19,6 @@ export type KeywordSearchResult = {
   /** Jumlah lead yang benar-benar baru pada pencarian ini. */
   createdCount: number;
 };
-
-function nextRunAt(frequency: SearchFrequency) {
-  if (frequency === SearchFrequency.HOURLY) return new Date(Date.now() + 60 * 60 * 1000);
-  if (frequency === SearchFrequency.DAILY) return new Date(Date.now() + 24 * 60 * 60 * 1000);
-  return null;
-}
 
 /** Kata kunci negatif aktif milik pengguna, dipakai untuk menyaring hasil pencarian. */
 export async function loadExcludedTerms(userId: string) {
@@ -41,7 +36,10 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
   // Kuota diperiksa sebelum SearchRun dibuat agar pemakaian yang ditolak tidak
   // tercatat sebagai percobaan pencarian.
   await assertSearchQuota(keyword.userId);
-  const excludedTerms = await loadExcludedTerms(keyword.userId);
+  const [excludedTerms, planIntervalHours] = await Promise.all([
+    loadExcludedTerms(keyword.userId),
+    resolveSearchIntervalHours(keyword.userId),
+  ]);
 
   const run = await prisma.searchRun.create({
     data: {
@@ -105,7 +103,7 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
 
     await prisma.$transaction([
       prisma.searchRun.update({ where: { id: run.id }, data: { status: SearchRunStatus.COMPLETED, resultCount: results.length, completedAt: new Date() } }),
-      prisma.keyword.update({ where: { id: keyword.id }, data: { lastRunAt: new Date(), nextRunAt: nextRunAt(keyword.frequency) } }),
+      prisma.keyword.update({ where: { id: keyword.id }, data: { lastRunAt: new Date(), nextRunAt: nextRunAt(keyword.frequency, planIntervalHours) } }),
     ]);
     await recordUsage(keyword.userId, "SEARCH", 1, run.id);
 
@@ -124,7 +122,7 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
     const code = error instanceof Error && "code" in error ? String(error.code).slice(0, 100) : "SEARCH_FAILED";
     await prisma.$transaction([
       prisma.searchRun.update({ where: { id: run.id }, data: { status: SearchRunStatus.FAILED, errorCode: code, completedAt: new Date() } }),
-      prisma.keyword.update({ where: { id: keyword.id }, data: { lastRunAt: new Date(), nextRunAt: nextRunAt(keyword.frequency) } }),
+      prisma.keyword.update({ where: { id: keyword.id }, data: { lastRunAt: new Date(), nextRunAt: nextRunAt(keyword.frequency, planIntervalHours) } }),
     ]).catch(() => undefined);
     throw error;
   }

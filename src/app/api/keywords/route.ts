@@ -28,7 +28,11 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: keywords.map(serialize),
-      meta: { keywordLimit: quota.keywords.limit, planName: quota.plan?.name ?? null },
+      meta: {
+        keywordLimit: quota.keywords.limit,
+        planName: quota.plan?.name ?? null,
+        searchIntervalHours: quota.plan?.searchIntervalHours ?? null,
+      },
     });
   } catch (error) {
     const result = publicThreadsError(error);

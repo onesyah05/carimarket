@@ -20,6 +20,7 @@ export async function syncPlans(prisma: PrismaClient) {
       monthlySearchLimit: entry.monthlySearchLimit,
       monthlyReplyLimit: entry.monthlyReplyLimit,
       keywordLimit: entry.keywordLimit,
+      searchIntervalHours: entry.searchIntervalHours,
       isActive: true,
     };
     await prisma.plan.upsert({

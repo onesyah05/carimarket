@@ -9,6 +9,7 @@
  */
 import { KeywordKind, SearchFrequency, ReplyStatus, SearchRunStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { projectedMonthlySearches, runsPerDay } from "@/server/leads/schedule";
 import { getQuotaSnapshot } from "@/server/usage/limits";
 import { currentPeriodStart } from "@/server/usage/quota";
 import { PLAN_CATALOG } from "../prisma/plan-catalog";
@@ -34,10 +35,17 @@ async function auditPlans() {
       if (plan.monthlySearchLimit !== catalog.monthlySearchLimit) drift.push(`pencarian ${plan.monthlySearchLimit} != ${catalog.monthlySearchLimit}`);
       if (plan.monthlyReplyLimit !== catalog.monthlyReplyLimit) drift.push(`balasan ${plan.monthlyReplyLimit} != ${catalog.monthlyReplyLimit}`);
       if (plan.keywordLimit !== catalog.keywordLimit) drift.push(`kata kunci ${plan.keywordLimit} != ${catalog.keywordLimit}`);
+      if (plan.searchIntervalHours !== catalog.searchIntervalHours) drift.push(`interval ${plan.searchIntervalHours}j != ${catalog.searchIntervalHours}j`);
+    }
+    // Jadwal penuh harus muat dalam kuota bulanan paket.
+    const fullSchedule = Math.round(plan.keywordLimit * runsPerDay("HOURLY", plan.searchIntervalHours) * 30);
+    if (fullSchedule > plan.monthlySearchLimit) {
+      drift.push(`jadwal penuh ${fullSchedule} > kuota ${plan.monthlySearchLimit}`);
     }
     console.log(
       `${pad(plan.code, 9)} Rp ${pad(Number(plan.monthlyPrice).toLocaleString("id-ID"), 9)} ` +
       `kk=${pad(plan.keywordLimit, 3)} cari=${pad(plan.monthlySearchLimit, 6)} balas=${pad(plan.monthlyReplyLimit, 5)} ` +
+      `tiap=${pad(plan.searchIntervalHours + "j", 4)} jadwalPenuh=${pad(Math.round(plan.keywordLimit * runsPerDay("HOURLY", plan.searchIntervalHours) * 30), 6)} ` +
       `aktif=${plan.isActive ? "ya " : "tidak"} langganan=${plan._count.subscriptions}` +
       (catalog ? "" : "  [di luar katalog]") + (drift.length ? `  [BEDA: ${drift.join("; ")}]` : ""),
     );
@@ -76,8 +84,14 @@ async function auditUsers() {
       prisma.keyword.count({ where: { userId: user.id, isActive: true, kind: KeywordKind.INCLUDE, frequency: SearchFrequency.MANUAL } }),
     ]);
 
-    // Proyeksi pemakaian bila seluruh jadwal berjalan penuh satu bulan.
-    const projectedSearches = hourly * 24 * 30 + daily * 30;
+    // Proyeksi pemakaian bila seluruh jadwal berjalan penuh satu bulan,
+    // memakai helper yang sama dengan penjadwal pencarian.
+    const scheduled = await prisma.keyword.findMany({
+      where: { userId: user.id, isActive: true, kind: KeywordKind.INCLUDE },
+      select: { frequency: true },
+    });
+    const planInterval = snapshot.plan?.searchIntervalHours ?? null;
+    const projectedSearches = projectedMonthlySearches(scheduled, planInterval);
 
     // Sumber kebenaran pemakaian: jejak eksekusi, bukan penghitung agregat.
     const [searchRuns, repliesSent, usageEvents] = await Promise.all([
