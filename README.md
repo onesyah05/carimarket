@@ -58,6 +58,8 @@ npm run db:validate
 npm run build
 ```
 
+> Catatan dependensi: npm 11.x gagal dengan `Cannot read properties of null (reading 'edgesOut')` saat memasang Vitest 4.1.11 karena bug resolver peer. Bila versi Vitest dinaikkan, jalankan sekali `npm install --legacy-peer-deps` untuk membuat lockfile-nya; setelah itu `npm install` dan `npm ci` biasa kembali bekerja normal.
+
 `npm test` menjalankan Vitest untuk logika murni: pencocokan kata kunci, jam
 tenang, perhitungan kuota, rate limit, dan guard pengalihan. Pengujian tidak
 membutuhkan MySQL maupun kredensial Threads.
