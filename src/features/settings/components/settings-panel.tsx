@@ -6,6 +6,7 @@ import { useReplyAutomation } from "@/features/replies/lib/use-reply-automation"
 import { ProfileSettings } from "@/features/settings/components/profile-settings";
 import { NotificationSettings } from "@/features/settings/components/notification-settings";
 import { SecuritySettings } from "@/features/settings/components/security-settings";
+import type { Account } from "@/features/account/components/account-forms";
 
 const tabs = [
   { id: "profil", label: "Profil bisnis", icon: Building2 },
@@ -51,7 +52,7 @@ const connectionErrors: Record<string, string> = {
   signup_disabled: "Pendaftaran akun baru lewat Threads sedang dimatikan. Masuk terlebih dahulu, lalu hubungkan akun Threads dari halaman ini.",
 };
 
-export function SettingsPanel({ profileComplete }: { profileComplete: boolean }) {
+export function SettingsPanel({ profileComplete, account }: { profileComplete: boolean; account?: Account }) {
   const [active, setActive] = useState("profil");
   const navRef = useRef<HTMLElement>(null);
   const [threads, setThreads] = useState<ThreadsState>({ loading: true, configured: false, connected: false });
@@ -150,7 +151,7 @@ export function SettingsPanel({ profileComplete }: { profileComplete: boolean })
       </>}
 
       {active === "notifikasi" && <NotificationSettings />}
-      {active === "keamanan" && <SecuritySettings />}
+      {active === "keamanan" && <SecuritySettings account={account} />}
     </section>
   </div>;
 }

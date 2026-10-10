@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
-type Account = {
+export type Account = {
   name: string;
   email: string | null;
   emailIsPlaceholder: boolean;
@@ -21,11 +21,14 @@ const emptyPassword: PasswordForm = { currentPassword: "", newPassword: "", conf
  * Dipakai bersama oleh pengaturan pengguna bisnis dan halaman profil akun
  * internal, karena nama, email, dan kata sandi adalah milik akun dan aturannya
  * sama untuk semua role.
+ *
+ * `initialAccount` dikirim dari server agar judul dan kolom tidak sempat salah
+ * tampil sebelum data termuat.
  */
-export function AccountForms() {
-  const [account, setAccount] = useState<Account | null>(null);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+export function AccountForms({ initialAccount }: { initialAccount?: Account }) {
+  const [account, setAccount] = useState<Account | null>(initialAccount ?? null);
+  const [name, setName] = useState(initialAccount?.name ?? "");
+  const [email, setEmail] = useState(initialAccount?.email ?? "");
   const [identityPassword, setIdentityPassword] = useState("");
   const [identityBusy, setIdentityBusy] = useState(false);
   const [identityError, setIdentityError] = useState<string>();
@@ -37,6 +40,7 @@ export function AccountForms() {
   const [passwordSaved, setPasswordSaved] = useState<string>();
 
   useEffect(() => {
+    if (initialAccount) return;
     let active = true;
     fetch("/api/account/profile", { cache: "no-store" })
       .then(async response => response.ok ? (await response.json() as { data?: Account }).data ?? null : null)
@@ -48,7 +52,7 @@ export function AccountForms() {
       })
       .catch(() => undefined);
     return () => { active = false; };
-  }, []);
+  }, [initialAccount]);
 
   const emailChanged = account !== null && email.trim().toLowerCase() !== (account.email ?? "").toLowerCase();
   const needsPasswordForEmail = Boolean(account?.requiresPasswordForEmailChange) && emailChanged;

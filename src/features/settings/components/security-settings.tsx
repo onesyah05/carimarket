@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Download } from "lucide-react";
-import { AccountForms } from "@/features/account/components/account-forms";
+import { AccountForms, type Account } from "@/features/account/components/account-forms";
 import { MobileDevices } from "@/features/settings/components/mobile-devices";
 
 /**
@@ -11,11 +11,11 @@ import { MobileDevices } from "@/features/settings/components/mobile-devices";
  * Form identitas dan kata sandi dipakai bersama dengan profil akun internal,
  * sehingga aturannya tidak pernah berbeda antar role.
  */
-export function SecuritySettings() {
+export function SecuritySettings({ account }: { account?: Account }) {
   return <>
     <div className="panel-heading"><div><h2>Keamanan dan data</h2><p>Kelola identitas akun, kata sandi, aplikasi mobile, dan salinan data workspace Anda.</p></div></div>
     <div className="security-settings">
-      <AccountForms />
+      <AccountForms initialAccount={account} />
 
       <div className="security-settings__mobile"><MobileDevices /></div>
 

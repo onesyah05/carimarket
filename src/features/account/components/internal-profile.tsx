@@ -49,7 +49,7 @@ export function InternalProfile({ account }: { account: AccountOverview }) {
     </section>
 
     <section className="panel profile-forms">
-      <AccountForms />
+      <AccountForms initialAccount={account} />
     </section>
   </div>;
 }
