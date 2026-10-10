@@ -126,6 +126,37 @@ export async function updatePlan(actor: User, planId: string, input: UpdatePlanI
   return updated;
 }
 
+/**
+ * Menghapus paket yang belum pernah dipakai langganan.
+ *
+ * Paket yang sudah punya langganan tidak boleh hilang karena histori billing
+ * mengacu padanya; untuk itu pakai penonaktifan, bukan penghapusan.
+ */
+export async function deletePlan(actor: User, planId: string) {
+  const plan = await prisma.plan.findUnique({
+    where: { id: planId },
+    include: { _count: { select: { subscriptions: true } } },
+  });
+  if (!plan) throw new ThreadsIntegrationError("PLAN_NOT_FOUND", "Paket tidak ditemukan.", 404);
+  if (plan._count.subscriptions > 0) {
+    throw new ThreadsIntegrationError(
+      "PLAN_IN_USE",
+      `Paket ini memiliki ${plan._count.subscriptions} langganan dalam histori. Nonaktifkan paket alih-alih menghapusnya.`,
+      409,
+    );
+  }
+
+  await prisma.plan.delete({ where: { id: planId } });
+  await recordAudit({
+    actorId: actor.id,
+    action: "PLAN_DELETED",
+    entityType: "Plan",
+    entityId: planId,
+    metadata: { code: plan.code },
+  });
+  return { code: plan.code };
+}
+
 export type AdminPlan = {
   id: string;
   code: string;

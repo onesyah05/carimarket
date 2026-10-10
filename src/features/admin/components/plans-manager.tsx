@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { AlertTriangle, Pencil, Plus, X } from "lucide-react";
+import { AlertTriangle, Pencil, Plus, Trash2, X } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
 import type { AdminPlan } from "@/server/plans/admin";
 
@@ -123,6 +123,20 @@ export function PlansManager({ plans }: { plans: AdminPlan[] }) {
     }
   }
 
+  async function remove(plan: AdminPlan) {
+    setError(undefined);
+    setSaved(undefined);
+    const response = await fetch(`/api/admin/plans/${encodeURIComponent(plan.id)}`, { method: "DELETE" });
+    const payload = await response.json().catch(() => null) as { data?: AdminPlan[]; error?: string } | null;
+    if (!response.ok || !payload?.data) {
+      setError(payload?.error ?? "Paket belum dapat dihapus.");
+      return;
+    }
+    setItems(payload.data);
+    setSaved(`Paket ${plan.code} dihapus.`);
+    if (mode.kind === "edit" && mode.plan.id === plan.id) setMode({ kind: "closed" });
+  }
+
   const projected = Number(form.keywordLimit) * (24 / Math.max(1, Number(form.searchIntervalHours))) * 30;
 
   return <>
@@ -208,6 +222,7 @@ export function PlansManager({ plans }: { plans: AdminPlan[] }) {
             <span data-label="Langganan">{plan.subscriptions.toLocaleString("id-ID")}</span>
             <span data-label="Aksi" className="row-actions">
               <button className="button button--ghost button--small" type="button" onClick={() => openEdit(plan)}><Pencil size={15} /> Ubah</button>
+              {plan.subscriptions === 0 && <button className="button button--danger button--small" type="button" onClick={() => void remove(plan)}><Trash2 size={15} /> Hapus</button>}
             </span>
           </div>
         ))}
