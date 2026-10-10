@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { Download } from "lucide-react";
+import { MobileDevices } from "@/features/settings/components/mobile-devices";
 
 type PasswordForm = { currentPassword: string; newPassword: string; confirmPassword: string };
 
@@ -90,7 +91,7 @@ export function SecuritySettings({ initialHasPassword }: { initialHasPassword: b
   }
 
   return <>
-    <div className="panel-heading"><div><h2>Keamanan dan data</h2><p>Kelola kata sandi dan unduh salinan data workspace Anda.</p></div></div>
+    <div className="panel-heading"><div><h2>Keamanan dan data</h2><p>Kelola kata sandi, email akun, aplikasi mobile, dan salinan data workspace Anda.</p></div></div>
     <div className="security-settings">
       <form className="security-settings__password" onSubmit={event => void changePassword(event)}>
         <div><h3>{hasPassword ? "Ubah kata sandi" : "Buat kata sandi"}</h3><p>{hasPassword ? "Setelah diubah, sesi lain akan keluar. Sesi ini tetap aktif." : "Akun yang dibuat lewat Threads belum memiliki kata sandi. Buat kata sandi lalu simpan email akun agar bisa masuk tanpa Threads."}</p></div>
@@ -118,6 +119,7 @@ export function SecuritySettings({ initialHasPassword }: { initialHasPassword: b
         {emailSaved && <p className="form-feedback form-feedback--success" role="status">{emailSaved}</p>}
         <div className="settings-actions"><button className="button button--primary" type="submit" disabled={account === null || emailSaving}>{emailSaving ? "Menyimpan..." : "Simpan email"}</button></div>
       </form>
+      <div className="security-settings__mobile"><MobileDevices /></div>
       <div className="security-settings__data"><h3>Data workspace</h3><p>Unduh profil bisnis, kata kunci, lead, dan riwayat draft Anda dalam format JSON. Token integrasi dan kata sandi tidak disertakan.</p><a className="button button--ghost" href="/api/settings/data-export" download><Download size={17} /> Unduh data saya</a><Link className="text-link" href="/penghapusan-data">Baca prosedur penghapusan data</Link></div>
     </div>
   </>;

@@ -49,9 +49,17 @@ describe("katalog API", () => {
     expect(extra, "dokumentasi menyebut endpoint yang tidak ada").toEqual([]);
   });
 
-  it("hanya mencakup menu pengguna", () => {
+  it("hanya mencakup menu pengguna dan autentikasinya", () => {
     for (const endpoint of API_ENDPOINTS) {
-      expect(endpoint.path.startsWith("/api/v1/me"), endpoint.path).toBe(true);
+      const allowed = endpoint.path.startsWith("/api/v1/me") || endpoint.path.startsWith("/api/v1/auth");
+      expect(allowed, endpoint.path).toBe(true);
+    }
+  });
+
+  it("tidak pernah memuat endpoint admin", () => {
+    for (const endpoint of API_ENDPOINTS) {
+      expect(endpoint.path).not.toContain("/admin");
+      expect(endpoint.path).not.toContain("/superadmin");
     }
   });
 

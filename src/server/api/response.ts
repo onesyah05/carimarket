@@ -69,6 +69,11 @@ export function pageMeta(page: number, perPage: number, total: number): ApiPageM
  */
 export const API_ERROR_CODES = {
   UNAUTHENTICATED: { status: 401, message: "Kredensial API tidak disertakan atau tidak dikenali." },
+  INVALID_CREDENTIALS: { status: 401, message: "Email atau kata sandi belum tepat." },
+  PASSWORD_NOT_SET: { status: 409, message: "Akun belum memiliki kata sandi, jadi belum dapat masuk dari aplikasi." },
+  PAIRING_CODE_INVALID: { status: 400, message: "Kode pemasangan tidak dikenali." },
+  PAIRING_CODE_USED: { status: 409, message: "Kode pemasangan sudah terpakai." },
+  PAIRING_CODE_EXPIRED: { status: 409, message: "Kode pemasangan sudah kedaluwarsa." },
   CREDENTIAL_REVOKED: { status: 401, message: "Kredensial API sudah dicabut." },
   CREDENTIAL_EXPIRED: { status: 401, message: "Kredensial API sudah kedaluwarsa." },
   ACCOUNT_INACTIVE: { status: 403, message: "Akun workspace tidak aktif." },

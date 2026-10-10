@@ -153,6 +153,58 @@ function fieldErrors(error: ZodError): Record<string, string> {
 }
 
 /** Endpoint yang hanya mendukung sebagian metode HTTP. */
+type PublicApiContext = Omit<ApiContext, "user" | "credentialId"> & { clientIp: string };
+
+const PUBLIC_RATE_LIMIT_PER_MINUTE = 20;
+
+/**
+ * Endpoint API yang memang tanpa kredensial, yaitu masuk dari aplikasi dan
+ * penukaran kode pemasangan. Amplop respons, pemetaan error, dan rate limit
+ * tetap sama; pembatasannya memakai alamat IP karena belum ada kredensial.
+ */
+export function withPublicApi<T>(handler: (context: PublicApiContext) => Promise<ApiResult<T>>) {
+  return async function route(request: Request, segment?: RouteSegment) {
+    const requestId = newRequestId();
+    const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+
+    try {
+      enforceRateLimit(`api-v1-public:${clientIp}`, PUBLIC_RATE_LIMIT_PER_MINUTE, 60_000);
+    } catch {
+      return failure("RATE_LIMITED", requestId);
+    }
+
+    const context: PublicApiContext = {
+      clientIp,
+      requestId,
+      searchParams: new URL(request.url).searchParams,
+      async param(name) {
+        const params = segment ? await segment.params : {};
+        const value = params[name];
+        const single = Array.isArray(value) ? value[0] : value;
+        if (!single) throw new ApiError("NOT_FOUND", "Sumber daya tidak ditemukan.");
+        return single;
+      },
+      async json(schema) {
+        const payload = await request.json().catch(() => null);
+        const parsed = schema.safeParse(payload);
+        if (!parsed.success) throw new ApiError("INVALID_INPUT", "Permintaan tidak valid.", fieldErrors(parsed.error));
+        return parsed.data;
+      },
+    };
+
+    try {
+      const result = await handler(context);
+      return respond(successBody(result.data, buildMeta(requestId, result.page)), result.status ?? 200, requestId);
+    } catch (error) {
+      const mapped = mapServiceError(error);
+      if (mapped.code === "INTERNAL_ERROR") {
+        console.warn(`API v1 publik gagal (request ${requestId}): ${error instanceof Error ? error.message.slice(0, 200) : "penyebab tidak diketahui"}`);
+      }
+      return failure(mapped.code, requestId, mapped.message, error instanceof ApiError ? error.details : null);
+    }
+  };
+}
+
 export function methodNotAllowed() {
   const requestId = newRequestId();
   return failure("METHOD_NOT_ALLOWED", requestId);

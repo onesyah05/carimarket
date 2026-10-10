@@ -1503,6 +1503,19 @@ html[data-theme="dark"] .app-shell--superadmin .internal-count { color: #bbd0ff;
 .app-shell--user .security-settings__password .settings-actions { justify-content: flex-start; }
 .app-shell--user .security-settings__email { max-width: 620px; padding-top: 20px; border-top: 1px solid var(--line); display: grid; gap: 16px; }
 .app-shell--user .security-settings__email .settings-actions { justify-content: flex-start; }
+.app-shell--user .security-settings__mobile { padding-top: 20px; border-top: 1px solid var(--line); }
+.mobile-devices { max-width: 620px; display: grid; gap: 14px; justify-items: start; }
+.mobile-devices h4 { margin: 0 0 10px; font-size: .84rem; }
+.pairing-code { width: 100%; padding: 16px 18px; border: 1px solid color-mix(in srgb, var(--brand-strong) 45%, var(--line)); border-radius: 12px; display: grid; gap: 6px; background: var(--brand-soft); }
+.pairing-code > span { color: var(--muted); font-size: .76rem; }
+.pairing-code > strong { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.6rem; letter-spacing: .12em; }
+.pairing-code > small { color: var(--muted); font-size: .74rem; }
+.pairing-code__actions { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 8px; }
+.device-list { width: 100%; display: grid; gap: 8px; }
+.device-row { padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.device-row div { display: grid; gap: 3px; }
+.device-row strong { font-size: .83rem; }
+.device-row small { color: var(--muted); font-size: .74rem; }
 .app-shell--user .security-settings__data { padding-top: 20px; border-top: 1px solid var(--line); display: grid; justify-items: start; gap: 12px; }
 .app-shell--user .security-settings__data p { max-width: 630px; }
 .app-shell--user .security-settings__data .text-link { font-size: .8rem; }
@@ -1552,6 +1565,7 @@ html[data-theme="dark"] .app-shell--superadmin .internal-count { color: #bbd0ff;
 .api-method--post { background: var(--success); }
 .api-method--put, .api-method--patch { background: var(--warning); }
 .api-method--delete { background: var(--danger); }
+.api-public-badge { padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: .66rem; font-weight: 750; }
 
 @media (max-width: 860px) {
   .api-credential-form { grid-template-columns: 1fr; }

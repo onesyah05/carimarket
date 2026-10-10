@@ -324,18 +324,34 @@ API tersedia di `/api/v1` dan cakupannya hanya **menu pengguna bisnis**: tidak
 ada endpoint admin maupun superadmin, dan satu kredensial hanya membuka satu
 workspace.
 
-### Kredensial
+### Autentikasi
 
-Kredensial **hanya diterbitkan Superadmin** melalui Superadmin → **API Mobile**
-(`/superadmin/api`). Pengguna tidak dapat membuat kunci sendiri.
+Token dikirim sebagai `Authorization: Bearer cmk_<8 heks>_<64 heks>` dan
+diperoleh melalui tiga jalur:
 
-- Format kunci `cmk_<8 heks>_<64 heks>`, dikirim sebagai `Authorization: Bearer <kunci>`.
-- Hanya hash SHA-256 yang disimpan; nilai kunci tampil satu kali saat diterbitkan
-  dan tidak pernah dapat ditampilkan ulang.
-- Kunci dapat diberi masa berlaku dan dapat dicabut kapan saja. Penerbitan dan
-  pencabutan tercatat di audit log sebagai `API_CREDENTIAL_ISSUED` dan
-  `API_CREDENTIAL_REVOKED`, tanpa nilai kunci.
-- Batas laju 120 permintaan per menit per kredensial.
+1. **Masuk dari aplikasi** — `POST /api/v1/auth/login` dengan email dan kata
+   sandi pengguna. Ini jalur utama untuk aplikasi dengan banyak pengguna:
+   pengguna mendapatkan tokennya sendiri tanpa campur tangan Superadmin.
+2. **Kode pemasangan** — pengguna membuat kode di Pengaturan → Keamanan dan
+   data, lalu aplikasi menukarnya lewat `POST /api/v1/auth/pair`. Dipakai akun
+   yang masuk lewat Threads sehingga belum memiliki kata sandi. Kode berlaku 10
+   menit dan sekali pakai.
+3. **Kunci terbitan Superadmin** — dibuat di Superadmin → **API Mobile**
+   (`/superadmin/api`) untuk integrasi internal atau pengujian.
+
+Berlaku untuk semua jalur:
+
+- Hanya hash SHA-256 token yang disimpan; nilainya tampil satu kali saat
+  diterbitkan dan tidak pernah dapat ditampilkan ulang.
+- Token login dan pemasangan berlaku 90 hari, maksimal 10 perangkat aktif per
+  akun, dan perangkat terlama otomatis dicabut saat batas terlampaui.
+- Pengguna dapat melihat dan mencabut perangkatnya sendiri dari aplikasi
+  (`GET|DELETE /api/v1/me/devices`) maupun dari dashboard web.
+- Penerbitan dan pencabutan tercatat di audit log (`MOBILE_LOGIN`,
+  `MOBILE_PAIRED`, `MOBILE_DEVICE_REVOKED`, `API_CREDENTIAL_ISSUED`,
+  `API_CREDENTIAL_REVOKED`) tanpa nilai token.
+- Batas laju 120 permintaan per menit per token, dan 20 per menit per alamat IP
+  untuk endpoint tanpa token. Percobaan masuk dibatasi 10 per 5 menit per email.
 
 ### Format respons
 

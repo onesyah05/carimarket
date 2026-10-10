@@ -74,11 +74,12 @@ function operation(endpoint: ApiEndpoint) {
         },
       },
       "4XX": {
-        description: `Gagal. Kode yang mungkin: ${["UNAUTHENTICATED", "RATE_LIMITED", ...(endpoint.errors ?? [])].join(", ")}.`,
+        description: `Gagal. Kode yang mungkin: ${[...(endpoint.public ? ["RATE_LIMITED"] : ["UNAUTHENTICATED", "RATE_LIMITED"]), ...(endpoint.errors ?? [])].join(", ")}.`,
         content: { "application/json": { schema: { $ref: "#/components/schemas/ApiError" } } },
       },
     },
-    security: [{ apiKey: [] }],
+    // Masuk dan pemasangan memang tanpa token.
+    security: endpoint.public ? [] : [{ apiKey: [] }],
   };
 }
 

@@ -30,11 +30,14 @@ export type ApiEndpoint = {
   dataExample: unknown;
   /** Kode error khusus endpoint ini, selain kode umum. */
   errors?: string[];
+  /** Endpoint yang sengaja tidak memerlukan token, yaitu masuk dan pemasangan. */
+  public?: boolean;
 };
 
 export const API_BASE_PATH = "/api/v1";
 
 export const API_GROUPS = [
+  { name: "Autentikasi", description: "Masuk dari aplikasi, pemasangan perangkat, dan pencabutan token." },
   { name: "Akun", description: "Identitas workspace, profil bisnis, dan paket." },
   { name: "Beranda", description: "Ringkasan untuk layar utama aplikasi." },
   { name: "Lead", description: "Daftar dan detail percakapan Threads yang cocok." },
@@ -97,7 +100,75 @@ const replyAutomationExample = {
   quietHoursEnd: null,
 };
 
+const deviceTokenExample = {
+  token: "cmk_1a2b3c4d_8f6e5d4c3b2a19087f6e5d4c3b2a19087f6e5d4c3b2a19087f6e5d4c3b2a1908",
+  tokenPrefix: "cmk_1a2b3c4d",
+  expiresAt: "2027-01-08T08:00:00.000Z",
+  device: { id: "clz2dev0001", name: "Android Nadia" },
+};
+
 export const API_ENDPOINTS: ApiEndpoint[] = [
+  {
+    method: "POST",
+    path: "/api/v1/auth/login",
+    group: "Autentikasi",
+    summary: "Masuk dari aplikasi",
+    description: "Tidak memerlukan kredensial apa pun. Mengembalikan token perangkat berlaku 90 hari yang dipakai pada seluruh endpoint lain. Maksimal 10 perangkat aktif per akun; perangkat terlama otomatis dicabut. Dibatasi 10 percobaan per 5 menit per email dan 20 permintaan per menit per alamat IP.",
+    body: [
+      { name: "email", type: "string", required: true, description: "Email akun pengguna." },
+      { name: "password", type: "string", required: true, description: "Kata sandi akun." },
+      { name: "deviceName", type: "string", description: "Nama perangkat agar mudah dikenali pengguna, mis. Android Nadia." },
+    ],
+    dataExample: deviceTokenExample,
+    errors: ["INVALID_CREDENTIALS", "PASSWORD_NOT_SET", "ACCOUNT_INACTIVE", "FORBIDDEN", "RATE_LIMITED"],
+    public: true,
+  },
+  {
+    method: "POST",
+    path: "/api/v1/auth/pair",
+    group: "Autentikasi",
+    summary: "Tukar kode pemasangan",
+    description: "Untuk akun yang masuk lewat Threads sehingga belum punya kata sandi. Pengguna membuat kode sendiri di dashboard web (Pengaturan, Keamanan dan data). Kode berlaku 10 menit dan hanya dapat ditukar satu kali.",
+    body: [
+      { name: "code", type: "string", required: true, description: "Kode 8 karakter dari dashboard web, mis. K7MP-3QXA." },
+      { name: "deviceName", type: "string", description: "Nama perangkat agar mudah dikenali pengguna." },
+    ],
+    dataExample: deviceTokenExample,
+    errors: ["PAIRING_CODE_INVALID", "PAIRING_CODE_USED", "PAIRING_CODE_EXPIRED", "ACCOUNT_INACTIVE"],
+    public: true,
+  },
+  {
+    method: "POST",
+    path: "/api/v1/auth/logout",
+    group: "Autentikasi",
+    summary: "Keluar dan cabut token",
+    description: "Mencabut token yang dipakai pada permintaan ini. Permintaan berikutnya dengan token yang sama dijawab CREDENTIAL_REVOKED.",
+    dataExample: { revoked: true },
+  },
+  {
+    method: "GET",
+    path: "/api/v1/me/devices",
+    group: "Autentikasi",
+    summary: "Daftar perangkat tertaut",
+    dataExample: [{
+      id: "clz2dev0001",
+      name: "Android Nadia",
+      source: "USER_LOGIN",
+      sourceLabel: "Masuk dari aplikasi",
+      tokenPrefix: "cmk_1a2b3c4d",
+      createdAt: "2026-10-10T08:00:00.000Z",
+      lastUsedAt: "2026-10-10T09:12:00.000Z",
+      expiresAt: "2027-01-08T08:00:00.000Z",
+    }],
+  },
+  {
+    method: "DELETE",
+    path: "/api/v1/me/devices/{id}",
+    group: "Autentikasi",
+    summary: "Cabut salah satu perangkat",
+    dataExample: { id: "clz2dev0001", revoked: true },
+    errors: ["NOT_FOUND"],
+  },
   {
     method: "GET",
     path: "/api/v1/me",

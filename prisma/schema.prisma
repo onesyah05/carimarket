@@ -124,6 +124,13 @@ enum TicketPriority {
   URGENT
 }
 
+/** Asal kredensial API: diterbitkan Superadmin, atau dibuat pengguna sendiri. */
+enum ApiCredentialSource {
+  SUPERADMIN
+  USER_LOGIN
+  USER_PAIRING
+}
+
 enum NotificationType {
   LEAD_DISCOVERED
   REPLY_SENT
@@ -162,6 +169,7 @@ model User {
   monthlyUsage       MonthlyUsage[]
   usageEvents        UsageEvent[]
   apiCredentials     ApiCredential[]          @relation("ApiCredentialOwner")
+  mobilePairingCodes MobilePairingCode[]
   issuedApiCredentials ApiCredential[]        @relation("ApiCredentialIssuer")
   authoredArticles   Article[]                @relation("ArticleAuthor")
   approvedArticles   Article[]                @relation("ArticleApprover")
@@ -576,6 +584,7 @@ model ApiCredential {
   /** Superadmin yang menerbitkan. */
   createdById String?
   name        String    @db.VarChar(120)
+  source      ApiCredentialSource @default(SUPERADMIN)
   keyPrefix   String    @db.VarChar(24)
   keyHash     String    @unique @db.VarChar(191)
   lastUsedAt  DateTime? @db.DateTime(3)
@@ -588,6 +597,27 @@ model ApiCredential {
 
   @@index([userId, revokedAt])
   @@index([keyPrefix])
+  @@index([source, revokedAt])
+}
+
+/**
+ * Kode pemasangan aplikasi mobile.
+ *
+ * Pengguna membuat kode berumur pendek dari dashboard web, lalu memasukkannya
+ * di aplikasi untuk menukarnya dengan token perangkat. Dipakai pengguna yang
+ * masuk lewat Threads sehingga belum punya kata sandi. Hanya hash kode yang
+ * disimpan dan kode hanya dapat ditukar satu kali.
+ */
+model MobilePairingCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String    @unique @db.VarChar(191)
+  expiresAt DateTime  @db.DateTime(3)
+  usedAt    DateTime? @db.DateTime(3)
+  createdAt DateTime  @default(now()) @db.DateTime(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
 
 model Notification {

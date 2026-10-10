@@ -10,6 +10,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { issueCredential, revokeCredential } from "@/server/api/credentials";
+import { createPairingCode } from "@/server/api/mobile-auth";
 
 const baseUrl = (process.argv[2] ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 
@@ -25,13 +26,19 @@ const READ_ONLY_PATHS = [
   "/api/v1/me/reply-automation",
   "/api/v1/me/business-profile",
   "/api/v1/me/notification-preferences",
+  "/api/v1/me/devices",
 ];
 
 type Check = { label: string; ok: boolean; detail: string };
 
-async function call(path: string, key: string | null) {
+async function call(path: string, key: string | null, init?: { method?: string; body?: unknown }) {
   const response = await fetch(`${baseUrl}${path}`, {
-    headers: key ? { Authorization: `Bearer ${key}` } : {},
+    method: init?.method ?? "GET",
+    headers: {
+      ...(key ? { Authorization: `Bearer ${key}` } : {}),
+      ...(init?.body === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    ...(init?.body === undefined ? {} : { body: JSON.stringify(init.body) }),
     cache: "no-store",
   });
   const payload = await response.json().catch(() => null) as
@@ -127,7 +134,67 @@ async function main() {
       detail: `status ${invalid.status}, kode ${invalid.payload?.error?.code ?? "-"}`,
     });
 
-    // 6. Endpoint internal tidak boleh terbuka untuk kunci API.
+    // 6. Alur pemasangan mandiri: kode dari dashboard ditukar menjadi token.
+    const pairing = await createPairingCode(target);
+    const paired = await call("/api/v1/auth/pair", null, { method: "POST", body: { code: pairing.code, deviceName: "Perangkat uji asap" } });
+    const pairedToken = (paired.payload?.data as { token?: string } | undefined)?.token ?? null;
+    checks.push({
+      label: "kode pemasangan ditukar menjadi token",
+      ok: paired.status === 201 && typeof pairedToken === "string" && envelopeIssues(paired.payload, true).length === 0,
+      detail: `status ${paired.status}, token ${pairedToken ? "diterima" : "tidak ada"}`,
+    });
+
+    if (pairedToken) {
+      const withPaired = await call("/api/v1/me", pairedToken);
+      checks.push({
+        label: "token hasil pemasangan dapat dipakai",
+        ok: withPaired.status === 200 && withPaired.payload?.success === true,
+        detail: `status ${withPaired.status}`,
+      });
+
+      // Kode hanya sekali pakai.
+      const reused = await call("/api/v1/auth/pair", null, { method: "POST", body: { code: pairing.code } });
+      checks.push({
+        label: "kode pemasangan tidak dapat dipakai dua kali",
+        ok: reused.status === 409 && reused.payload?.error?.code === "PAIRING_CODE_USED",
+        detail: `status ${reused.status}, kode ${reused.payload?.error?.code ?? "-"}`,
+      });
+
+      const loggedOut = await call("/api/v1/auth/logout", pairedToken, { method: "POST" });
+      const afterLogout = await call("/api/v1/me", pairedToken);
+      checks.push({
+        label: "keluar mencabut token perangkat",
+        ok: loggedOut.status === 200 && afterLogout.status === 401 && afterLogout.payload?.error?.code === "CREDENTIAL_REVOKED",
+        detail: `logout ${loggedOut.status}, pemakaian berikutnya ${afterLogout.status}/${afterLogout.payload?.error?.code ?? "-"}`,
+      });
+    }
+
+    // 7. Kode pemasangan asal ditolak.
+    const badCode = await call("/api/v1/auth/pair", null, { method: "POST", body: { code: "ZZZZ-9999" } });
+    checks.push({
+      label: "kode pemasangan asing ditolak",
+      ok: badCode.status === 400 && badCode.payload?.error?.code === "PAIRING_CODE_INVALID",
+      detail: `status ${badCode.status}, kode ${badCode.payload?.error?.code ?? "-"}`,
+    });
+
+    // 8. Masuk dengan kata sandi: akun tanpa kata sandi harus dijawab jelas.
+    const login = await call("/api/v1/auth/login", null, { method: "POST", body: { email: target.email, password: "sandi-yang-salah-sekali" } });
+    const expectedLoginCode = target.passwordHash ? "INVALID_CREDENTIALS" : "PASSWORD_NOT_SET";
+    checks.push({
+      label: `masuk tanpa kredensial benar ditolak ${expectedLoginCode}`,
+      ok: login.payload?.error?.code === expectedLoginCode,
+      detail: `status ${login.status}, kode ${login.payload?.error?.code ?? "-"}`,
+    });
+
+    // 9. Email tidak terdaftar tidak boleh dibedakan dari kata sandi salah.
+    const unknown = await call("/api/v1/auth/login", null, { method: "POST", body: { email: "tidak-ada@contoh.invalid", password: "apa-saja-panjang" } });
+    checks.push({
+      label: "email tidak terdaftar ditolak INVALID_CREDENTIALS",
+      ok: unknown.payload?.error?.code === "INVALID_CREDENTIALS",
+      detail: `status ${unknown.status}, kode ${unknown.payload?.error?.code ?? "-"}`,
+    });
+
+    // 10. Endpoint internal tidak boleh terbuka untuk kunci API.
     const internal = await call("/api/admin/api-credentials", issued.key);
     checks.push({
       label: "endpoint admin tidak dapat diakses kunci API",

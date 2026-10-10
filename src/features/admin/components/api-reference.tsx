@@ -24,6 +24,7 @@ function EndpointCard({ endpoint, baseUrl }: { endpoint: ApiEndpoint; baseUrl: s
       <header>
         <span className={`api-method api-method--${endpoint.method.toLowerCase()}`}>{endpoint.method}</span>
         <code>{endpoint.path}</code>
+        {endpoint.public && <span className="api-public-badge">tanpa token</span>}
       </header>
       <p className="api-endpoint__summary">{endpoint.summary}</p>
       {endpoint.description && <p className="api-endpoint__description">{endpoint.description}</p>}
@@ -63,7 +64,8 @@ function EndpointCard({ endpoint, baseUrl }: { endpoint: ApiEndpoint; baseUrl: s
 
 function curlExample(endpoint: ApiEndpoint, baseUrl: string) {
   const path = endpoint.path.replace(/\{(\w+)\}/g, "<$1>");
-  const lines = [`curl -X ${endpoint.method} "${baseUrl}${path}"`, `  -H "Authorization: Bearer $CARIMARKET_API_KEY"`];
+  const lines = [`curl -X ${endpoint.method} "${baseUrl}${path}"`];
+  if (!endpoint.public) lines.push(`  -H "Authorization: Bearer $CARIMARKET_API_TOKEN"`);
   if (endpoint.body?.length) {
     const body = Object.fromEntries(endpoint.body.filter(field => field.required).map(field => [field.name, placeholderFor(field.type)]));
     lines.push(`  -H "Content-Type: application/json"`);
@@ -87,12 +89,19 @@ export function ApiReference({ baseUrl }: { baseUrl: string }) {
     <section className="api-reference">
       <article className="panel api-doc-panel">
         <h2>Autentikasi</h2>
-        <p>Setiap permintaan menyertakan kunci API yang diterbitkan Superadmin. Tidak ada pendaftaran kunci dari sisi pengguna, dan satu kunci hanya membuka satu workspace.</p>
+        <p>Seluruh endpoint selain masuk dan pemasangan memerlukan token pada header berikut. Satu token hanya membuka satu workspace.</p>
         <CodeBlock>{`Authorization: Bearer cmk_1a2b3c4d_<rahasia>`}</CodeBlock>
+        <p>Token diperoleh melalui tiga jalur:</p>
         <ul className="api-field-list">
-          <li>Kunci disimpan sebagai hash SHA-256. Nilai aslinya hanya tampil sekali saat diterbitkan.</li>
-          <li>Kunci yang dicabut atau kedaluwarsa menolak permintaan dengan <code>CREDENTIAL_REVOKED</code> atau <code>CREDENTIAL_EXPIRED</code>.</li>
-          <li>Batas laju 120 permintaan per menit per kredensial. Kelebihannya dijawab <code>RATE_LIMITED</code>.</li>
+          <li><strong>Masuk dari aplikasi</strong> — <code>POST /api/v1/auth/login</code> dengan email dan kata sandi pengguna. Jalur utama untuk aplikasi yang dipakai banyak pengguna; tidak perlu campur tangan Superadmin.</li>
+          <li><strong>Kode pemasangan</strong> — pengguna membuat kode di dashboard web (Pengaturan, Keamanan dan data) lalu menukarnya lewat <code>POST /api/v1/auth/pair</code>. Dipakai akun yang masuk lewat Threads sehingga belum memiliki kata sandi.</li>
+          <li><strong>Kunci terbitan Superadmin</strong> — dibuat di halaman ini untuk integrasi internal atau pengujian. Tidak dipakai untuk pendaftaran pengguna massal.</li>
+        </ul>
+        <ul className="api-field-list">
+          <li>Token login dan pemasangan berlaku 90 hari; maksimal 10 perangkat aktif per akun, dan perangkat terlama otomatis dicabut saat batas terlampaui.</li>
+          <li>Hanya hash SHA-256 token yang disimpan. Nilai token hanya muncul sekali pada respons penerbitan.</li>
+          <li>Token yang dicabut atau kedaluwarsa dijawab <code>CREDENTIAL_REVOKED</code> atau <code>CREDENTIAL_EXPIRED</code>. Pengguna dapat mencabut perangkatnya sendiri lewat aplikasi maupun dashboard web.</li>
+          <li>Batas laju 120 permintaan per menit per token, dan 20 per menit per alamat IP untuk endpoint tanpa token.</li>
           <li>Cakupan API hanya menu pengguna. Tidak ada endpoint admin, superadmin, maupun data workspace lain.</li>
         </ul>
       </article>
