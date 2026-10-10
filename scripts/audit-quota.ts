@@ -96,8 +96,7 @@ async function auditUsers() {
       `  pencarian bulan  : ${quotaText(snapshot.search)} -> ${snapshot.search.allowed ? "boleh" : "DITOLAK"}${snapshot.search.warning ? " [peringatan 80%]" : ""}\n` +
       `  balasan bulan    : ${quotaText(snapshot.reply)} -> ${snapshot.reply.allowed ? "boleh" : "DITOLAK"}${snapshot.reply.warning ? " [peringatan 80%]" : ""}\n` +
       `  jadwal pencarian : ${hourly} tiap jam, ${daily} harian, ${manual} manual -> proyeksi ${projectedSearches} pencarian/bulan` +
-      (snapshot.search.limit !== null && projectedSearches > snapshot.search.limit ? ` [MELEBIHI kuota ${snapshot.search.limit}]` : "") + "
-" +
+      (snapshot.search.limit !== null && projectedSearches > snapshot.search.limit ? ` [MELEBIHI kuota ${snapshot.search.limit}]` : "") + "\n" +
       `  silang pemakaian : SearchRun selesai ${searchRuns}, UsageEvent ${eventSearch}, counter ${snapshot.search.used} | balasan terkirim ${repliesSent}, UsageEvent ${eventReply}, counter ${snapshot.reply.used}`,
     );
 
