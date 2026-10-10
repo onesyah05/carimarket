@@ -267,6 +267,13 @@ Aplikasi menjalankan pekerjaan terjadwal di dalam proses server (via `instrument
 
 Scope yang diminta adalah `threads_basic`, `threads_keyword_search`, dan `threads_content_publish`. Token jangka panjang disimpan terenkripsi menggunakan AES-256-GCM dan diperbarui sebelum kedaluwarsa.
 
+### Ketahanan dan diagnosis koneksi
+
+- Kegagalan sementara di sisi Meta (HTTP 5xx, 429, atau kode 0/1/2/4/17/341/368) dicoba ulang dua kali untuk penukaran dan pembaruan token. Penukaran kode otorisasi tidak pernah diulang karena kodenya sekali pakai.
+- Bila penukaran ke token jangka panjang gagal, koneksi tetap disimpan memakai token jangka pendek (`tokenKind = SHORT_LIVED`). Pengguna dapat langsung memakai integrasi, sistem mencoba meningkatkan token pada pemakaian berikutnya, dan halaman Pengaturan menampilkan peringatan beserta waktu kedaluwarsanya.
+- Pembaruan token yang gagal tidak lagi langsung menandai koneksi kedaluwarsa; token lama tetap dipakai selama masih berlaku, dan kode kegagalan terakhir disimpan di `ThreadsConnection.lastErrorCode` serta tampil di Superadmin → Kuota API.
+- Pesan asli dari Meta (`message`, `code`, `error_subcode`, `type`, `fbtrace_id`) dicatat ke log server dalam satu baris setelah disensor dari token dan secret, dan kegagalan perpanjangan token tercatat di audit log sebagai `THREADS_TOKEN_EXTEND_FAILED`. Sebelumnya hanya kode angka yang tercatat sehingga penyebabnya tidak dapat ditelusuri.
+
 Endpoint aplikasi:
 
 - `GET /api/integrations/threads/connect` memulai OAuth.

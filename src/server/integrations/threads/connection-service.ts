@@ -1,10 +1,10 @@
 import "server-only";
-import { ConnectionStatus, SearchCapability } from "@prisma/client";
+import { ConnectionStatus, SearchCapability, ThreadsTokenKind } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { decryptToken, encryptToken } from "@/server/security/token-encryption";
 import { THREADS_SCOPES } from "./config";
 import { ThreadsIntegrationError } from "./errors";
-import { refreshLongLivedToken } from "./oauth";
+import { exchangeLongLivedToken, refreshLongLivedToken } from "./oauth";
 
 type SavedConnection = {
   userId: string;
@@ -12,7 +12,17 @@ type SavedConnection = {
   username: string;
   accessToken: string;
   expiresIn: number;
+  /**
+   * SHORT_LIVED dipakai bila penukaran ke token jangka panjang gagal. Koneksi
+   * tetap disimpan agar pengguna bisa langsung memakainya, dan ditingkatkan
+   * otomatis pada pemakaian berikutnya.
+   */
+  tokenKind?: ThreadsTokenKind;
+  lastErrorCode?: string | null;
 };
+
+const REFRESH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const MINIMUM_USABLE_MS = 60_000;
 
 export async function saveThreadsConnection(input: SavedConnection) {
   const encrypted = encryptToken(input.accessToken);
@@ -38,9 +48,11 @@ export async function saveThreadsConnection(input: SavedConnection) {
       tokenIv: encrypted.iv,
       tokenAuthTag: encrypted.authTag,
       tokenKeyVersion: encrypted.keyVersion,
+      tokenKind: input.tokenKind ?? ThreadsTokenKind.LONG_LIVED,
       tokenExpiresAt: expiresAt,
       scopes: [...THREADS_SCOPES],
       lastCheckedAt: new Date(),
+      lastErrorCode: input.lastErrorCode ?? null,
     };
 
     return ownedElsewhere
@@ -53,7 +65,7 @@ export async function getThreadsConnectionStatus(userId: string) {
   const connection = await prisma.threadsConnection.findFirst({
     where: { userId, status: ConnectionStatus.CONNECTED },
     orderBy: { updatedAt: "desc" },
-    select: { id: true, username: true, status: true, capability: true, scopes: true, tokenExpiresAt: true, lastCheckedAt: true },
+    select: { id: true, username: true, status: true, capability: true, scopes: true, tokenKind: true, tokenExpiresAt: true, lastCheckedAt: true, lastErrorCode: true },
   });
   return connection;
 }
@@ -68,8 +80,33 @@ export async function disconnectThreads(userId: string) {
       tokenAuthTag: null,
       tokenKeyVersion: null,
       tokenExpiresAt: null,
+      lastErrorCode: null,
     },
   });
+}
+
+async function persistToken(connectionId: string, token: { access_token: string; expires_in: number }) {
+  const encrypted = encryptToken(token.access_token);
+  await prisma.threadsConnection.update({
+    where: { id: connectionId },
+    data: {
+      tokenCiphertext: encrypted.ciphertext,
+      tokenIv: encrypted.iv,
+      tokenAuthTag: encrypted.authTag,
+      tokenKeyVersion: encrypted.keyVersion,
+      tokenKind: ThreadsTokenKind.LONG_LIVED,
+      tokenExpiresAt: new Date(Date.now() + token.expires_in * 1000),
+      lastCheckedAt: new Date(),
+      lastErrorCode: null,
+    },
+  });
+}
+
+function recordFailure(connectionId: string, code: string, status?: ConnectionStatus) {
+  return prisma.threadsConnection.update({
+    where: { id: connectionId },
+    data: { lastErrorCode: code.slice(0, 100), lastCheckedAt: new Date(), ...(status ? { status } : {}) },
+  }).catch(() => undefined);
 }
 
 export async function getValidThreadsToken(userId: string) {
@@ -82,26 +119,40 @@ export async function getValidThreadsToken(userId: string) {
   }
 
   const token = decryptToken({ ciphertext: connection.tokenCiphertext, iv: connection.tokenIv, authTag: connection.tokenAuthTag });
-  const refreshAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
-  if (!connection.tokenExpiresAt || connection.tokenExpiresAt.getTime() > refreshAt) return token;
+  const expiresAt = connection.tokenExpiresAt?.getTime() ?? null;
+  const usableUntilNow = expiresAt === null || expiresAt > Date.now() + MINIMUM_USABLE_MS;
+
+  // Token jangka pendek: coba tingkatkan dulu. Bila Meta masih menolak, token
+  // yang ada tetap dipakai selama masih berlaku, jadi koneksi tidak hangus.
+  if (connection.tokenKind === ThreadsTokenKind.SHORT_LIVED) {
+    try {
+      const upgraded = await exchangeLongLivedToken(token);
+      await persistToken(connection.id, upgraded);
+      return upgraded.access_token;
+    } catch (error) {
+      const code = error instanceof ThreadsIntegrationError ? error.code : "TOKEN_UPGRADE_FAILED";
+      await recordFailure(connection.id, code, usableUntilNow ? undefined : ConnectionStatus.EXPIRED);
+      if (usableUntilNow) return token;
+      throw new ThreadsIntegrationError(
+        "THREADS_TOKEN_EXPIRED",
+        "Koneksi Threads sudah kedaluwarsa. Hubungkan kembali akun Anda.",
+        401,
+        error instanceof ThreadsIntegrationError ? error.diagnostics : undefined,
+      );
+    }
+  }
+
+  if (expiresAt === null || expiresAt > Date.now() + REFRESH_WINDOW_MS) return token;
 
   try {
     const refreshed = await refreshLongLivedToken(token);
-    const encrypted = encryptToken(refreshed.access_token);
-    await prisma.threadsConnection.update({
-      where: { id: connection.id },
-      data: {
-        tokenCiphertext: encrypted.ciphertext,
-        tokenIv: encrypted.iv,
-        tokenAuthTag: encrypted.authTag,
-        tokenKeyVersion: encrypted.keyVersion,
-        tokenExpiresAt: new Date(Date.now() + refreshed.expires_in * 1000),
-        lastCheckedAt: new Date(),
-      },
-    });
+    await persistToken(connection.id, refreshed);
     return refreshed.access_token;
   } catch (error) {
-    await prisma.threadsConnection.update({ where: { id: connection.id }, data: { status: ConnectionStatus.EXPIRED } });
+    const code = error instanceof ThreadsIntegrationError ? error.code : "TOKEN_REFRESH_FAILED";
+    // Token lama masih bisa dipakai sampai benar-benar kedaluwarsa.
+    await recordFailure(connection.id, code, usableUntilNow ? undefined : ConnectionStatus.EXPIRED);
+    if (usableUntilNow) return token;
     throw error;
   }
 }

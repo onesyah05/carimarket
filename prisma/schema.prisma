@@ -34,6 +34,16 @@ enum ConnectionStatus {
   ERROR
 }
 
+/**
+ * Token Threads jangka pendek (1 jam) hanya dipakai bila penukaran ke token
+ * jangka panjang gagal. Koneksi seperti itu tetap bisa dipakai, tetapi harus
+ * ditingkatkan atau dihubungkan ulang sebelum kedaluwarsa.
+ */
+enum ThreadsTokenKind {
+  SHORT_LIVED
+  LONG_LIVED
+}
+
 enum SearchCapability {
   LOCAL_DATA
   SELF_ONLY
@@ -253,9 +263,12 @@ model ThreadsConnection {
   tokenIv             String?            @db.VarChar(255)
   tokenAuthTag        String?             @db.VarChar(255)
   tokenKeyVersion     Int?
+  tokenKind           ThreadsTokenKind    @default(LONG_LIVED)
   tokenExpiresAt      DateTime?           @db.DateTime(3)
   scopes              Json?
   lastCheckedAt       DateTime?           @db.DateTime(3)
+  /// Kode kegagalan terakhir dari Meta (tanpa token/secret), untuk panel Superadmin.
+  lastErrorCode       String?             @db.VarChar(100)
   createdAt           DateTime            @default(now()) @db.DateTime(3)
   updatedAt           DateTime            @updatedAt @db.DateTime(3)
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)

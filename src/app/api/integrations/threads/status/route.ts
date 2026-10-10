@@ -44,6 +44,7 @@ export async function GET(request: Request) {
       publishingLimit = null;
     }
 
+    const tokenShortLived = connection.tokenKind === "SHORT_LIVED";
     const scopes = connection.scopes;
     const needsReconnectForReplies = !Array.isArray(scopes) ||
       !["threads_read_replies", "threads_manage_replies"].every(scope => scopes.includes(scope));
@@ -57,6 +58,8 @@ export async function GET(request: Request) {
         connected: true,
         searchPreviewAvailable: searchPreview.configured,
         username: connection.username,
+        tokenShortLived,
+        tokenExpiresAt: connection.tokenExpiresAt?.toISOString() ?? null,
         needsReconnectForReplies,
         publishingLimit,
         mode: "official",

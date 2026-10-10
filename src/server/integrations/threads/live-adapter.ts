@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { getThreadsConfig } from "./config";
 import { ThreadsIntegrationError } from "./errors";
+import { describeMetaError, metaErrorCode, parseMetaError } from "./meta-errors";
 import type { ThreadsAdapter } from "./types";
 
 const searchResponseSchema = z.object({
@@ -31,14 +32,16 @@ const publishingLimitSchema = z.object({
 
 async function requestMeta<T>(url: URL, schema: z.ZodType<T>, init?: RequestInit) {
   const response = await fetch(url, { ...init, cache: "no-store", signal: AbortSignal.timeout(15_000) });
-  const payload = await response.json().catch(() => null) as { error?: { message?: string; code?: number } } | null;
+  const payload = await response.json().catch(() => null);
   if (!response.ok) {
+    const diagnostics = parseMetaError(payload, response.status);
     throw new ThreadsIntegrationError(
-      `META_${payload?.error?.code ?? response.status}`,
+      metaErrorCode(diagnostics),
       response.status === 401 || response.status === 403
         ? "Koneksi Threads perlu diperbarui. Hubungkan kembali akun Anda."
         : "Threads sedang tidak dapat memproses permintaan. Silakan coba lagi nanti.",
       response.status >= 400 && response.status < 500 ? 400 : 502,
+      describeMetaError(diagnostics),
     );
   }
   const parsed = schema.safeParse(payload);

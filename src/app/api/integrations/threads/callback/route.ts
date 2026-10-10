@@ -1,10 +1,11 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { ThreadsTokenKind } from "@prisma/client";
 import { getThreadsConfig } from "@/server/integrations/threads/config";
 import { saveThreadsConnection } from "@/server/integrations/threads/connection-service";
-import { exchangeAuthorizationCode, exchangeLongLivedToken, getThreadsProfile } from "@/server/integrations/threads/oauth";
+import { SHORT_LIVED_TOKEN_TTL_SECONDS, exchangeAuthorizationCode, exchangeLongLivedToken, getThreadsProfile } from "@/server/integrations/threads/oauth";
 import { getWorkspaceUser } from "@/server/workspace-user";
-import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
+import { ThreadsIntegrationError, threadsErrorDetail } from "@/server/integrations/threads/errors";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
 import { createSession } from "@/server/auth/session";
@@ -73,10 +74,33 @@ export async function GET(request: NextRequest) {
     const user = await getWorkspaceUser().catch(() => null);
     stage = "token_exchange";
     const shortToken = await exchangeAuthorizationCode(code);
+
+    // Perpanjangan token boleh gagal tanpa menggagalkan koneksi: token jangka
+    // pendek tetap disimpan dan ditingkatkan otomatis pada pemakaian
+    // berikutnya, sehingga pengguna tidak terhenti di halaman error.
     stage = "token_extend";
-    const longToken = await exchangeLongLivedToken(shortToken.access_token);
+    let accessToken = shortToken.access_token;
+    let expiresIn = shortToken.expires_in ?? SHORT_LIVED_TOKEN_TTL_SECONDS;
+    let tokenKind: ThreadsTokenKind = ThreadsTokenKind.LONG_LIVED;
+    let extendErrorCode: string | null = null;
+    try {
+      const longToken = await exchangeLongLivedToken(shortToken.access_token);
+      accessToken = longToken.access_token;
+      expiresIn = longToken.expires_in;
+    } catch (error) {
+      tokenKind = ThreadsTokenKind.SHORT_LIVED;
+      extendErrorCode = error instanceof ThreadsIntegrationError ? error.code : "TOKEN_EXTEND_FAILED";
+      console.warn(`Threads token extend gagal, memakai token jangka pendek: ${threadsErrorDetail(error)}`);
+      await recordAudit({
+        actorId: user?.id ?? null,
+        action: "THREADS_TOKEN_EXTEND_FAILED",
+        entityType: "ThreadsConnection",
+        metadata: { code: extendErrorCode, detail: threadsErrorDetail(error).slice(0, 400) },
+      });
+    }
+
     stage = "profile";
-    const profile = await getThreadsProfile(longToken.access_token);
+    const profile = await getThreadsProfile(accessToken);
     stage = "save_failed";
 
     let targetUserId = user?.id;
@@ -113,8 +137,10 @@ export async function GET(request: NextRequest) {
       userId: targetUserId,
       externalAccountId: profile.id,
       username: profile.username,
-      accessToken: longToken.access_token,
-      expiresIn: longToken.expires_in,
+      accessToken,
+      expiresIn,
+      tokenKind,
+      lastErrorCode: extendErrorCode,
     });
 
     if (!user) {
@@ -132,8 +158,7 @@ export async function GET(request: NextRequest) {
       : error instanceof ThreadsIntegrationError && error.code === "META_101" && stage === "token_exchange"
         ? "invalid_app_secret"
       : stage;
-    const safeCode = error instanceof ThreadsIntegrationError ? error.code : "INTERNAL_ERROR";
-    console.warn(`Threads OAuth callback gagal pada tahap ${reason}: ${safeCode}`);
+    console.warn(`Threads OAuth callback gagal pada tahap ${reason}: ${threadsErrorDetail(error)}`);
     return redirectResult("error", reason);
   }
 }

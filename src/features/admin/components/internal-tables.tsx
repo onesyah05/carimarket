@@ -78,7 +78,7 @@ export function ConnectionsTable({ connections }: { connections: Array<Record<st
               <span data-label="Pengguna"><strong>{user.name}</strong><br /><small>{user.email}</small></span>
               <span data-label="Akun Threads">{connection.username ? `@${String(connection.username)}` : "—"}</span>
               <span data-label="Status">{statusLabel(String(connection.status))}{connection.tokenExpiresAt !== null && connection.status === "CONNECTED" ? <><br /><small>Token s.d. {expires}</small></> : null}</span>
-              <span data-label="Capability">{statusLabel(String(connection.capability))}</span>
+              <span data-label="Capability">{statusLabel(String(connection.capability))}{connection.tokenKind === "SHORT_LIVED" ? <><br /><small>Token jangka pendek</small></> : null}{connection.lastErrorCode ? <><br /><small>Kegagalan terakhir: {String(connection.lastErrorCode)}</small></> : null}</span>
               <span data-label="Pemakaian cari / balas">{`${connection.searchCount ?? 0} / ${connection.replyCount ?? 0}`}</span>
             </div>
           );

@@ -22,6 +22,8 @@ type ThreadsState = {
   credentialsInvalid?: boolean;
   connected: boolean;
   needsReconnectForReplies?: boolean;
+  tokenShortLived?: boolean;
+  tokenExpiresAt?: string | null;
   searchPreviewAvailable?: boolean;
   username?: string | null;
   publishingLimit?: {
@@ -135,6 +137,7 @@ export function SettingsPanel({ hasPassword, profileComplete }: { hasPassword: b
           {threads.loading ? <div className="integration-loading"><span className="integration-state__icon"><LoaderCircle className="spin" /></span><h3>Memeriksa koneksi</h3><p>Tunggu sebentar, kami sedang memeriksa akun Threads Anda.</p></div> : threads.connected ?
             <div className="integration-connected"><div className="integration-connected__account"><span className="integration-state__icon"><AtSign /></span><div><span className="integration-eyebrow">Akun terhubung</span><h3>{threads.username ? `@${threads.username}` : "Threads"}</h3><p>Ketersediaan pencarian dan balasan mengikuti izin yang diberikan Meta.</p></div></div><button className="button button--danger button--small" type="button" onClick={() => void disconnectThreads()}>Putuskan koneksi</button>
               {threads.needsReconnectForReplies && <div className="integration-alert" role="alert"><Shield size={17} /><span>Koneksi ini dibuat sebelum izin membaca dan mengelola balasan diminta. <a href="/api/integrations/threads/connect">Hubungkan ulang Threads</a> agar Meta meminta izin tersebut.</span></div>}
+              {threads.tokenShortLived && <div className="integration-alert" role="alert"><Shield size={17} /><span>Meta belum memberikan token jangka panjang untuk koneksi ini, jadi masa berlakunya singkat{threads.tokenExpiresAt ? ` (sampai ${new Date(threads.tokenExpiresAt).toLocaleString("id-ID")})` : ""}. Sistem mencoba meningkatkannya otomatis setiap kali dipakai; bila statusnya tidak berubah, <a href="/api/integrations/threads/connect">hubungkan ulang Threads</a>.</span></div>}
               {threads.publishingLimit && <div className="integration-quota" aria-live="polite">
                 <div className="integration-quota__row"><span>Kuota posting (24 jam)</span><strong>{threads.publishingLimit.quotaUsage} / {threads.publishingLimit.quotaLimit}</strong></div>
                 <div className="integration-quota__bar"><span style={{ width: `${pct(threads.publishingLimit.quotaUsage, threads.publishingLimit.quotaLimit)}%` }} /></div>

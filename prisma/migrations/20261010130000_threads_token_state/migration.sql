@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE `ThreadsConnection` ADD COLUMN `lastErrorCode` VARCHAR(100) NULL,
+    ADD COLUMN `tokenKind` ENUM('SHORT_LIVED', 'LONG_LIVED') NOT NULL DEFAULT 'LONG_LIVED';
+
