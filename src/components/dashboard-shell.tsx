@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { BookOpen, CircleHelp, CreditCard, FileCheck2, FileText, Gauge, History, KeyRound, LayoutDashboard, Mail, Menu, MessageSquareText, Plug, Search, Settings, ShieldCheck, Smartphone, Tags, Users, X } from "lucide-react";
+import { BookOpen, CircleHelp, CreditCard, FileCheck2, FileText, Gauge, History, KeyRound, LayoutDashboard, Mail, Menu, MessageSquareText, Plug, Search, Settings, ShieldCheck, Smartphone, Tags, UserCog, Users, X } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoutButton } from "@/features/auth/components/logout-button";
@@ -28,6 +28,7 @@ const adminNav: NavItem[] = [
   { label: "Moderasi", href: "/admin/moderasi", icon: ShieldCheck },
   { label: "Monitoring", href: "/admin/monitoring", icon: Gauge },
   { label: "Konten", href: "/admin/konten", icon: BookOpen },
+  { label: "Profil", href: "/admin/profil", icon: UserCog },
 ];
 
 const superNav: NavItem[] = [
@@ -43,6 +44,7 @@ const superNav: NavItem[] = [
   { label: "Pesan kontak", href: "/superadmin/kontak", icon: Mail },
   { label: "Audit", href: "/superadmin/audit", icon: FileText },
   { label: "CMS", href: "/superadmin/konten", icon: BookOpen },
+  { label: "Profil", href: "/superadmin/profil", icon: UserCog },
 ];
 
 export function DashboardShell({ children, user }: { children: React.ReactNode; user: { name: string; workspace: string; role: "user" | "admin" | "superadmin" } }) {

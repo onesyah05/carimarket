@@ -116,26 +116,6 @@ export function SystemStateTable({ worker, threadsOAuthStatus }: { worker: Worke
   );
 }
 
-export function PlansTable({ plans }: { plans: Array<Record<string, unknown>> }) {
-  return (
-    <section className="panel table-panel">
-      <TableHeading title="Daftar paket" description="Harga dan batas penggunaan setiap paket." count={plans.length} />
-      <div className="data-table internal-table">
-        <div className="data-row data-head data-row--4"><span>Paket</span><span>Harga bulanan</span><span>Batas kuota</span><span>Langganan aktif</span></div>
-        {plans.length === 0 && <EmptyRow cols="data-row--4" message="Belum ada paket. Jalankan seed untuk paket Starter." />}
-        {plans.map(plan => (
-          <div className="data-row data-row--4" key={String(plan.id)}>
-            <span data-label="Paket"><strong>{String(plan.name)}</strong><br /><small>{String(plan.code)}</small></span>
-            <span data-label="Harga bulanan">Rp {Number(plan.monthlyPrice).toLocaleString("id-ID")}</span>
-            <span data-label="Batas kuota">{`${plan.monthlySearchLimit} pencarian · ${plan.monthlyReplyLimit} balasan · ${plan.keywordLimit} kata kunci`}</span>
-            <span data-label="Langganan aktif">{String(plan._count ? (plan._count as { subscriptions: number }).subscriptions : 0)}</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export function TicketsTable({ tickets }: { tickets: Array<Record<string, unknown>> }) {
   return (
     <section className="panel table-panel">

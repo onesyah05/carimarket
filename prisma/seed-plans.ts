@@ -6,11 +6,17 @@ import { PLAN_CATALOG } from "./plan-catalog";
  *
  * Aman dijalankan di produksi dan berulang kali: hanya menyentuh tabel `Plan`,
  * mencocokkan baris berdasarkan `code`, dan tidak pernah menghapus paket yang
- * sudah dipakai langganan. Paket yang tidak ada di katalog dinonaktifkan
- * (`isActive = false`) agar histori langganan tetap utuh.
+ * sudah dipakai langganan.
+ *
+ * Paket yang sudah ada TIDAK ditimpa, karena harga dan kuota dapat disunting
+ * Superadmin dari panel dan suntingan itu tidak boleh hilang saat deploy.
+ * Setel `PLAN_SYNC_FORCE=1` bila memang ingin memaksa nilai katalog kembali.
+ * Paket di luar katalog dibiarkan apa adanya agar paket buatan panel tetap
+ * hidup.
  */
-export async function syncPlans(prisma: PrismaClient) {
-  const results: Array<{ code: string; price: string; action: "dibuat" | "diperbarui" }> = [];
+export async function syncPlans(prisma: PrismaClient, options?: { force?: boolean }) {
+  const force = options?.force ?? process.env.PLAN_SYNC_FORCE === "1";
+  const results: Array<{ code: string; price: string; action: "dibuat" | "diperbarui" | "dilewati" }> = [];
 
   for (const entry of PLAN_CATALOG) {
     const existing = await prisma.plan.findUnique({ where: { code: entry.code } });
@@ -23,6 +29,12 @@ export async function syncPlans(prisma: PrismaClient) {
       searchIntervalHours: entry.searchIntervalHours,
       isActive: true,
     };
+
+    if (existing && !force) {
+      results.push({ code: entry.code, price: Number(existing.monthlyPrice).toLocaleString("id-ID"), action: "dilewati" });
+      continue;
+    }
+
     await prisma.plan.upsert({
       where: { code: entry.code },
       update: data,
@@ -31,20 +43,18 @@ export async function syncPlans(prisma: PrismaClient) {
     results.push({ code: entry.code, price: entry.monthlyPrice.toLocaleString("id-ID"), action: existing ? "diperbarui" : "dibuat" });
   }
 
-  const retired = await prisma.plan.updateMany({
-    where: { code: { notIn: PLAN_CATALOG.map(entry => entry.code) }, isActive: true },
-    data: { isActive: false },
-  });
-
-  return { results, retiredCount: retired.count };
+  return { results, force };
 }
 
 async function main() {
   const prisma = new PrismaClient();
   try {
-    const { results, retiredCount } = await syncPlans(prisma);
+    const { results, force } = await syncPlans(prisma);
     for (const row of results) console.log(`${row.action}: ${row.code} Rp ${row.price}/bulan`);
-    if (retiredCount > 0) console.log(`dinonaktifkan: ${retiredCount} paket di luar katalog`);
+    const skipped = results.filter(row => row.action === "dilewati").length;
+    if (skipped > 0 && !force) {
+      console.log(`${skipped} paket dibiarkan apa adanya agar suntingan dari panel Superadmin tidak tertimpa. Pakai PLAN_SYNC_FORCE=1 untuk memaksa nilai katalog.`);
+    }
     console.log("Katalog paket tersinkron.");
   } finally {
     await prisma.$disconnect();

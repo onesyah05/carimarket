@@ -51,7 +51,7 @@ const connectionErrors: Record<string, string> = {
   signup_disabled: "Pendaftaran akun baru lewat Threads sedang dimatikan. Masuk terlebih dahulu, lalu hubungkan akun Threads dari halaman ini.",
 };
 
-export function SettingsPanel({ hasPassword, profileComplete }: { hasPassword: boolean; profileComplete: boolean }) {
+export function SettingsPanel({ profileComplete }: { profileComplete: boolean }) {
   const [active, setActive] = useState("profil");
   const navRef = useRef<HTMLElement>(null);
   const [threads, setThreads] = useState<ThreadsState>({ loading: true, configured: false, connected: false });
@@ -150,7 +150,7 @@ export function SettingsPanel({ hasPassword, profileComplete }: { hasPassword: b
       </>}
 
       {active === "notifikasi" && <NotificationSettings />}
-      {active === "keamanan" && <SecuritySettings initialHasPassword={hasPassword} />}
+      {active === "keamanan" && <SecuritySettings />}
     </section>
   </div>;
 }

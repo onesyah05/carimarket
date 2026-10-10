@@ -143,10 +143,6 @@ export async function listArticlesForInternal() {
   });
 }
 
-export async function listPlans() {
-  return prisma.plan.findMany({ orderBy: { monthlyPrice: "asc" }, include: { _count: { select: { subscriptions: true } } } });
-}
-
 export async function getSuperadminOverview() {
   const now = new Date();
   const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);

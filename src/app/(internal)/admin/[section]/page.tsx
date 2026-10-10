@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/dashboard-ui";
 import { getSessionUser } from "@/server/auth/session";
+import { getAccountOverview } from "@/server/settings/account";
+import { requirePageRole } from "@/server/auth/page-guards";
+import { InternalProfile } from "@/features/account/components/internal-profile";
 import { isThreadsConfigured } from "@/server/integrations/threads/config";
 import { listArticlesForCms } from "@/server/cms/articles";
 import { serializeCmsArticle } from "@/server/cms/serialize";
@@ -14,12 +17,21 @@ const HEADINGS: Record<string, { title: string; copy: string }> = {
   moderasi: { title: "Moderasi balasan", copy: "Setujui draft yang lolos aturan atau tolak draft berisiko. Keputusan tercatat di audit log." },
   monitoring: { title: "Monitoring integrasi", copy: "Kesehatan integrasi 24 jam terakhir, read-only." },
   konten: { title: "Draft konten", copy: "Tulis dan edit draft artikel. Terbit memerlukan persetujuan Superadmin." },
+  profil: { title: "Profil akun", copy: "Kelola identitas dan kata sandi akun internal Anda." },
 };
 
 export default async function AdminSection({ params }: { params: Promise<{ section: string }> }) {
   const { section } = await params;
   const heading = HEADINGS[section];
   if (!heading) notFound();
+
+  if (section === "profil") {
+    const actor = await requirePageRole(["ADMIN", "SUPERADMIN"], "/admin/profil");
+    return <>
+      <PageHeading eyebrow="Admin" title={heading.title} copy={heading.copy} />
+      <InternalProfile account={await getAccountOverview(actor)} />
+    </>;
+  }
 
   if (section === "tiket") {
     const [tickets, submissions] = await Promise.all([listSupportTickets(), listContactSubmissions()]);

@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/dashboard-ui";
 import { getSessionUser } from "@/server/auth/session";
+import { requirePageRole } from "@/server/auth/page-guards";
+import { getAccountOverview } from "@/server/settings/account";
+import { InternalProfile } from "@/features/account/components/internal-profile";
 import {
   listAdmins,
   listAuditLog,
@@ -9,7 +12,6 @@ import {
   listConnections,
   listFlaggedReplies,
   listModerationStats,
-  listPlans,
   listPlatformUsers,
 } from "@/server/admin/queries";
 import { listArticlesForCms } from "@/server/cms/articles";
@@ -17,7 +19,10 @@ import { serializeCmsArticle } from "@/server/cms/serialize";
 import { getWorkerStatus } from "@/server/jobs/runtime";
 import { getUnofficialCredentialsStatus } from "@/server/integrations/threads/unofficial-credentials";
 import { getThreadsConfig, getThreadsOAuthReadiness } from "@/server/integrations/threads/config";
-import { AuditTable, ConnectionsTable, ContactSubmissionsTable, ModerationQueue, PlansTable, SystemStateTable, UsersTable } from "@/features/admin/components/internal-tables";
+import { AuditTable, ConnectionsTable, ContactSubmissionsTable, ModerationQueue, SystemStateTable, UsersTable } from "@/features/admin/components/internal-tables";
+import { PlansManager } from "@/features/admin/components/plans-manager";
+import { listPlansForAdmin } from "@/server/plans/admin";
+import { PLAN_CATALOG } from "../../../../../prisma/plan-catalog";
 import { ApiDocs } from "@/features/admin/components/api-docs";
 import { listCredentials } from "@/server/api/credentials";
 import { AdminsManager } from "@/features/admin/components/admins-manager";
@@ -28,13 +33,14 @@ import { ArticlesManager } from "@/features/cms/components/articles-manager";
 const HEADINGS: Record<string, { title: string; copy: string }> = {
   admin: { title: "Manajemen Admin", copy: "Promosikan akun pengguna menjadi Admin dan atur permission mereka." },
   users: { title: "Manajemen Pengguna", copy: "Pantau akun, paket, dan status koneksi. Token tidak pernah ditampilkan di panel ini." },
-  paket: { title: "Paket dan billing", copy: "Daftar paket dan kuota berasal dari database." },
+  paket: { title: "Paket dan billing", copy: "Tambah dan ubah paket langganan. Harga serta kuota di sini langsung berlaku di halaman harga dan penegakan kuota." },
   kuota: { title: "Kuota API", copy: "Status koneksi Threads dan pemakaian agregat per pengguna." },
   kepatuhan: { title: "Kepatuhan", copy: "Kelola istilah terlarang dan pantau antrean moderasi lintas tim." },
   sistem: { title: "Pengaturan Sistem", copy: "Kondisi integrasi yang sebenarnya; nilai rahasia tidak pernah ditampilkan." },
   integrasi: { title: "Integrasi Threads", copy: "Periksa koneksi resmi Threads dan pencarian pratinjau sebelum App Review." },
   api: { title: "API Mobile", copy: "Dokumentasi API aplikasi mobile dan daftar token aktif. Halaman ini hanya dapat diakses Superadmin." },
   kontak: { title: "Pesan kontak", copy: "Pesan dari formulir kontak publik, tersimpan di database platform." },
+  profil: { title: "Profil akun", copy: "Kelola identitas dan kata sandi akun Superadmin Anda." },
   audit: { title: "Audit Log", copy: "Jejak aktivitas kritikal platform, terekam otomatis dari aplikasi." },
   konten: { title: "Manajemen Konten", copy: "Tulis, jadwalkan, dan terbitkan artikel blog. Admin mengajukan review, Superadmin menerbitkan." },
 };
@@ -43,6 +49,14 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
   const { section } = await params;
   const heading = HEADINGS[section];
   if (!heading) notFound();
+
+  if (section === "profil") {
+    const actor = await requirePageRole(["SUPERADMIN"], "/superadmin/profil");
+    return <>
+      <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
+      <InternalProfile account={await getAccountOverview(actor)} />
+    </>;
+  }
 
   if (section === "admin") {
     const admins = await listAdmins();
@@ -61,10 +75,10 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
   }
 
   if (section === "paket") {
-    const plans = await listPlans();
+    const plans = await listPlansForAdmin(PLAN_CATALOG.map(entry => entry.code));
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
-      <PlansTable plans={plans} />
+      <PlansManager plans={plans} />
     </>;
   }
 

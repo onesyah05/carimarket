@@ -304,6 +304,38 @@ Endpoint aplikasi:
 
 Pengiriman dari halaman detail lead dipublikasikan langsung. Aturan mode otomatis sudah tersimpan dan dipakai untuk menentukan kelayakan draft; eksekusi terjadwal tanpa interaksi pengguna memerlukan proses worker/cron terpisah sebelum dipakai di produksi.
 
+## Paket langganan
+
+Superadmin dapat menambah dan mengubah paket dari Superadmin → **Paket dan
+billing**: harga, kuota pencarian, kuota balasan, batas kata kunci, interval
+pencarian, dan status aktif. Perubahan langsung berlaku pada penegakan kuota
+dan halaman harga publik.
+
+Validasi server menolak kombinasi yang tidak masuk akal: jadwal penuh (batas
+kata kunci dengan interval paket) tidak boleh melampaui kuota pencarian
+bulanan, pemakaian harian tidak boleh melampaui batas Meta (2.200 pencarian dan
+1.000 balasan per 24 jam), dan paket yang masih dipakai langganan aktif tidak
+dapat dinonaktifkan. Batas bernilai 0 berarti tanpa batas.
+
+`npm run db:plans` kini **tidak menimpa** paket yang sudah ada, supaya
+penyuntingan dari panel tidak hilang saat deploy. Pakai `PLAN_SYNC_FORCE=1`
+bila memang ingin memaksa nilai katalog kembali. Teks pemasaran paket (tagline
+dan daftar keunggulan) tetap berasal dari `prisma/plan-catalog.ts`; paket yang
+dibuat lewat panel dan belum ada di katalog ditampilkan di halaman harga dengan
+ringkasan kuota otomatis.
+
+## Profil akun internal
+
+Akun Admin dan Superadmin memiliki halaman profil sendiri di `/admin/profil`
+dan `/superadmin/profil`: identitas (nama dan email), kata sandi, role, hak
+akses, dan waktu masuk terakhir. Sebelumnya endpoint kata sandi dan email
+dibatasi role `USER`, sehingga akun internal tidak dapat mengganti sandinya
+sendiri.
+
+Operasi tingkat akun kini netral role di `/api/account/profile` dan
+`/api/account/password`, dipakai bersama oleh pengaturan pengguna bisnis dan
+halaman profil internal.
+
 ## Akun Superadmin pada instalasi baru
 
 Database produksi tidak memakai seed pengembangan, jadi akun Superadmin dibuat
