@@ -7,7 +7,7 @@
  *
  * Jalankan: npm run db:audit-quota
  */
-import { KeywordKind, ReplyStatus, SearchRunStatus } from "@prisma/client";
+import { KeywordKind, SearchFrequency, ReplyStatus, SearchRunStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getQuotaSnapshot } from "@/server/usage/limits";
 import { currentPeriodStart } from "@/server/usage/quota";
@@ -67,11 +67,17 @@ async function auditUsers() {
   for (const user of users) {
     const snapshot = await getQuotaSnapshot(user.id);
     const subscription = user.subscriptions[0];
-    const [keywordsAll, keywordsInclude, keywordsPaused] = await Promise.all([
+    const [keywordsAll, keywordsInclude, keywordsPaused, hourly, daily, manual] = await Promise.all([
       prisma.keyword.count({ where: { userId: user.id } }),
       prisma.keyword.count({ where: { userId: user.id, kind: KeywordKind.INCLUDE } }),
       prisma.keyword.count({ where: { userId: user.id, isActive: false } }),
+      prisma.keyword.count({ where: { userId: user.id, isActive: true, kind: KeywordKind.INCLUDE, frequency: SearchFrequency.HOURLY } }),
+      prisma.keyword.count({ where: { userId: user.id, isActive: true, kind: KeywordKind.INCLUDE, frequency: SearchFrequency.DAILY } }),
+      prisma.keyword.count({ where: { userId: user.id, isActive: true, kind: KeywordKind.INCLUDE, frequency: SearchFrequency.MANUAL } }),
     ]);
+
+    // Proyeksi pemakaian bila seluruh jadwal berjalan penuh satu bulan.
+    const projectedSearches = hourly * 24 * 30 + daily * 30;
 
     // Sumber kebenaran pemakaian: jejak eksekusi, bukan penghitung agregat.
     const [searchRuns, repliesSent, usageEvents] = await Promise.all([
@@ -89,8 +95,15 @@ async function auditUsers() {
       `  kata kunci       : ${quotaText(snapshot.keywords)} (include ${keywordsInclude}, exclude ${keywordsAll - keywordsInclude}, dijeda ${keywordsPaused}) -> ${snapshot.keywords.allowed ? "boleh tambah" : "DITOLAK"}\n` +
       `  pencarian bulan  : ${quotaText(snapshot.search)} -> ${snapshot.search.allowed ? "boleh" : "DITOLAK"}${snapshot.search.warning ? " [peringatan 80%]" : ""}\n` +
       `  balasan bulan    : ${quotaText(snapshot.reply)} -> ${snapshot.reply.allowed ? "boleh" : "DITOLAK"}${snapshot.reply.warning ? " [peringatan 80%]" : ""}\n` +
+      `  jadwal pencarian : ${hourly} tiap jam, ${daily} harian, ${manual} manual -> proyeksi ${projectedSearches} pencarian/bulan` +
+      (snapshot.search.limit !== null && projectedSearches > snapshot.search.limit ? ` [MELEBIHI kuota ${snapshot.search.limit}]` : "") + "
+" +
       `  silang pemakaian : SearchRun selesai ${searchRuns}, UsageEvent ${eventSearch}, counter ${snapshot.search.used} | balasan terkirim ${repliesSent}, UsageEvent ${eventReply}, counter ${snapshot.reply.used}`,
     );
+
+    if (snapshot.search.limit !== null && projectedSearches > snapshot.search.limit) {
+      problems.push(`${user.email}: jadwal kata kunci memproyeksikan ${projectedSearches} pencarian/bulan, di atas kuota paket ${snapshot.search.limit}`);
+    }
 
     if (snapshot.search.used !== searchRuns) problems.push(`${user.email}: counter pencarian ${snapshot.search.used} != SearchRun selesai ${searchRuns}`);
     if (snapshot.reply.used !== repliesSent) problems.push(`${user.email}: counter balasan ${snapshot.reply.used} != balasan terkirim ${repliesSent}`);
