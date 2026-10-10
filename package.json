@@ -16,6 +16,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:plans": "tsx prisma/seed-plans.ts",
+    "db:audit-quota": "tsx --tsconfig scripts/tsconfig.json scripts/audit-quota.ts",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy"
   },

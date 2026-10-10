@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { enforceSameOrigin } from "@/server/http/request-guards";
-import { assertKeywordQuota } from "@/server/usage/limits";
+import { assertKeywordQuota, getQuotaSnapshot } from "@/server/usage/limits";
 import { publicThreadsError, ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 import { getWorkspaceUser } from "@/server/workspace-user";
 
@@ -20,8 +20,16 @@ function serialize(keyword: { id: string; phrase: string; kind: KeywordKind; isA
 export async function GET() {
   try {
     const user = await getWorkspaceUser();
-    const keywords = await prisma.keyword.findMany({ where: { userId: user.id }, include: { _count: { select: { leadMatches: true } } }, orderBy: { createdAt: "desc" } });
-    return NextResponse.json({ success: true, data: keywords.map(serialize) });
+    const [keywords, quota] = await Promise.all([
+      prisma.keyword.findMany({ where: { userId: user.id }, include: { _count: { select: { leadMatches: true } } }, orderBy: { createdAt: "desc" } }),
+      getQuotaSnapshot(user.id),
+    ]);
+    // Batas dihitung dari seluruh kata kunci, termasuk yang dijeda dan negatif.
+    return NextResponse.json({
+      success: true,
+      data: keywords.map(serialize),
+      meta: { keywordLimit: quota.keywords.limit, planName: quota.plan?.name ?? null },
+    });
   } catch (error) {
     const result = publicThreadsError(error);
     return NextResponse.json(result.body, { status: result.status });

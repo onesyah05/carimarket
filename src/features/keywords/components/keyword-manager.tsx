@@ -1,13 +1,16 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { LoaderCircle, Plus, Search, Trash2 } from "lucide-react";
 
 type Item = { id: string; label: string; negative: boolean; matches: number; active: boolean };
-type ApiResponse = { data?: Item | Item[]; error?: string };
+type Meta = { keywordLimit: number | null; planName: string | null };
+type ApiResponse = { data?: Item | Item[]; error?: string; meta?: Meta };
 
 export function KeywordManager() {
   const [items, setItems] = useState<Item[]>([]);
+  const [meta, setMeta] = useState<Meta>({ keywordLimit: null, planName: null });
   const [adding, setAdding] = useState(false);
   const [value, setValue] = useState("");
   const [negative, setNegative] = useState(false);
@@ -20,7 +23,9 @@ export function KeywordManager() {
       .then(async response => {
         const payload = await response.json() as ApiResponse;
         if (!response.ok) throw new Error(payload.error ?? "Kata kunci belum dapat dimuat.");
-        if (active) setItems(Array.isArray(payload.data) ? payload.data : []);
+        if (!active) return;
+        setItems(Array.isArray(payload.data) ? payload.data : []);
+        if (payload.meta) setMeta(payload.meta);
       })
       .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : "Kata kunci belum dapat dimuat."); })
       .finally(() => { if (active) setLoading(false); });
@@ -73,7 +78,9 @@ export function KeywordManager() {
     <div className="keyword-actions"><button className="button button--primary" onClick={() => setAdding(current => !current)}><Plus size={16} /> Tambah kata kunci</button></div>
     {adding && <form className="inline-add" onSubmit={add}><label htmlFor="new-keyword">Kata kunci baru</label><input className="input" id="new-keyword" value={value} onChange={event => setValue(event.target.value)} placeholder={negative ? "Contoh: lowongan" : "Contoh: foto properti"} autoFocus /><label className="sr-only" htmlFor="new-keyword-kind">Jenis kata kunci</label><select className="input" id="new-keyword-kind" value={negative ? "exclude" : "include"} onChange={event => setNegative(event.target.value === "exclude")}><option value="include">Pencarian</option><option value="exclude">Eksklusi</option></select><button className="button button--primary" type="submit" disabled={loading || value.trim().length < 2}>Tambahkan</button><button className="button button--ghost" type="button" onClick={() => setAdding(false)}>Batal</button></form>}
     {error && <div className="inline-error" role="alert"><strong>Kata kunci belum dapat diproses.</strong><span>{error}</span></div>}
-    <div className="keyword-summary"><div>{loading ? <LoaderCircle className="spin" /> : <Search />}<span><strong>{items.filter(item => item.active).length}</strong> kata kunci aktif</span></div></div>
+    <div className="keyword-summary"><div>{loading ? <LoaderCircle className="spin" /> : <Search />}<span>{meta.keywordLimit === null
+      ? <><strong>{items.length}</strong> kata kunci tersimpan, {items.filter(item => item.active).length} aktif</>
+      : <><strong>{items.length} dari {meta.keywordLimit}</strong> kata kunci terpakai{meta.planName ? ` pada paket ${meta.planName}` : ""}, {items.filter(item => item.active).length} aktif</>}</span></div>{meta.keywordLimit !== null && items.length >= meta.keywordLimit && <Link className="text-link" href="/harga">Batas paket tercapai, lihat paket lain</Link>}</div>
     <section className="panel table-panel"><div className="panel-heading"><div><h2>Daftar kata kunci</h2><p>Istilah pencarian menemukan lead; istilah eksklusi menyaring postingan yang memuatnya sebelum masuk ke feed.</p></div></div><div className="data-table keyword-table"><div className="data-row data-head"><span>Kata kunci</span><span>Jenis</span><span>Kecocokan</span><span>Status</span><span>Aksi</span></div>{items.map(keyword => <div className="data-row" key={keyword.id}><strong data-label="Kata kunci">{keyword.label}</strong><span data-label="Jenis"><em className={keyword.negative ? "tag-negative" : "tag-positive"}>{keyword.negative ? "Eksklusi" : "Pencarian"}</em></span><span data-label="Kecocokan">{keyword.matches} hasil</span><label className="switch-label" data-label="Status"><input type="checkbox" checked={keyword.active} onChange={event => void setActive(keyword, event.target.checked)} /> {keyword.active ? "Aktif" : "Jeda"}</label><div className="keyword-row-action" data-label="Aksi"><button className="icon-button" aria-label={`Hapus ${keyword.label}`} onClick={() => void remove(keyword)}><Trash2 size={17} /></button></div></div>)}{!loading && items.length === 0 && <div className="empty-state"><Search /><h2>Belum ada kata kunci</h2><p>Tambahkan istilah pertama untuk mulai mencari lead.</p></div>}</div></section>
   </>;
 }
