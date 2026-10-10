@@ -304,6 +304,20 @@ Endpoint aplikasi:
 
 Pengiriman dari halaman detail lead dipublikasikan langsung. Aturan mode otomatis sudah tersimpan dan dipakai untuk menentukan kelayakan draft; eksekusi terjadwal tanpa interaksi pengguna memerlukan proses worker/cron terpisah sebelum dipakai di produksi.
 
+## Akun Superadmin pada instalasi baru
+
+Database produksi tidak memakai seed pengembangan, jadi akun Superadmin dibuat
+secara sadar satu kali:
+
+```bash
+SUPERADMIN_EMAIL=nama@domain.com SUPERADMIN_PASSWORD='sandi minimal 12 karakter' npm run db:create-superadmin
+```
+
+Tanpa `SUPERADMIN_PASSWORD`, skrip membuat sandi acak dan menampilkannya sekali
+untuk segera diganti. Skrip menolak berjalan bila sudah ada Superadmin, kecuali
+`ALLOW_ADDITIONAL_SUPERADMIN=1` disertakan. Email yang sudah terdaftar akan
+dipromosikan tanpa mengganti sandinya, kecuali sandi baru disertakan.
+
 ## API aplikasi mobile
 
 API tersedia di `/api/v1` dan cakupannya hanya **menu pengguna bisnis**: tidak
