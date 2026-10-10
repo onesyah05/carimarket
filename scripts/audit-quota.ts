@@ -37,10 +37,13 @@ async function auditPlans() {
       if (plan.keywordLimit !== catalog.keywordLimit) drift.push(`kata kunci ${plan.keywordLimit} != ${catalog.keywordLimit}`);
       if (plan.searchIntervalHours !== catalog.searchIntervalHours) drift.push(`interval ${plan.searchIntervalHours}j != ${catalog.searchIntervalHours}j`);
     }
-    // Jadwal penuh harus muat dalam kuota bulanan paket.
+    // Jadwal penuh harus muat dalam kuota bulanan paket, dan sebaiknya
+    // menyisakan ruang untuk pencarian manual.
     const fullSchedule = Math.round(plan.keywordLimit * runsPerDay("HOURLY", plan.searchIntervalHours) * 30);
     if (fullSchedule > plan.monthlySearchLimit) {
       drift.push(`jadwal penuh ${fullSchedule} > kuota ${plan.monthlySearchLimit}`);
+    } else if (fullSchedule >= plan.monthlySearchLimit * 0.9) {
+      drift.push(`jadwal penuh ${fullSchedule} memakai ${Math.round((fullSchedule / plan.monthlySearchLimit) * 100)}% kuota, tanpa cadangan untuk pencarian manual`);
     }
     console.log(
       `${pad(plan.code, 9)} Rp ${pad(Number(plan.monthlyPrice).toLocaleString("id-ID"), 9)} ` +
