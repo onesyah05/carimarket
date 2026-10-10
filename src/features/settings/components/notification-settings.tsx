@@ -57,14 +57,14 @@ export function NotificationSettings() {
   }
 
   return <>
-    <div className="panel-heading"><div><h2>Notifikasi</h2><p>Atur jenis email yang ingin Anda terima saat layanan notifikasi tersedia.</p></div></div>
+    <div className="panel-heading"><div><h2>Notifikasi</h2><p>Notifikasi dalam aplikasi selalu aktif dan muncul di ikon lonceng. Pilihan di bawah mengatur salinan email.</p></div></div>
     <form className="notification-settings" onSubmit={event => void save(event)}>
       <div className="preference-list">
         <label><input type="checkbox" checked={preferences.emailLead} onChange={event => update("emailLead", event.target.checked)} disabled={!loaded || saving} /><span><strong>Lead baru</strong><small>Pembaruan saat ada lead yang sesuai kata kunci.</small></span></label>
         <label><input type="checkbox" checked={preferences.emailReply} onChange={event => update("emailReply", event.target.checked)} disabled={!loaded || saving} /><span><strong>Status balasan</strong><small>Perubahan status draft dan balasan yang dikirim.</small></span></label>
         <label><input type="checkbox" checked={preferences.emailQuota} onChange={event => update("emailQuota", event.target.checked)} disabled={!loaded || saving} /><span><strong>Batas kuota</strong><small>Peringatan saat penggunaan mendekati batas.</small></span></label>
       </div>
-      <p className="settings-note">Pilihan Anda tersimpan di akun. Pengiriman email belum aktif pada versi beta ini.</p>
+      <p className="settings-note">Pilihan Anda tersimpan di akun. Pengiriman email belum dikonfigurasi, jadi untuk sementara notifikasi hanya tampil di dalam aplikasi.</p>
       {error && <p className="form-feedback form-feedback--error" role="alert">{error}</p>}
       {saved && <p className="form-feedback form-feedback--success" role="status">Preferensi notifikasi tersimpan.</p>}
       <div className="settings-actions"><button className="button button--primary" type="submit" disabled={!loaded || saving}>{loading ? "Memuat pilihan..." : saving ? "Menyimpan..." : "Simpan pilihan"}</button></div>

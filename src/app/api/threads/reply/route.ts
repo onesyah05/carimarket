@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { deliverReplyForDraft } from "@/server/replies/delivery-service";
 import { enforceRateLimit, enforceSameOrigin } from "@/server/http/request-guards";
+import { assertReplyQuota } from "@/server/usage/limits";
 import { publicThreadsError, ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 import { getWorkspaceUser } from "@/server/workspace-user";
 
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
 
     const user = await getWorkspaceUser();
     enforceRateLimit(`threads-reply:${user.id}`, 20, 60_000);
+    await assertReplyQuota(user.id);
 
     const lead = await prisma.lead.findFirst({
       where: { id: input.data.leadId, userId: user.id },

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { listWorkspaceLeads } from "@/server/leads/queries";
 import { runKeywordSearch } from "@/server/leads/search-service";
 import { enforceRateLimit, enforceSameOrigin } from "@/server/http/request-guards";
+import { assertKeywordQuota } from "@/server/usage/limits";
 import { isThreadsAvailable } from "@/server/integrations/threads/config";
 import { publicThreadsError, ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 import { getWorkspaceUser } from "@/server/workspace-user";
@@ -34,14 +35,15 @@ export async function POST(request: Request) {
     const user = await getWorkspaceUser();
     enforceRateLimit(`threads-search:${user.id}`, 30, 60_000);
     const normalized = input.data.query.toLocaleLowerCase("id-ID");
+    await assertKeywordQuota(user.id, KeywordKind.INCLUDE, normalized);
     const keyword = await prisma.keyword.upsert({
       where: { userId_normalized_kind: { userId: user.id, normalized, kind: KeywordKind.INCLUDE } },
       update: { phrase: input.data.query, isActive: true, lastRunAt: new Date() },
       create: { userId: user.id, phrase: input.data.query, normalized, kind: KeywordKind.INCLUDE, lastRunAt: new Date() },
     });
 
-    const { resultCount } = await runKeywordSearch(keyword.id);
-    return NextResponse.json({ success: true, data: await listWorkspaceLeads(user.id), meta: { resultCount } });
+    const { resultCount, excludedCount } = await runKeywordSearch(keyword.id);
+    return NextResponse.json({ success: true, data: await listWorkspaceLeads(user.id), meta: { resultCount, excludedCount } });
   } catch (error) {
     const result = publicThreadsError(error);
     return NextResponse.json(result.body, { status: result.status });

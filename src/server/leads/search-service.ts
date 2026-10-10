@@ -3,13 +3,21 @@ import { KeywordKind, SearchCapability, SearchFrequency, SearchRunStatus } from 
 import { prisma } from "@/lib/prisma";
 import { getThreadsAdapter } from "@/server/integrations/threads";
 import { isThreadsAvailable } from "@/server/integrations/threads/config";
+import { createNotification } from "@/server/notifications/service";
+import { assertSearchQuota, hasSearchQuota } from "@/server/usage/limits";
 import { recordUsage } from "@/server/usage/service";
+import { matchedExcludedTerm, relevanceScore } from "./matching";
 
-export function relevanceScore(body: string, query: string) {
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-  const matches = terms.filter(term => body.toLowerCase().includes(term)).length;
-  return Math.min(100, Math.round(70 + (matches / Math.max(terms.length, 1)) * 30));
-}
+export { relevanceScore } from "./matching";
+
+export type KeywordSearchResult = {
+  /** Jumlah postingan yang masuk ke feed setelah penyaringan. */
+  resultCount: number;
+  /** Jumlah postingan yang dibuang karena memuat kata kunci negatif. */
+  excludedCount: number;
+  /** Jumlah lead yang benar-benar baru pada pencarian ini. */
+  createdCount: number;
+};
 
 function nextRunAt(frequency: SearchFrequency) {
   if (frequency === SearchFrequency.HOURLY) return new Date(Date.now() + 60 * 60 * 1000);
@@ -17,9 +25,23 @@ function nextRunAt(frequency: SearchFrequency) {
   return null;
 }
 
-export async function runKeywordSearch(keywordId: string) {
+/** Kata kunci negatif aktif milik pengguna, dipakai untuk menyaring hasil pencarian. */
+export async function loadExcludedTerms(userId: string) {
+  const keywords = await prisma.keyword.findMany({
+    where: { userId, kind: KeywordKind.EXCLUDE, isActive: true },
+    select: { normalized: true },
+  });
+  return keywords.map(keyword => keyword.normalized);
+}
+
+export async function runKeywordSearch(keywordId: string): Promise<KeywordSearchResult> {
   const keyword = await prisma.keyword.findUnique({ where: { id: keywordId } });
   if (!keyword) throw new Error("KEYWORD_NOT_FOUND");
+
+  // Kuota diperiksa sebelum SearchRun dibuat agar pemakaian yang ditolak tidak
+  // tercatat sebagai percobaan pencarian.
+  await assertSearchQuota(keyword.userId);
+  const excludedTerms = await loadExcludedTerms(keyword.userId);
 
   const run = await prisma.searchRun.create({
     data: {
@@ -33,13 +55,37 @@ export async function runKeywordSearch(keywordId: string) {
 
   try {
     const adapter = await getThreadsAdapter(keyword.userId);
-    const results = (await adapter.searchPosts(keyword.phrase)).filter(result => result.body.trim().length > 0);
+    const fetched = await adapter.searchPosts(keyword.phrase);
+
+    const results: typeof fetched = [];
+    let excludedCount = 0;
+    for (const result of fetched) {
+      if (result.body.trim().length === 0) continue;
+      if (matchedExcludedTerm(result.body, excludedTerms)) {
+        excludedCount += 1;
+        continue;
+      }
+      results.push(result);
+    }
+
+    let createdCount = 0;
     for (const result of results) {
-      await prisma.$transaction(async tx => {
+      const created = await prisma.$transaction(async tx => {
+        // Metrik keterlibatan hanya ditulis bila adapter benar-benar
+        // mengirimkannya, agar nilai yang sudah tersimpan tidak tertimpa nol.
+        const engagement = {
+          ...(result.likeCount === undefined ? {} : { likeCount: result.likeCount }),
+          ...(result.replyCount === undefined ? {} : { replyCount: result.replyCount }),
+          ...(result.repostCount === undefined ? {} : { repostCount: result.repostCount }),
+        };
         const post = await tx.threadPost.upsert({
           where: { externalPostId: result.externalPostId },
-          update: { authorHandle: result.authorHandle, authorName: result.authorName, body: result.body, permalink: result.permalink, postedAt: result.postedAt, capturedAt: new Date() },
-          create: { externalPostId: result.externalPostId, authorHandle: result.authorHandle, authorName: result.authorName, body: result.body, permalink: result.permalink, postedAt: result.postedAt },
+          update: { authorHandle: result.authorHandle, authorName: result.authorName, body: result.body, permalink: result.permalink, postedAt: result.postedAt, capturedAt: new Date(), ...engagement },
+          create: { externalPostId: result.externalPostId, authorHandle: result.authorHandle, authorName: result.authorName, body: result.body, permalink: result.permalink, postedAt: result.postedAt, ...engagement },
+        });
+        const existing = await tx.lead.findUnique({
+          where: { userId_threadPostId: { userId: keyword.userId, threadPostId: post.id } },
+          select: { id: true },
         });
         const score = relevanceScore(result.body, keyword.phrase);
         const lead = await tx.lead.upsert({
@@ -52,7 +98,9 @@ export async function runKeywordSearch(keywordId: string) {
           update: { score },
           create: { leadId: lead.id, keywordId: keyword.id, score },
         });
+        return existing === null;
       });
+      if (created) createdCount += 1;
     }
 
     await prisma.$transaction([
@@ -60,7 +108,18 @@ export async function runKeywordSearch(keywordId: string) {
       prisma.keyword.update({ where: { id: keyword.id }, data: { lastRunAt: new Date(), nextRunAt: nextRunAt(keyword.frequency) } }),
     ]);
     await recordUsage(keyword.userId, "SEARCH", 1, run.id);
-    return { resultCount: results.length };
+
+    if (createdCount > 0) {
+      await createNotification({
+        userId: keyword.userId,
+        type: "LEAD_DISCOVERED",
+        title: `${createdCount} lead baru ditemukan`,
+        body: `Kata kunci “${keyword.phrase}” menemukan ${createdCount} percakapan baru yang relevan.`,
+        href: "/dashboard/leads",
+      });
+    }
+
+    return { resultCount: results.length, excludedCount, createdCount };
   } catch (error) {
     const code = error instanceof Error && "code" in error ? String(error.code).slice(0, 100) : "SEARCH_FAILED";
     await prisma.$transaction([
@@ -81,9 +140,21 @@ export async function findDueKeywordIds(limit = 20) {
       frequency: { not: SearchFrequency.MANUAL },
       OR: [{ nextRunAt: null }, { nextRunAt: { lte: now } }],
     },
-    select: { id: true },
+    select: { id: true, userId: true },
     orderBy: { nextRunAt: "asc" },
     take: limit,
   });
-  return keywords.map(keyword => keyword.id);
+
+  // Pengguna yang kuotanya habis dilewati tanpa membuat SearchRun gagal.
+  const quotaByUser = new Map<string, boolean>();
+  const dueIds: string[] = [];
+  for (const keyword of keywords) {
+    let allowed = quotaByUser.get(keyword.userId);
+    if (allowed === undefined) {
+      allowed = await hasSearchQuota(keyword.userId);
+      quotaByUser.set(keyword.userId, allowed);
+    }
+    if (allowed) dueIds.push(keyword.id);
+  }
+  return dueIds;
 }

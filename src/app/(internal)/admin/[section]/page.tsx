@@ -4,13 +4,13 @@ import { getSessionUser } from "@/server/auth/session";
 import { isThreadsConfigured } from "@/server/integrations/threads/config";
 import { listArticlesForCms } from "@/server/cms/articles";
 import { serializeCmsArticle } from "@/server/cms/serialize";
-import { listFlaggedReplies, listMonitoringSnapshot, listSupportTickets } from "@/server/admin/queries";
+import { listContactSubmissions, listFlaggedReplies, listMonitoringSnapshot, listSupportTickets } from "@/server/admin/queries";
 import { getWorkerStatus } from "@/server/jobs/runtime";
-import { MonitoringPanels, ModerationQueue, TicketsTable } from "@/features/admin/components/internal-tables";
+import { ContactSubmissionsTable, MonitoringPanels, ModerationQueue, TicketsTable } from "@/features/admin/components/internal-tables";
 import { ArticlesManager } from "@/features/cms/components/articles-manager";
 
 const HEADINGS: Record<string, { title: string; copy: string }> = {
-  tiket: { title: "Tiket dukungan", copy: "Tanggapi pertanyaan pengguna tanpa membuka data sensitif." },
+  tiket: { title: "Tiket dukungan", copy: "Tanggapi pertanyaan pengguna dan pesan dari formulir kontak tanpa membuka data sensitif." },
   moderasi: { title: "Moderasi balasan", copy: "Setujui draft yang lolos aturan atau tolak draft berisiko. Keputusan tercatat di audit log." },
   monitoring: { title: "Monitoring integrasi", copy: "Kesehatan integrasi 24 jam terakhir, read-only." },
   konten: { title: "Draft konten", copy: "Tulis dan edit draft artikel. Terbit memerlukan persetujuan Superadmin." },
@@ -22,10 +22,11 @@ export default async function AdminSection({ params }: { params: Promise<{ secti
   if (!heading) notFound();
 
   if (section === "tiket") {
-    const tickets = await listSupportTickets();
+    const [tickets, submissions] = await Promise.all([listSupportTickets(), listContactSubmissions()]);
     return <>
       <PageHeading eyebrow="Admin" title={heading.title} copy={heading.copy} />
       <TicketsTable tickets={tickets} />
+      <ContactSubmissionsTable submissions={submissions} />
     </>;
   }
 

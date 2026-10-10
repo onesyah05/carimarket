@@ -13,6 +13,9 @@ export const localThreadsAdapter: ThreadsAdapter = {
       postedAt: new Date("2026-09-29T02:30:00.000Z"),
       capability: "LOCAL_DATA",
       simulated: true,
+      likeCount: 12,
+      replyCount: 3,
+      repostCount: 1,
     }];
   },
   async publishReply() { return { status: "SIMULATED_SENT" }; },

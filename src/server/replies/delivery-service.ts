@@ -2,6 +2,7 @@ import "server-only";
 import { LeadStatus, ReplyStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getThreadsAdapter } from "@/server/integrations/threads";
+import { createNotification } from "@/server/notifications/service";
 import { recordUsage } from "@/server/usage/service";
 
 export type DeliveryOutcome = {
@@ -44,6 +45,13 @@ export async function deliverReplyForDraft(draftId: string, idempotencyKey: stri
       prisma.lead.update({ where: { id: draft.leadId }, data: { status: LeadStatus.REPLIED } }),
     ]);
     await recordUsage(draft.userId, "REPLY", 1, draft.id);
+    await createNotification({
+      userId: draft.userId,
+      type: "REPLY_SENT",
+      title: finalStatus === ReplyStatus.SENT ? "Balasan terkirim ke Threads" : "Balasan tercatat (simulasi)",
+      body: draft.body.slice(0, 180),
+      href: "/dashboard/riwayat",
+    });
     return { status: finalStatus, externalReplyId: result.externalReplyId };
   } catch (error) {
     const code = error instanceof Error && "code" in error ? String(error.code).slice(0, 100) : "REPLY_FAILED";
@@ -51,6 +59,13 @@ export async function deliverReplyForDraft(draftId: string, idempotencyKey: stri
       prisma.replyDeliveryAttempt.update({ where: { id: attempt.id }, data: { status: ReplyStatus.FAILED, errorCode: code } }),
       prisma.replyDraft.update({ where: { id: draft.id }, data: { status: ReplyStatus.FAILED } }),
     ]).catch(() => undefined);
+    await createNotification({
+      userId: draft.userId,
+      type: "REPLY_FAILED",
+      title: "Balasan gagal dikirim",
+      body: `Pengiriman balasan tidak berhasil (${code}). Periksa koneksi Threads lalu coba lagi.`,
+      href: "/dashboard/riwayat",
+    });
     return { status: ReplyStatus.FAILED, errorCode: code };
   }
 }

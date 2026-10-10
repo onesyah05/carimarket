@@ -32,6 +32,12 @@ const postSchema = z.object({
   caption: z.object({ text: z.string().optional().nullable() }).optional().nullable(),
   taken_at: z.number().optional().nullable(),
   user: userSchema.optional().nullable(),
+  like_count: z.number().optional().nullable(),
+  text_post_app_info: z.object({
+    direct_reply_count: z.number().optional().nullable(),
+    repost_count: z.number().optional().nullable(),
+    quote_count: z.number().optional().nullable(),
+  }).optional().nullable(),
 });
 
 const threadSchema = z.object({
@@ -171,6 +177,11 @@ async function requestUnofficial<T>(
   return parsed.data;
 }
 
+/** Hanya menerima angka yang benar-benar dikirim Threads; sisanya tetap tidak diketahui. */
+function nonNegative(value: number | null | undefined): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.trunc(value) : undefined;
+}
+
 export function createUnofficialThreadsAdapter(credentials: UnofficialCredentials): ThreadsAdapter {
   return {
     async getCapability(): Promise<SearchCapability> {
@@ -198,6 +209,7 @@ export function createUnofficialThreadsAdapter(credentials: UnofficialCredential
 
         const code = post.code ?? post.pk;
         const handle = post.user?.username ?? "";
+        const engagement = post.text_post_app_info;
         results.push({
           externalPostId: post.pk,
           authorHandle: handle ? `@${handle}` : "",
@@ -207,6 +219,9 @@ export function createUnofficialThreadsAdapter(credentials: UnofficialCredential
           postedAt: new Date((post.taken_at ?? 0) * 1000),
           capability: "PUBLIC_SEARCH",
           simulated: false,
+          likeCount: nonNegative(post.like_count),
+          replyCount: nonNegative(engagement?.direct_reply_count),
+          repostCount: nonNegative(engagement?.repost_count),
         });
       }
       return results;

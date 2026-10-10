@@ -1,6 +1,7 @@
 import "server-only";
 import { runDueSearches } from "./search-job";
 import { processAutoReplies } from "./auto-reply-job";
+import { publishScheduledArticles } from "./article-job";
 
 export type WorkerStatus = {
   enabled: boolean;
@@ -49,7 +50,8 @@ export async function runCycle() {
   try {
     const searchSummary = await runDueSearches();
     const replySummary = await processAutoReplies();
-    worker.lastSummary = { ...searchSummary, ...replySummary };
+    const articleSummary = await publishScheduledArticles();
+    worker.lastSummary = { ...searchSummary, ...replySummary, ...articleSummary };
     worker.lastError = null;
     return { skipped: false, summary: worker.lastSummary };
   } catch (error) {

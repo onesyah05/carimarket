@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { Bell, BookOpen, CircleHelp, CreditCard, FileCheck2, FileText, Gauge, History, KeyRound, LayoutDashboard, Menu, MessageSquareText, Plug, Search, Settings, ShieldCheck, Tags, Users, X } from "lucide-react";
+import { BookOpen, CircleHelp, CreditCard, FileCheck2, FileText, Gauge, History, KeyRound, LayoutDashboard, Mail, Menu, MessageSquareText, Plug, Search, Settings, ShieldCheck, Tags, Users, X } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoutButton } from "@/features/auth/components/logout-button";
+import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import { useState } from "react";
 
 type NavItem = { label: string; href: string; icon: LucideIcon };
@@ -38,6 +39,7 @@ const superNav: NavItem[] = [
   { label: "Kepatuhan", href: "/superadmin/kepatuhan", icon: FileCheck2 },
   { label: "Sistem", href: "/superadmin/sistem", icon: KeyRound },
   { label: "Integrasi", href: "/superadmin/integrasi", icon: Plug },
+  { label: "Pesan kontak", href: "/superadmin/kontak", icon: Mail },
   { label: "Audit", href: "/superadmin/audit", icon: FileText },
   { label: "CMS", href: "/superadmin/konten", icon: BookOpen },
 ];
@@ -45,7 +47,6 @@ const superNav: NavItem[] = [
 export function DashboardShell({ children, user }: { children: React.ReactNode; user: { name: string; workspace: string; role: "user" | "admin" | "superadmin" } }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { role, name, workspace } = user;
   const nav = role === "user" ? userNav : role === "admin" ? adminNav : superNav;
   const initials = name.split(" ").map(part => part[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
@@ -68,7 +69,7 @@ export function DashboardShell({ children, user }: { children: React.ReactNode; 
     </aside>
     {open && <button className="sidebar-backdrop" onClick={() => setOpen(false)} aria-label="Tutup navigasi" />}
     <div className="app-main">
-      <header className="app-topbar"><button className="menu-button" onClick={() => setOpen(true)} aria-label="Buka menu"><Menu size={21} /></button><Link className="top-search" href={quickLink}><Search size={17} /><span>{quickLabel}</span></Link><ThemeToggle /><div className="notification-wrap"><button className="icon-button" aria-label="Buka notifikasi" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(value => !value)}><Bell size={19} /></button>{notificationsOpen && <div className="notification-popover"><strong>Notifikasi</strong><p>{isSuperadmin ? "Aktivitas penting platform dapat ditinjau melalui audit log." : role === "admin" ? "Periksa antrean moderasi untuk tindakan yang menunggu keputusan." : "Pembaruan lead dan balasan akan muncul di sini setelah integrasi aktif."}</p><Link href={notificationLink} onClick={() => setNotificationsOpen(false)}>{notificationLabel}</Link></div>}</div></header>
+      <header className="app-topbar"><button className="menu-button" onClick={() => setOpen(true)} aria-label="Buka menu"><Menu size={21} /></button><Link className="top-search" href={quickLink}><Search size={17} /><span>{quickLabel}</span></Link><ThemeToggle /><NotificationBell enabled={isUser} fallbackHref={notificationLink} fallbackLabel={notificationLabel} fallbackCopy={isSuperadmin ? "Aktivitas penting platform dapat ditinjau melalui audit log." : "Periksa antrean moderasi untuk tindakan yang menunggu keputusan."} /></header>
       <div className="app-content">{children}</div>
     </div>
   </div>;

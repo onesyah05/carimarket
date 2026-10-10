@@ -221,6 +221,7 @@ textarea.input { min-height: 120px; padding-block: 13px; resize: vertical; }
 .onboarding { min-height: 100dvh; background: var(--canvas); }
 .onboarding > header { min-height: 74px; padding: 0 36px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; background: white; }
 .onboarding > header a:last-child { color: var(--muted); font-size: .78rem; font-weight: 700; }
+.onboarding__required { color: var(--muted); font-size: .78rem; font-weight: 700; }
 .onboarding__body { width: min(650px, calc(100% - 36px)); margin: 64px auto; }
 .onboarding__progress { height: 5px; margin-bottom: 38px; border-radius: 99px; background: var(--line); overflow: hidden; }
 .onboarding__progress span { height: 100%; display: block; border-radius: inherit; background: var(--brand-strong); }
@@ -629,6 +630,16 @@ body { min-width: 320px; background: var(--surface); }
 .notification-popover { position: absolute; top: 50px; right: 0; z-index: 50; width: 280px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-raised); box-shadow: var(--shadow-md); }
 .notification-popover p { color: var(--muted); font-size: .8rem; line-height: 1.5; }
 .notification-popover a { color: var(--brand-strong); font-size: .78rem; font-weight: 750; text-decoration: underline; }
+.notification-wrap { position: relative; }
+.notification-wrap .icon-button { position: relative; }
+.notification-badge { position: absolute; top: -3px; right: -3px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 99px; display: grid; place-items: center; color: white; background: var(--danger); font-size: .62rem; font-weight: 800; }
+.notification-popover { width: 320px; max-height: 420px; overflow-y: auto; }
+.notification-list { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.notification-list li { padding: 10px; border: 1px solid var(--line); border-radius: 9px; display: grid; gap: 3px; }
+.notification-list li.notification-list__unread { border-color: color-mix(in srgb, var(--brand-strong) 45%, var(--line)); background: var(--brand-soft); }
+.notification-list strong { font-size: .8rem; }
+.notification-list span { color: var(--muted); font-size: .76rem; line-height: 1.45; }
+.notification-list small { color: var(--muted); font-size: .7rem; }
 .panel, .lead-card, .metric-card, .queue-card, .thread-post, .match-panel, .composer { border-radius: 10px; box-shadow: none; }
 .dash-heading span, .panel-heading p, .lead-card > p { font-size: .85rem; }
 .dashboard-priority-grid { margin-top: 18px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(270px, .55fr); gap: 16px; align-items: start; }
@@ -646,7 +657,8 @@ body { min-width: 320px; background: var(--surface); }
 .result-summary label { display: flex; align-items: center; gap: 8px; }
 .result-summary select { min-height: 36px; padding: 0 28px 0 9px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: var(--surface-raised); }
 .keyword-actions { margin: 0 0 24px; display: flex; justify-content: flex-end; }
-.inline-add { margin-bottom: 16px; padding: 18px; border: 1px solid var(--line); display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; background: var(--surface-raised); }
+.inline-add { margin-bottom: 16px; padding: 18px; border: 1px solid var(--line); display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: 10px; align-items: center; background: var(--surface-raised); }
+.inline-add select.input { width: auto; }
 .inline-add label { font-size: .8rem; font-weight: 750; }
 .keyword-summary { min-height: 58px; padding: 10px 16px; border: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; background: var(--surface-raised); }
 .keyword-summary > div { padding: 0; border: 0; background: transparent; }
@@ -1486,6 +1498,8 @@ html[data-theme="dark"] .app-shell--superadmin .internal-count { color: #bbd0ff;
 .app-shell--user .security-settings h3 { margin: 0 0 5px; font-size: .95rem; }
 .app-shell--user .security-settings p { margin: 0; color: var(--muted); font-size: .78rem; line-height: 1.55; }
 .app-shell--user .security-settings__password .settings-actions { justify-content: flex-start; }
+.app-shell--user .security-settings__email { max-width: 620px; padding-top: 20px; border-top: 1px solid var(--line); display: grid; gap: 16px; }
+.app-shell--user .security-settings__email .settings-actions { justify-content: flex-start; }
 .app-shell--user .security-settings__data { padding-top: 20px; border-top: 1px solid var(--line); display: grid; justify-items: start; gap: 12px; }
 .app-shell--user .security-settings__data p { max-width: 630px; }
 .app-shell--user .security-settings__data .text-link { font-size: .8rem; }
@@ -1496,5 +1510,6 @@ html[data-theme="dark"] .app-shell--superadmin .internal-count { color: #bbd0ff;
 @media (max-width: 620px) {
   .app-shell--user .settings-form .notification-settings, .app-shell--user .security-settings { padding: 16px; }
   .app-shell--user .notification-settings .settings-actions .button, .app-shell--user .security-settings .settings-actions .button, .app-shell--user .security-settings__data .button { width: 100%; }
+  .notification-popover { width: min(320px, calc(100vw - 48px)); }
   .app-shell--user .security-settings__data { justify-items: stretch; }
 }

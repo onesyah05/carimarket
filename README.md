@@ -9,7 +9,7 @@ cp .env.example .env
 docker compose up -d mysql
 npm install
 npm run db:generate
-npm run db:push
+npm run db:deploy
 npm run db:seed
 npm run dev
 ```
@@ -28,14 +28,39 @@ Setelah `npm run db:seed`, masuk lewat `/masuk` menggunakan salah satu akun beri
 
 Kata sandi ini hanya untuk pengembangan lokal; ganti sebelum dipakai di lingkungan lain.
 
+## Migration database
+
+Skema dikelola lewat Prisma migration di `prisma/migrations/`.
+
+```bash
+npm run db:migrate   # pengembangan: membuat dan menerapkan migration baru
+npm run db:deploy    # staging/produksi: menerapkan migration yang sudah ada
+```
+
+Database yang sebelumnya dibuat dengan `npm run db:push` perlu di-baseline satu
+kali agar migration awal tidak dijalankan ulang di atas tabel yang sudah ada:
+
+```bash
+npx prisma migrate resolve --applied 0_init
+npm run db:deploy
+```
+
+`npm run db:push` tetap tersedia untuk eksperimen cepat, tetapi perubahan skema
+yang dipakai bersama harus lewat migration.
+
 ## Validasi
 
 ```bash
 npm run lint
 npm run typecheck
+npm test
 npm run db:validate
 npm run build
 ```
+
+`npm test` menjalankan Vitest untuk logika murni: pencocokan kata kunci, jam
+tenang, perhitungan kuota, rate limit, dan guard pengalihan. Pengujian tidak
+membutuhkan MySQL maupun kredensial Threads.
 
 ## Deploy ke server dengan aaPanel
 
@@ -92,6 +117,7 @@ THREADS_APP_ID=""
 THREADS_APP_SECRET=""
 THREADS_GRAPH_URL="https://graph.threads.net/v1.0"
 AI_API_KEY=""
+THREADS_SIGNUP_ENABLED="true"
 INTEGRATION_MODE="live"
 WORKER_ENABLED="true"
 WORKER_INTERVAL_MS="60000"
@@ -104,7 +130,7 @@ Build dan siapkan database:
 ```bash
 npm install
 npm run db:generate
-npm run db:push
+npm run db:deploy
 npm run db:seed
 npm run build
 ```
@@ -148,7 +174,7 @@ cd /www/wwwroot/carimarket
 git pull
 npm install
 npm run db:generate
-npm run db:push
+npm run db:deploy
 npm run build
 pm2 restart carimarket
 ```
@@ -161,6 +187,60 @@ pm2 restart carimarket
 - **Ganti kata sandi dev**: semua akun seed memakai `carimarket123`. Setelah login, ganti kata sandi setiap akun di Pengaturan → Keamanan, atau hapus akun seed untuk produksi.
 - **Firewall aplikasi**: tambahkan WAF (ModSecurity) dari App Store aaPanel bila perlu.
 
+## Kuota paket
+
+Batas `monthlySearchLimit`, `monthlyReplyLimit`, dan `keywordLimit` pada paket
+ditegakkan di server (`src/server/usage/limits.ts`):
+
+- Batas diambil dari langganan aktif pengguna; bila belum ada langganan, paket
+  aktif termurah dipakai sebagai batas bawaan. Tanpa paket sama sekali,
+  pemakaian tidak dibatasi.
+- Pencarian, pengiriman balasan, dan penambahan kata kunci ditolak dengan
+  status 429 setelah batas tercapai. Worker melewati pengguna yang kuotanya
+  habis, bukan menandai pencarian sebagai gagal.
+- Pemakaian bulan berjalan tampil di `/dashboard/langganan`, dan peringatan
+  dikirim sebagai notifikasi saat pemakaian mencapai 80 persen.
+
+## Notifikasi
+
+Notifikasi dalam aplikasi tersimpan di tabel `Notification` dan muncul pada
+ikon lonceng dashboard pengguna (`GET|PATCH /api/notifications`). Pemicunya:
+lead baru dari pencarian, hasil pengiriman balasan, keputusan moderasi, dan
+peringatan kuota.
+
+Pengiriman email masih berupa adapter tanpa provider (`src/server/integrations/email/mailer.ts`),
+jadi salinan email belum terkirim. Preferensi email tetap tersimpan per akun dan
+akan dipakai begitu provider diisi.
+
+## Pendaftaran lewat Threads
+
+OAuth Threads juga berfungsi sebagai pendaftaran. Akun yang dibuat lewat jalur
+ini tidak memiliki email dari Meta, jadi:
+
+- email diisi placeholder (`threads-<id>@placeholder.carimarket.invalid`) dan
+  ditandai `emailIsPlaceholder`, sehingga tidak pernah dianggap dapat dihubungi;
+- pembuatan akun tercatat di audit log sebagai `AUTH_THREADS_SIGNUP`;
+- pengguna dapat mengisi email nyata dan kata sandi di Pengaturan → Keamanan
+  dan data;
+- panel Superadmin → Pengguna menandai akun dengan email placeholder atau email
+  yang belum terverifikasi;
+- setel `THREADS_SIGNUP_ENABLED="false"` untuk melarang pembuatan akun baru dari
+  OAuth; jalur itu hanya menghubungkan akun yang sudah masuk.
+
+## Formulir kontak
+
+`POST /api/contact` menyimpan pesan ke tabel `ContactSubmission` dengan
+pembatasan origin dan rate limit. Pesan dapat dibaca di Admin → Tiket dukungan
+dan Superadmin → Pesan kontak. Notifikasi email ke tim menyusul bersama adapter
+email.
+
+## Batas rate limit
+
+`enforceRateLimit` menyimpan hitungan di memori proses: tidak dibagi antar
+instance dan hilang saat restart. Entri kedaluwarsa dibersihkan berkala dan
+jumlah kunci dibatasi. Untuk beberapa instance di belakang load balancer,
+pindahkan hitungan ini ke penyimpanan bersama.
+
 ## Mode integrasi
 
 - `INTEGRATION_MODE=live`: menggunakan OAuth dan API resmi Threads.
@@ -171,7 +251,8 @@ pm2 restart carimarket
 Aplikasi menjalankan pekerjaan terjadwal di dalam proses server (via `instrumentation.ts`), tanpa Redis:
 
 - **Pencarian berkala**: kata kunci aktif dengan frekuensi `HOURLY`/`DAILY` dijalankan sesuai `nextRunAt`.
-- **Draft & kirim otomatis**: lead baru mendapat draft AI; mode `Tinjau dulu` menghasilkan `PENDING_APPROVAL`, mode `Balas otomatis` menjadwalkan kirim dengan ambang skor, batas harian, jeda, quiet hours, dan penahanan draft berisiko (blacklist → `FLAGGED` + antrean moderasi).
+- **Draft & kirim otomatis**: lead baru mendapat draft AI; mode `Tinjau dulu` menghasilkan `PENDING_APPROVAL`, mode `Balas otomatis` menjadwalkan kirim dengan ambang skor, batas harian, jeda, quiet hours, kuota paket, dan penahanan draft berisiko (blacklist → `FLAGGED` + antrean moderasi).
+- **Publikasi artikel terjadwal**: artikel berstatus `SCHEDULED` yang jadwalnya lewat diterbitkan otomatis dan tercatat di audit log sebagai `ARTICLE_AUTO_PUBLISHED`.
 - Pemicu manual & status: `GET|POST /api/admin/jobs` (Superadmin untuk POST), tampilan di `/superadmin/sistem` dan `/admin/monitoring`.
 - Konfigurasi: `WORKER_ENABLED="false"` untuk mematikan, `WORKER_INTERVAL_MS` untuk interval siklus (minimum 15 detik; default 60 detik).
 - Untuk produksi dengan banyak pengguna, pindahkan ke worker/cron terpisah yang memanggil fungsi `src/server/jobs/` yang sama.
@@ -181,7 +262,7 @@ Aplikasi menjalankan pekerjaan terjadwal di dalam proses server (via `instrument
 1. Buat Meta App dengan use case Threads.
 2. Salin `.env.example` menjadi `.env`, lalu isi `THREADS_APP_ID` dan `THREADS_APP_SECRET` dari bagian **Threads App** di Meta App Dashboard → App settings → Basic. Isi juga `DATABASE_URL` dan `APP_ENCRYPTION_KEY`.
 3. Daftarkan callback OAuth berikut di Meta App: `https://localhost:3000/api/integrations/threads/callback` atau URL HTTPS aplikasi produksi yang setara. URL harus sama persis dengan `NEXT_PUBLIC_APP_URL` ditambah path callback.
-4. Jalankan `npm run db:push` dan `npm run db:seed`.
+4. Jalankan `npm run db:deploy` dan `npm run db:seed`.
 5. Jalankan `npm run dev:https`, lalu buka Pengaturan → Integrasi Threads → Hubungkan Threads. Halaman Superadmin → Integrasi Threads menampilkan hasil validasi App ID/Secret tanpa menampilkan nilainya.
 
 Scope yang diminta adalah `threads_basic`, `threads_keyword_search`, dan `threads_content_publish`. Token jangka panjang disimpan terenkripsi menggunakan AES-256-GCM dan diperbarui sebelum kedaluwarsa.
@@ -194,7 +275,10 @@ Endpoint aplikasi:
 - `POST /api/integrations/threads/disconnect` memutus dan menghapus token tersimpan.
 - `POST /api/threads/search` menjalankan pencarian keyword.
 - `POST /api/threads/reply` mengirim balasan teks dengan `reply_to_id`, idempotency, dan pencatatan status pengiriman.
-- `GET|POST|PATCH|DELETE /api/keywords` mengelola kata kunci workspace di MySQL.
+- `GET|POST|PATCH|DELETE /api/keywords` mengelola kata kunci workspace di MySQL. Kata kunci bertipe `EXCLUDE` menyaring postingan sebelum menjadi lead.
+- `GET|PATCH /api/notifications` membaca dan menandai notifikasi pengguna.
+- `GET|PUT /api/settings/account-email` menampilkan dan mengganti email akun.
+- `POST /api/onboarding/complete` menandai onboarding selesai.
 - `GET|PUT /api/settings/reply-automation` menyimpan aturan tinjau/otomatis di MySQL.
 - `PATCH /api/admin/users` menangguhkan/mengaktifkan akun (SUPERADMIN), `POST /api/admin/users/connections` mereset koneksi Threads pengguna.
 - `POST|PATCH|DELETE /api/admin/admins` mempromosikan, mengatur permission, dan menurunkan akun Admin (SUPERADMIN).

@@ -5,6 +5,7 @@ import { recordAudit } from "@/server/audit";
 import { requireApiRole } from "@/server/auth/api-guards";
 import { enforceRateLimit, enforceSameOrigin } from "@/server/http/request-guards";
 import { publicThreadsError, ThreadsIntegrationError } from "@/server/integrations/threads/errors";
+import { createNotification } from "@/server/notifications/service";
 
 export const runtime = "nodejs";
 
@@ -40,6 +41,16 @@ export async function POST(request: Request) {
       }),
       prisma.moderationFlag.update({ where: { id: flag.id }, data: { resolvedAt: new Date() } }),
     ]);
+
+    await createNotification({
+      userId: flag.replyDraft.userId,
+      type: "MODERATION_DECISION",
+      title: input.data.decision === "APPROVE" ? "Draft tertanda disetujui tim moderasi" : "Draft tertanda ditolak tim moderasi",
+      body: input.data.decision === "APPROVE"
+        ? "Draft kembali ke antrean tinjauan Anda dan dapat dikirim setelah diperiksa."
+        : `Draft dibatalkan karena aturan ${flag.ruleCode}. Sesuaikan isi draft sebelum mencoba lagi.`,
+      href: "/dashboard/balasan",
+    });
 
     await recordAudit({
       actorId: actor.id,

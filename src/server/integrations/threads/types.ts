@@ -9,6 +9,14 @@ export type ThreadSearchResult = {
   postedAt: Date;
   capability: SearchCapability;
   simulated: boolean;
+  /**
+   * Metrik keterlibatan hanya tersedia pada jalur yang benar-benar
+   * mengembalikannya. `undefined` berarti belum diketahui, bukan nol, agar UI
+   * tidak menampilkan angka yang menyesatkan.
+   */
+  likeCount?: number;
+  replyCount?: number;
+  repostCount?: number;
 };
 
 export type ThreadsPublishingLimit = {

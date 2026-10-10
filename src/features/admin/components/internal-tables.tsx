@@ -25,7 +25,7 @@ export function UsersTable({ users }: { users: Array<Record<string, unknown>> & 
           const plan = (user.subscriptions as Array<{ plan: { name: string } }>)[0]?.plan.name ?? "—";
           return (
             <div className="data-row data-row--users" key={String(user.id)}>
-              <span data-label="Pengguna"><strong>{String(user.name)}</strong><br /><small>{String(user.email)}</small></span>
+              <span data-label="Pengguna"><strong>{String(user.name)}</strong><br /><small>{user.emailIsPlaceholder ? "Email placeholder (pendaftaran Threads)" : String(user.email)}</small>{!user.emailIsPlaceholder && user.emailVerifiedAt === null ? <><br /><small>Email belum terverifikasi</small></> : null}</span>
               <span data-label="Bisnis">{user.businessProfile ? String((user.businessProfile as { name: string }).name) : "—"}</span>
               <span data-label="Role">{statusLabel(String(user.role))}</span>
               <span data-label="Status">{statusLabel(String(user.status))}</span>
@@ -156,6 +156,26 @@ export function TicketsTable({ tickets }: { tickets: Array<Record<string, unknow
             </div>
           );
         })}
+      </div>
+    </section>
+  );
+}
+
+export function ContactSubmissionsTable({ submissions }: { submissions: Array<Record<string, unknown>> }) {
+  return (
+    <section className="panel table-panel">
+      <TableHeading title="Pesan dari formulir kontak" description="Permintaan dari calon pengguna yang belum memiliki akun." count={submissions.length} />
+      <div className="data-table internal-table">
+        <div className="data-row data-head data-row--4"><span>Pengirim</span><span>Bisnis</span><span>Pesan</span><span>Masuk</span></div>
+        {submissions.length === 0 && <EmptyRow cols="data-row--4" message="Belum ada pesan kontak yang masuk." />}
+        {submissions.map(submission => (
+          <div className="data-row data-row--4" key={String(submission.id)}>
+            <span data-label="Pengirim"><strong>{String(submission.name)}</strong><br /><small>{String(submission.email)}</small></span>
+            <span data-label="Bisnis">{submission.company ? String(submission.company) : "—"}</span>
+            <span data-label="Pesan">{String(submission.message).slice(0, 140)}{String(submission.message).length > 140 ? "…" : ""}</span>
+            <span data-label="Masuk">{formatDateTime(submission.createdAt as string)}</span>
+          </div>
+        ))}
       </div>
     </section>
   );

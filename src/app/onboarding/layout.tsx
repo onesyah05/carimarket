@@ -1,11 +1,11 @@
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { requirePageRole } from "@/server/auth/page-guards";
-import { hasCompleteBusinessProfile } from "@/server/settings/business-profile";
 
+/**
+ * Onboarding hanya untuk akun pengguna bisnis. Kelengkapan profil tidak
+ * diperiksa di sini karena langkah pertama justru berfungsi mengisinya;
+ * langkah 2 sampai 4 yang memeriksanya sendiri.
+ */
 export default async function OnboardingLayout({ children }: { children: React.ReactNode }) {
-  const user = await requirePageRole(["USER"], "/onboarding");
-  const profile = await prisma.businessProfile.findUnique({ where: { userId: user.id } });
-  if (!hasCompleteBusinessProfile(profile)) redirect("/dashboard/pengaturan");
+  await requirePageRole(["USER"], "/onboarding/bisnis");
   return <>{children}</>;
 }

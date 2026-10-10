@@ -6,6 +6,7 @@ import { exchangeAuthorizationCode, exchangeLongLivedToken, getThreadsProfile } 
 import { getWorkspaceUser } from "@/server/workspace-user";
 import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 import { prisma } from "@/lib/prisma";
+import { recordAudit } from "@/server/audit";
 import { createSession } from "@/server/auth/session";
 import { hasCompleteBusinessProfile } from "@/server/settings/business-profile";
 
@@ -17,7 +18,23 @@ function equalState(actual: string, expected: string) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-type FailureReason = "permission_denied" | "provider_error" | "missing_code" | "state_missing" | "state_mismatch" | "session_expired" | "token_exchange" | "invalid_app_secret" | "token_extend" | "profile" | "account_in_use" | "save_failed";
+type FailureReason = "permission_denied" | "provider_error" | "missing_code" | "state_missing" | "state_mismatch" | "session_expired" | "token_exchange" | "invalid_app_secret" | "token_extend" | "profile" | "account_in_use" | "save_failed" | "signup_disabled";
+
+/**
+ * Pendaftaran lewat Threads membuat akun baru tanpa email terverifikasi karena
+ * Meta tidak membagikan alamat email. Akun seperti itu diberi email placeholder
+ * yang ditandai eksplisit (`emailIsPlaceholder`) supaya tidak pernah dianggap
+ * alamat yang dapat dihubungi, dan pembuatannya tercatat di audit log.
+ * Setel THREADS_SIGNUP_ENABLED="false" untuk membatasi OAuth hanya pada akun
+ * yang sudah masuk.
+ */
+function isThreadsSignupEnabled() {
+  return process.env.THREADS_SIGNUP_ENABLED !== "false";
+}
+
+function placeholderEmail(threadsAccountId: string) {
+  return `threads-${threadsAccountId}@placeholder.carimarket.invalid`;
+}
 
 function settingsRedirect(status: "connected" | "error", reason?: FailureReason) {
   const url = new URL("/dashboard/pengaturan", getThreadsConfig().appUrl);
@@ -68,15 +85,24 @@ export async function GET(request: NextRequest) {
       if (existingConnection) {
         targetUserId = existingConnection.userId;
       } else {
+        if (!isThreadsSignupEnabled()) return redirectResult("error", "signup_disabled");
         const newUser = await prisma.user.create({
           data: {
-            email: `${profile.id}@threads.local`,
+            email: placeholderEmail(profile.id),
+            emailIsPlaceholder: true,
             name: profile.username,
             role: "USER",
             status: "ACTIVE",
           }
         });
         targetUserId = newUser.id;
+        await recordAudit({
+          actorId: newUser.id,
+          action: "AUTH_THREADS_SIGNUP",
+          entityType: "User",
+          entityId: newUser.id,
+          metadata: { emailVerified: false, emailIsPlaceholder: true },
+        });
       }
       const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
       await createSession(targetUserId, { ip, userAgent: request.headers.get("user-agent") ?? undefined });
@@ -93,7 +119,7 @@ export async function GET(request: NextRequest) {
 
     if (!user) {
       const businessProfile = await prisma.businessProfile.findUnique({ where: { userId: targetUserId } });
-      const destination = hasCompleteBusinessProfile(businessProfile) ? "/dashboard" : "/dashboard/pengaturan";
+      const destination = hasCompleteBusinessProfile(businessProfile) ? "/dashboard" : "/onboarding/bisnis";
       const response = NextResponse.redirect(new URL(destination, getThreadsConfig().appUrl));
       response.cookies.set("threads_oauth_state", "", { httpOnly: true, sameSite: "lax", secure: true, path: "/api/integrations/threads/callback", maxAge: 0 });
       return response;

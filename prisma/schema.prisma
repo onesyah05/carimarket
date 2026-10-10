@@ -114,6 +114,14 @@ enum TicketPriority {
   URGENT
 }
 
+enum NotificationType {
+  LEAD_DISCOVERED
+  REPLY_SENT
+  REPLY_FAILED
+  MODERATION_DECISION
+  QUOTA_WARNING
+}
+
 model User {
   id                 String                  @id @default(cuid())
   email              String                  @unique @db.VarChar(191)
@@ -122,6 +130,7 @@ model User {
   role               Role                    @default(USER)
   status             AccountStatus           @default(PENDING_VERIFICATION)
   emailVerifiedAt    DateTime?                @db.DateTime(3)
+  emailIsPlaceholder Boolean                  @default(false)
   lastLoginAt        DateTime?                @db.DateTime(3)
   suspendedAt        DateTime?                @db.DateTime(3)
   createdAt          DateTime                 @default(now()) @db.DateTime(3)
@@ -129,6 +138,7 @@ model User {
   deletedAt          DateTime?                @db.DateTime(3)
   businessProfile    BusinessProfile?
   notification       NotificationPreference?
+  notifications      Notification[]
   replyAutomation    ReplyAutomationSetting?
   sessions           Session[]
   threadsConnections ThreadsConnection[]
@@ -302,9 +312,9 @@ model ThreadPost {
   authorName     String?  @db.VarChar(140)
   body           String   @db.Text
   permalink      String   @db.VarChar(512)
-  likeCount      Int      @default(0)
-  replyCount     Int      @default(0)
-  repostCount    Int      @default(0)
+  likeCount      Int?
+  replyCount     Int?
+  repostCount    Int?
   postedAt       DateTime @db.DateTime(3)
   capturedAt     DateTime @default(now()) @db.DateTime(3)
   leads          Lead[]
@@ -531,6 +541,21 @@ model SupportMessage {
   author    User          @relation(fields: [authorId], references: [id], onDelete: Restrict)
 
   @@index([ticketId, createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String           @db.VarChar(191)
+  body      String           @db.VarChar(500)
+  href      String?          @db.VarChar(255)
+  readAt    DateTime?        @db.DateTime(3)
+  createdAt DateTime         @default(now()) @db.DateTime(3)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([createdAt])
 }
 
 model AuditLog {

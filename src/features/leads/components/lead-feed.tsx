@@ -5,16 +5,24 @@ import { LoaderCircle, Search } from "lucide-react";
 import { LeadCard } from "@/components/dashboard-ui";
 import type { Lead } from "@/lib/workspace-data";
 
-type ApiResponse = { data?: Lead[]; error?: string; code?: string; meta?: { resultCount: number } };
+type SearchMeta = { resultCount: number; excludedCount?: number };
+type ApiResponse = { data?: Lead[]; error?: string; code?: string; meta?: SearchMeta };
+
+const engagementFilters = [
+  { label: "Semua engagement", value: 0 },
+  { label: "Min. 10 interaksi", value: 10 },
+  { label: "Min. 50 interaksi", value: 50 },
+];
 
 export function LeadFeed() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("Semua");
   const [sort, setSort] = useState("relevansi");
+  const [minEngagement, setMinEngagement] = useState(0);
   const [items, setItems] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
-  const [lastSearch, setLastSearch] = useState<{ query: string; resultCount: number }>();
+  const [lastSearch, setLastSearch] = useState<{ query: string; resultCount: number; excludedCount: number }>();
 
   useEffect(() => {
     let active = true;
@@ -49,7 +57,7 @@ export function LeadFeed() {
       const payload = await response.json() as ApiResponse;
       if (!response.ok) throw new Error(payload.error ?? "Pencarian Threads gagal.");
       setItems(payload.data ?? []);
-      setLastSearch({ query: searchedQuery, resultCount: payload.meta?.resultCount ?? 0 });
+      setLastSearch({ query: searchedQuery, resultCount: payload.meta?.resultCount ?? 0, excludedCount: payload.meta?.excludedCount ?? 0 });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Pencarian Threads gagal.");
     } finally {
@@ -59,7 +67,12 @@ export function LeadFeed() {
 
   const filtered = useMemo(() => items
     .filter(lead => status === "Semua" || lead.status === status)
-    .sort((a, b) => sort === "relevansi" ? b.score - a.score : b.time.localeCompare(a.time)), [items, status, sort]);
+    // Lead tanpa metrik tidak dapat dibandingkan, jadi hanya disaring saat
+    // pengguna benar-benar meminta ambang engagement.
+    .filter(lead => minEngagement === 0 || (lead.likes ?? 0) + (lead.replies ?? 0) >= minEngagement)
+    .sort((a, b) => sort === "relevansi"
+      ? b.score - a.score
+      : new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()), [items, status, sort, minEngagement]);
 
   return <>
     <form className="filter-bar threads-search-bar" onSubmit={searchThreads}>
@@ -68,7 +81,7 @@ export function LeadFeed() {
       <div className="filter-tabs" aria-label="Filter status">{["Semua", "Baru", "Tersimpan", "Dibalas"].map(item => <button type="button" className={status === item ? "active" : ""} key={item} onClick={() => setStatus(item)}>{item}</button>)}</div>
     </form>
     {error && <div className="inline-error" role="alert"><strong>Pencarian belum dapat dijalankan.</strong><span>{error}</span></div>}
-    <div className="result-summary"><span><strong>{filtered.length}</strong> lead ditemukan</span><label>Urutkan <select value={sort} onChange={event => setSort(event.target.value)}><option value="relevansi">Paling relevan</option><option value="terbaru">Terbaru</option></select></label></div>
+    <div className="result-summary"><span><strong>{filtered.length}</strong> lead ditemukan{lastSearch && lastSearch.excludedCount > 0 ? ` · ${lastSearch.excludedCount} disaring kata kunci negatif` : ""}</span><label>Engagement <select value={minEngagement} onChange={event => setMinEngagement(Number(event.target.value))} aria-label="Filter engagement minimum">{engagementFilters.map(filter => <option key={filter.value} value={filter.value}>{filter.label}</option>)}</select></label><label>Urutkan <select value={sort} onChange={event => setSort(event.target.value)}><option value="relevansi">Paling relevan</option><option value="terbaru">Terbaru</option></select></label></div>
     <div className="lead-list">{filtered.map(lead => <LeadCard key={lead.id} lead={lead} />)}{!loading && filtered.length === 0 && <div className="empty-state"><Search /><h2>{lastSearch?.resultCount === 0 ? "Tidak ada hasil dari Threads" : "Belum ada lead"}</h2><p>{lastSearch?.resultCount === 0 ? `Pencarian “${lastSearch.query}” selesai, tetapi Threads tidak mengembalikan postingan. Sebelum izin pencarian publik disetujui Meta, hasil dapat terbatas pada postingan akun Anda sendiri.` : "Jalankan pencarian Threads untuk menemukan percakapan yang sesuai dengan bisnis Anda."}</p></div>}</div>
   </>;
 }

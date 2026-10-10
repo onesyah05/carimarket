@@ -1,4 +1,4 @@
-import { PrismaClient, Role, AccountStatus, ReplyMode, AdminPermissionKey, ArticleStatus } from "@prisma/client";
+import { PrismaClient, Role, AccountStatus, ReplyMode, AdminPermissionKey, ArticleStatus, SubscriptionStatus } from "@prisma/client";
 import { randomBytes, scrypt } from "node:crypto";
 import { promisify } from "node:util";
 
@@ -86,20 +86,22 @@ Akhiri dengan ajakan yang mudah dipenuhi: bertukar pesan, mengirim contoh hasil,
 async function main() {
   const passwordHash = await devPasswordHash();
 
-  await prisma.plan.upsert({
+  // Batas paket ini benar-benar ditegakkan server (lihat src/server/usage/limits.ts),
+  // jadi angkanya dibuat cukup longgar untuk pengembangan lokal.
+  const starterPlan = await prisma.plan.upsert({
     where: { code: "STARTER" },
-    update: {},
+    update: { monthlySearchLimit: 500, monthlyReplyLimit: 100, keywordLimit: 15 },
     create: {
       code: "STARTER",
       name: "Starter",
       monthlyPrice: 0,
-      monthlySearchLimit: 100,
-      monthlyReplyLimit: 20,
-      keywordLimit: 3,
+      monthlySearchLimit: 500,
+      monthlyReplyLimit: 100,
+      keywordLimit: 15,
     },
   });
 
-  await prisma.user.upsert({
+  const businessUser = await prisma.user.upsert({
     where: { email: "nadia@langitvisual.id" },
     update: { passwordHash },
     create: {
@@ -131,6 +133,22 @@ async function main() {
       },
     },
   });
+
+  // Langganan fiktif agar jalur "batas dari langganan" ikut terpakai saat dev.
+  const periodStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
+  const periodEnd = new Date(Date.UTC(periodStart.getUTCFullYear(), periodStart.getUTCMonth() + 1, 1));
+  const existingSubscription = await prisma.subscription.findFirst({ where: { userId: businessUser.id } });
+  if (!existingSubscription) {
+    await prisma.subscription.create({
+      data: {
+        userId: businessUser.id,
+        planId: starterPlan.id,
+        status: SubscriptionStatus.TRIAL,
+        currentPeriodStart: periodStart,
+        currentPeriodEnd: periodEnd,
+      },
+    });
+  }
 
   await prisma.user.upsert({
     where: { email: "admin@carimarket.id" },

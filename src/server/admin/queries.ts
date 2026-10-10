@@ -16,6 +16,8 @@ export async function listPlatformUsers() {
       status: true,
       createdAt: true,
       lastLoginAt: true,
+      emailVerifiedAt: true,
+      emailIsPlaceholder: true,
       businessProfile: { select: { name: true, category: true } },
       subscriptions: { where: { status: { in: ["TRIAL", "ACTIVE", "PAST_DUE"] } }, select: { plan: { select: { name: true } } }, take: 1, orderBy: { createdAt: "desc" } },
     },
@@ -103,6 +105,13 @@ export async function listSupportTickets() {
       requester: { select: { name: true, email: true } },
       assignee: { select: { name: true } },
     },
+  });
+}
+
+export async function listContactSubmissions() {
+  return prisma.contactSubmission.findMany({
+    orderBy: { createdAt: "desc" },
+    take: RECENT_LIMIT,
   });
 }
 

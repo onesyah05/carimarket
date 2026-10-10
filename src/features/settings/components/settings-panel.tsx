@@ -46,6 +46,7 @@ const connectionErrors: Record<string, string> = {
   profile: "Token diterima, tetapi profil akun Threads belum dapat dibaca. Periksa izin Threads Basic lalu coba lagi.",
   account_in_use: "Akun Threads ini sudah terhubung ke workspace lain.",
   save_failed: "Koneksi berhasil diotorisasi, tetapi belum dapat disimpan. Silakan coba lagi.",
+  signup_disabled: "Pendaftaran akun baru lewat Threads sedang dimatikan. Masuk terlebih dahulu, lalu hubungkan akun Threads dari halaman ini.",
 };
 
 export function SettingsPanel({ hasPassword, profileComplete }: { hasPassword: boolean; profileComplete: boolean }) {

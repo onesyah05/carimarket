@@ -2,18 +2,9 @@ import "server-only";
 import { ConnectionStatus, LeadStatus, ReplyMode, ReplyStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { deterministicReplyGenerator } from "@/server/integrations/ai/reply-generator";
+import { isWithinQuietHours } from "@/server/replies/automation-rules";
 import { deliverReplyForDraft } from "@/server/replies/delivery-service";
-
-function isWithinQuietHours(setting: { quietHoursEnabled: boolean; quietHoursStart: string | null; quietHoursEnd: string | null }, now = new Date()) {
-  if (!setting.quietHoursEnabled || !setting.quietHoursStart || !setting.quietHoursEnd) return false;
-  const minutes = now.getUTCHours() * 60 + now.getUTCMinutes();
-  const [startHour, startMinute] = setting.quietHoursStart.split(":").map(Number);
-  const [endHour, endMinute] = setting.quietHoursEnd.split(":").map(Number);
-  if ([startHour, startMinute, endHour, endMinute].some(Number.isNaN)) return false;
-  const start = startHour * 60 + startMinute;
-  const end = endHour * 60 + endMinute;
-  return start <= end ? minutes >= start && minutes < end : minutes >= start || minutes < end;
-}
+import { hasReplyQuota } from "@/server/usage/limits";
 
 /**
  * Hanya jalur resmi (OAuth Meta) yang mendukung publish. Jalur tidak resmi
@@ -39,7 +30,7 @@ async function repliesUsedToday(userId: string) {
 }
 
 export async function processAutoReplies(limitUsers = 50) {
-  const summary = { usersChecked: 0, draftsCreated: 0, draftsFlagged: 0, draftsScheduled: 0, delivered: 0, deliveryFailed: 0 };
+  const summary = { usersChecked: 0, draftsCreated: 0, draftsFlagged: 0, draftsScheduled: 0, delivered: 0, deliveryFailed: 0, quotaBlocked: 0 };
 
   const users = await prisma.user.findMany({
     where: { status: "ACTIVE", replyAutomation: { isNot: null } },
@@ -86,6 +77,8 @@ export async function processAutoReplies(limitUsers = 50) {
       if (setting.mode === ReplyMode.AUTO_SEND) {
         if (Number(lead.relevanceScore) < setting.minimumScore) continue;
         if (isWithinQuietHours(setting)) continue;
+        // Batas kuota paket berlaku juga untuk pengiriman otomatis.
+        if (!(await hasReplyQuota(user.id))) { summary.quotaBlocked += 1; continue; }
         const used = await repliesUsedToday(user.id);
         if (used >= setting.dailyLimit) continue;
         if (!(await canPublishViaThreads(user.id))) {
@@ -131,6 +124,7 @@ export async function processAutoReplies(limitUsers = 50) {
       if (isWithinQuietHours(setting)) continue;
       if (await repliesUsedToday(draft.userId) >= setting.dailyLimit) continue;
     }
+    if (!(await hasReplyQuota(draft.userId))) { summary.quotaBlocked += 1; continue; }
     const outcome = await deliverReplyForDraft(draft.id, `scheduled-${draft.id}`);
     if (outcome.status === ReplyStatus.SENT || outcome.status === ReplyStatus.SIMULATED_SENT) summary.delivered += 1;
     else if (outcome.status === ReplyStatus.FAILED) summary.deliveryFailed += 1;

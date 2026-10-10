@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { enforceSameOrigin } from "@/server/http/request-guards";
+import { assertKeywordQuota } from "@/server/usage/limits";
 import { publicThreadsError, ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 import { getWorkspaceUser } from "@/server/workspace-user";
 
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
     const user = await getWorkspaceUser();
     const kind = input.data.negative ? KeywordKind.EXCLUDE : KeywordKind.INCLUDE;
     const normalized = input.data.phrase.toLocaleLowerCase("id-ID");
+    await assertKeywordQuota(user.id, kind, normalized);
     const keyword = await prisma.keyword.upsert({
       where: { userId_normalized_kind: { userId: user.id, normalized, kind } },
       update: { phrase: input.data.phrase, isActive: true },
