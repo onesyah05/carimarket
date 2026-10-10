@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import type { User } from "@prisma/client";
+import { ApiCredentialSource, type User } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
 
@@ -32,6 +32,8 @@ export type CredentialSummary = {
   userId: string;
   userEmail: string;
   userName: string;
+  source: ApiCredentialSource;
+  sourceLabel: string;
   issuedBy: string | null;
   createdAt: string;
   lastUsedAt: string | null;
@@ -64,6 +66,12 @@ export function readBearerKey(header: string | null): string | null {
   if (!key || !key.startsWith(`${API_KEY_PREFIX}_`)) return null;
   return key;
 }
+
+const SOURCE_LABEL: Record<ApiCredentialSource, string> = {
+  SUPERADMIN: "Terbitan admin platform",
+  USER_LOGIN: "Masuk dari aplikasi",
+  USER_PAIRING: "Kode pemasangan",
+};
 
 function credentialStatus(row: { revokedAt: Date | null; expiresAt: Date | null }): CredentialSummary["status"] {
   if (row.revokedAt) return "dicabut";
@@ -137,29 +145,14 @@ export async function listCredentials(): Promise<CredentialSummary[]> {
     userId: row.userId,
     userEmail: row.user.email,
     userName: row.user.name,
+    source: row.source,
+    sourceLabel: SOURCE_LABEL[row.source],
     issuedBy: row.createdBy?.name ?? null,
     createdAt: row.createdAt.toISOString(),
     lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
     expiresAt: row.expiresAt?.toISOString() ?? null,
     revokedAt: row.revokedAt?.toISOString() ?? null,
     status: credentialStatus(row),
-  }));
-}
-
-/** Kandidat workspace yang dapat diberi kredensial: hanya akun pengguna bisnis. */
-export async function listCredentialTargets() {
-  const users = await prisma.user.findMany({
-    where: { role: "USER", deletedAt: null },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-    select: { id: true, name: true, email: true, status: true, businessProfile: { select: { name: true } } },
-  });
-  return users.map(user => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    status: user.status,
-    businessName: user.businessProfile?.name ?? null,
   }));
 }
 

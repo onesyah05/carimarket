@@ -336,8 +336,9 @@ diperoleh melalui tiga jalur:
    data, lalu aplikasi menukarnya lewat `POST /api/v1/auth/pair`. Dipakai akun
    yang masuk lewat Threads sehingga belum memiliki kata sandi. Kode berlaku 10
    menit dan sekali pakai.
-3. **Kunci terbitan Superadmin** — dibuat di Superadmin → **API Mobile**
-   (`/superadmin/api`) untuk integrasi internal atau pengujian.
+3. **Kunci integrasi internal** — dibuat lewat `POST /api/admin/api-credentials`
+   memakai sesi Superadmin. Form penerbitannya tidak ada di halaman API karena
+   pengguna sudah memperoleh tokennya sendiri.
 
 Berlaku untuk semua jalur:
 
@@ -371,8 +372,10 @@ berisi nilai yang sama dengan `meta.requestId`.
 
 Dokumentasi lengkap hanya dapat diakses Superadmin:
 
-- Halaman referensi: Superadmin → **API Mobile** (daftar endpoint, parameter,
-  contoh respons, contoh curl, dan tabel kode error).
+- Halaman referensi: Superadmin → **API Mobile**, dipisah menjadi tab
+  (Autentikasi, Format respons, Kode error, Referensi endpoint, Token aktif).
+  Referensi endpoint memakai akordeon per kelompok dan per endpoint sehingga
+  halaman tetap pendek.
 - Berkas OpenAPI 3.1: `GET /api/admin/api-docs` (butuh sesi Superadmin).
 
 Halaman dokumentasi dan berkas OpenAPI dihasilkan dari katalog yang sama
