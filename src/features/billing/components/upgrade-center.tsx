@@ -134,12 +134,11 @@ export function UpgradeCenter({ initial }: { initial: BillingOverview }) {
           </div>
 
           <div className="upgrade-total">
-            <span>Perkiraan tagihan</span>
-            <strong>{formatRupiah(projectedTotal)}</strong>
-            <small>{selectedPlan ? `${selectedPlan.name}, ${periodLabel(draft.periodMonths)}. Kode unik tiga digit ditambahkan saat tagihan dibuat agar mutasi mudah dicocokkan.` : "Pilih paket terlebih dahulu."}</small>
-          </div>
-
-          <div className="settings-actions">
+            <div>
+              <span>Perkiraan tagihan</span>
+              <strong>{formatRupiah(projectedTotal)}</strong>
+              <small>{selectedPlan ? `${selectedPlan.name}, ${periodLabel(draft.periodMonths)}. Kode unik tiga digit ditambahkan saat tagihan dibuat agar mutasi mudah dicocokkan.` : "Pilih paket terlebih dahulu."}</small>
+            </div>
             <button className="button button--primary" type="submit" disabled={busy || !draft.planId || overview.paymentMethods.length === 0}>
               {busy ? "Membuat tagihan..." : "Buat tagihan"}
             </button>
@@ -148,9 +147,9 @@ export function UpgradeCenter({ initial }: { initial: BillingOverview }) {
 
     {overview.history.length > 0 && <div className="billing-history">
       <h3><Receipt size={16} /> Riwayat transaksi</h3>
-      <div className="data-table">
-        <div className="data-row data-head data-row--4"><span>Tagihan</span><span>Paket</span><span>Nominal</span><span>Status</span></div>
-        {overview.history.map(item => <div className="data-row data-row--4" key={item.id}>
+      <div className="data-table history-table">
+        <div className="data-row data-head"><span>Tagihan</span><span>Paket</span><span>Nominal</span><span>Status</span></div>
+        {overview.history.map(item => <div className="data-row" key={item.id}>
           <span data-label="Tagihan"><code>{item.invoiceNumber}</code><br /><small>{formatDateTime(item.createdAt)}</small></span>
           <span data-label="Paket">{item.planName}<br /><small>{periodLabel(item.periodMonths)}</small></span>
           <span data-label="Nominal">{formatRupiah(item.totalAmount)}</span>
@@ -193,55 +192,64 @@ function Invoice({ transaction, busy, copied, payer, windowHours, onCopy, onPaye
       <span className={`pay-badge ${waiting ? "pay-badge--warn" : "pay-badge--ok"}`}>{transaction.statusLabel}</span>
     </div>
 
-    <div className="invoice__amount">
-      <span>Nominal transfer</span>
-      <strong>{formatRupiah(transaction.totalAmount)}</strong>
-      <button className="button button--ghost button--small" type="button" onClick={() => void onCopy(String(transaction.totalAmount), "amount")}>
-        <ClipboardCopy size={15} /> {copied === "amount" ? "Tersalin" : "Salin nominal"}
-      </button>
-      <small>{formatRupiah(transaction.baseAmount)} harga paket + {transaction.uniqueCode} kode unik</small>
-    </div>
-
-    <p className="invoice__warning"><AlertTriangle size={15} /> Transfer tepat sampai tiga angka terakhir. Kode unik itulah yang membuat pembayaran Anda dikenali otomatis pada mutasi.</p>
-
-    {method
-      ? <dl className="invoice__method">
-        <div><dt>Metode</dt><dd>{method.channelLabel} · {method.label}</dd></div>
-        <div><dt>{method.channel === "QRIS" ? "Keterangan" : "Nomor tujuan"}</dt><dd>
-          <span className="invoice__account">{method.accountNumber}</span>
-          <button className="button button--ghost button--small" type="button" onClick={() => void onCopy(method.accountNumber, "account")}>
-            <ClipboardCopy size={14} /> {copied === "account" ? "Tersalin" : "Salin"}
+    <div className="invoice__body">
+      <div className="invoice__pay">
+        <div className="invoice__amount">
+          <div>
+            <span>Nominal transfer</span>
+            <strong>{formatRupiah(transaction.totalAmount)}</strong>
+            <small>{formatRupiah(transaction.baseAmount)} harga paket + {transaction.uniqueCode} kode unik</small>
+          </div>
+          <button className="button button--ghost button--small" type="button" onClick={() => void onCopy(String(transaction.totalAmount), "amount")}>
+            <ClipboardCopy size={15} /> {copied === "amount" ? "Tersalin" : "Salin nominal"}
           </button>
-        </dd></div>
-        <div><dt>Atas nama</dt><dd>{method.accountName}</dd></div>
-        {method.instructions && <div><dt>Catatan</dt><dd>{method.instructions}</dd></div>}
-      </dl>
-      : <p className="billing-empty">Metode pembayaran tagihan ini sudah dihapus tim. Batalkan tagihan lalu buat ulang dengan metode yang tersedia.</p>}
+        </div>
 
-    <p className="invoice__expiry"><Clock size={15} /> {waiting
-      ? `Konfirmasi terkirim ${formatDateTime(transaction.submittedAt)}. Verifikasi dilakukan manual oleh tim, biasanya dalam 1x24 jam kerja.`
-      : `Bayar sebelum ${formatDateTime(transaction.expiresAt)}. Tagihan yang belum dibayar dalam ${windowHours} jam otomatis kedaluwarsa.`}</p>
+        <p className="invoice__warning"><AlertTriangle size={15} /> Transfer tepat sampai tiga angka terakhir. Kode unik itulah yang membuat pembayaran Anda dikenali otomatis pada mutasi.</p>
 
-    {waiting
-      ? <div className="invoice__actions">
-        <p><BadgeCheck size={15} /> Pembayaran atas nama {transaction.payerName ?? "—"} sedang diperiksa.</p>
-        <button className="button button--ghost" type="button" onClick={onCancel} disabled={busy}><X size={15} /> Batalkan tagihan</button>
+        {method
+          ? <dl className="invoice__method">
+            <div><dt>Metode</dt><dd>{method.channelLabel} · {method.label}</dd></div>
+            <div><dt>{method.channel === "QRIS" ? "Keterangan" : "Nomor tujuan"}</dt><dd>
+              <span className="invoice__account">{method.accountNumber}</span>
+              <button className="button button--ghost button--small" type="button" onClick={() => void onCopy(method.accountNumber, "account")}>
+                <ClipboardCopy size={14} /> {copied === "account" ? "Tersalin" : "Salin"}
+              </button>
+            </dd></div>
+            <div><dt>Atas nama</dt><dd>{method.accountName}</dd></div>
+            {method.instructions && <div><dt>Catatan</dt><dd>{method.instructions}</dd></div>}
+          </dl>
+          : <p className="billing-empty">Metode pembayaran tagihan ini sudah dihapus tim. Batalkan tagihan lalu buat ulang dengan metode yang tersedia.</p>}
+
+        <p className="invoice__expiry"><Clock size={15} /> {waiting
+          ? `Konfirmasi terkirim ${formatDateTime(transaction.submittedAt)}. Verifikasi dilakukan manual oleh tim, biasanya dalam 1x24 jam kerja.`
+          : `Bayar sebelum ${formatDateTime(transaction.expiresAt)}. Tagihan yang belum dibayar dalam ${windowHours} jam otomatis kedaluwarsa.`}</p>
       </div>
-      : <form className="invoice__confirm" onSubmit={onConfirm}>
-        <h3>Sudah transfer?</h3>
-        <p>Isi nama pengirim seperti yang tertulis di rekening Anda agar tim dapat mencocokkannya dengan mutasi.</p>
-        <div className="field">
-          <label htmlFor="payer-name">Nama pengirim</label>
-          <input className="input" id="payer-name" value={payer.payerName} onChange={event => onPayerChange({ ...payer, payerName: event.target.value })} minLength={2} maxLength={120} disabled={busy} required />
+
+      {waiting
+        ? <div className="invoice__side">
+          <h3><BadgeCheck size={16} /> Menunggu verifikasi</h3>
+          <p>Pembayaran atas nama {transaction.payerName ?? "—"} sedang diperiksa tim. Anda akan menerima notifikasi begitu paket aktif.</p>
+          <div className="invoice__actions">
+            <button className="button button--ghost" type="button" onClick={onCancel} disabled={busy}><X size={15} /> Batalkan tagihan</button>
+          </div>
         </div>
-        <div className="field">
-          <label htmlFor="payer-note">Catatan (opsional)</label>
-          <input className="input" id="payer-note" value={payer.payerNote} onChange={event => onPayerChange({ ...payer, payerNote: event.target.value })} maxLength={500} placeholder="Mis. transfer dari BCA pukul 14.20" disabled={busy} />
-        </div>
-        <div className="invoice__actions">
-          <button className="button button--primary" type="submit" disabled={busy}>{busy ? "Mengirim..." : "Saya sudah transfer"}</button>
-          <button className="button button--ghost" type="button" onClick={onCancel} disabled={busy}><X size={15} /> Batalkan tagihan</button>
-        </div>
-      </form>}
+        : <form className="invoice__side invoice__confirm" onSubmit={onConfirm}>
+          <h3>Sudah transfer?</h3>
+          <p>Isi nama pengirim seperti yang tertulis di rekening Anda agar tim dapat mencocokkannya dengan mutasi.</p>
+          <div className="field">
+            <label htmlFor="payer-name">Nama pengirim</label>
+            <input className="input" id="payer-name" value={payer.payerName} onChange={event => onPayerChange({ ...payer, payerName: event.target.value })} minLength={2} maxLength={120} disabled={busy} required />
+          </div>
+          <div className="field">
+            <label htmlFor="payer-note">Catatan (opsional)</label>
+            <input className="input" id="payer-note" value={payer.payerNote} onChange={event => onPayerChange({ ...payer, payerNote: event.target.value })} maxLength={500} placeholder="Mis. transfer dari BCA pukul 14.20" disabled={busy} />
+          </div>
+          <div className="invoice__actions">
+            <button className="button button--primary" type="submit" disabled={busy}>{busy ? "Mengirim..." : "Saya sudah transfer"}</button>
+            <button className="button button--ghost" type="button" onClick={onCancel} disabled={busy}><X size={15} /> Batalkan tagihan</button>
+          </div>
+        </form>}
+    </div>
   </div>;
 }

@@ -114,12 +114,12 @@ function Row({ transaction, busy, onDecide }: { transaction: AdminTransaction; b
       <strong>{formatRupiah(transaction.totalAmount)}</strong><br />
       <small>kode unik {transaction.uniqueCode}</small>
     </span>
-    <span data-label="Status" className="row-actions">
+    <span data-label="Status" className="pay-cell">
       <span className={`pay-badge ${tone}`}>{transaction.statusLabel}</span>
-      {transaction.open && <>
+      {transaction.open && <span className="pay-cell__buttons">
         <button className="button button--primary button--small" type="button" onClick={() => onDecide("approve")} disabled={busy}><BadgeCheck size={15} /> Setujui</button>
         <button className="button button--danger button--small" type="button" onClick={() => onDecide("reject")} disabled={busy}><XCircle size={15} /> Tolak</button>
-      </>}
+      </span>}
       {transaction.reviewedBy && <small>oleh {transaction.reviewedBy}</small>}
       {transaction.reviewNote && <small>{transaction.reviewNote}</small>}
     </span>
