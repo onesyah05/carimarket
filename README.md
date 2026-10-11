@@ -355,8 +355,9 @@ Aturan yang ditegakkan server:
 - Paket gratis ditolak sebagai tagihan, dan pelanggan hanya dapat
   mengonfirmasi atau membatalkan tagihannya sendiri.
 
-Metode pembayaran (transfer bank, e-wallet, QRIS) dikelola Superadmin pada
-menu yang sama. Nomor dan nama pemilik akun tampil apa adanya kepada pelanggan
+Metode pembayaran (transfer bank, e-wallet, QRIS) dikelola pada halaman
+tersendiri, Superadmin → **Metode pembayaran**, terpisah dari antrean
+verifikasi. Nomor dan nama pemilik akun tampil apa adanya kepada pelanggan
 sebagai instruksi transfer. Metode yang pernah dipakai tagihan tidak dapat
 dihapus, hanya dinonaktifkan, dan penonaktifan ditolak selama masih ada tagihan
 terbuka yang memakainya. **Instalasi baru belum memiliki metode pembayaran,

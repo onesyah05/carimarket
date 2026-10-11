@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AlertTriangle } from "lucide-react";
 import { PageHeading } from "@/components/dashboard-ui";
 import { getSessionUser } from "@/server/auth/session";
 import { requirePageRole } from "@/server/auth/page-guards";
@@ -38,7 +40,8 @@ const HEADINGS: Record<string, { title: string; copy: string }> = {
   admin: { title: "Manajemen Admin", copy: "Promosikan akun pengguna menjadi Admin dan atur permission mereka." },
   users: { title: "Manajemen Pengguna", copy: "Pantau akun, paket, dan status koneksi. Token tidak pernah ditampilkan di panel ini." },
   paket: { title: "Paket dan billing", copy: "Tambah dan ubah paket langganan. Harga serta kuota di sini langsung berlaku di halaman harga dan penegakan kuota." },
-  pembayaran: { title: "Pembayaran", copy: "Kelola metode pembayaran dan verifikasi transaksi upgrade. Menyetujui pembayaran langsung mengaktifkan paket pelanggan." },
+  pembayaran: { title: "Verifikasi pembayaran", copy: "Cocokkan nominal beserta kode uniknya dengan mutasi rekening. Menyetujui pembayaran langsung mengaktifkan paket pelanggan." },
+  "metode-pembayaran": { title: "Metode pembayaran", copy: "Rekening, e-wallet, dan QRIS yang ditampilkan kepada pelanggan saat membuat tagihan upgrade." },
   kuota: { title: "Kuota API", copy: "Status koneksi Threads dan pemakaian agregat per pengguna." },
   kepatuhan: { title: "Kepatuhan", copy: "Kelola istilah terlarang dan pantau antrean moderasi lintas tim." },
   sistem: { title: "Pengaturan Sistem", copy: "Kondisi integrasi yang sebenarnya; nilai rahasia tidak pernah ditampilkan." },
@@ -89,9 +92,21 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
 
   if (section === "pembayaran") {
     const [methods, transactions] = await Promise.all([listPaymentMethodsForAdmin(), listTransactionsForAdmin()]);
+    const activeMethods = methods.filter(method => method.isActive).length;
     return <>
-      <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
+      <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} action={<Link className="button button--ghost" href="/superadmin/metode-pembayaran">Metode pembayaran</Link>} />
+      {activeMethods === 0 && <div className="internal-warning">
+        <AlertTriangle size={18} />
+        <p>Belum ada metode pembayaran aktif, jadi pelanggan belum dapat membuat tagihan. Tambahkan rekening atau e-wallet di <Link href="/superadmin/metode-pembayaran">Metode pembayaran</Link>.</p>
+      </div>}
       <TransactionsReview initial={transactions} />
+    </>;
+  }
+
+  if (section === "metode-pembayaran") {
+    const methods = await listPaymentMethodsForAdmin();
+    return <>
+      <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} action={<Link className="button button--ghost" href="/superadmin/pembayaran">Verifikasi pembayaran</Link>} />
       <PaymentMethodsManager methods={methods} />
     </>;
   }
