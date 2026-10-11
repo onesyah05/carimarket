@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { PasswordInput } from "@/components/password-input";
 
 export type Account = {
   name: string;
@@ -128,7 +129,7 @@ export function AccountForms({ initialAccount }: { initialAccount?: Account }) {
       </div>
       <div className="field"><label htmlFor="account-name">Nama</label><input className="input" id="account-name" value={name} onChange={event => { setName(event.target.value); setIdentitySaved(undefined); setIdentityError(undefined); }} disabled={account === null || identityBusy} minLength={2} maxLength={120} required /></div>
       <div className="field"><label htmlFor="account-email">Email</label><input className="input" id="account-email" type="email" autoComplete="email" value={email} onChange={event => { setEmail(event.target.value); setIdentitySaved(undefined); setIdentityError(undefined); }} disabled={account === null || identityBusy} maxLength={191} required /></div>
-      {needsPasswordForEmail && <div className="field"><label htmlFor="account-current-password">Kata sandi saat ini</label><input className="input" id="account-current-password" type="password" autoComplete="current-password" value={identityPassword} onChange={event => setIdentityPassword(event.target.value)} disabled={identityBusy} required /><small className="field-hint">Diperlukan karena Anda mengganti email akun.</small></div>}
+      {needsPasswordForEmail && <div className="field"><label htmlFor="account-current-password">Kata sandi saat ini</label><PasswordInput id="account-current-password" autoComplete="current-password" value={identityPassword} onChange={event => setIdentityPassword(event.target.value)} disabled={identityBusy} required /><small className="field-hint">Diperlukan karena Anda mengganti email akun.</small></div>}
       {identityError && <p className="form-feedback form-feedback--error" role="alert">{identityError}</p>}
       {identitySaved && <p className="form-feedback form-feedback--success" role="status">{identitySaved}</p>}
       <div className="settings-actions"><button className="button button--primary" type="submit" disabled={account === null || identityBusy}>{identityBusy ? "Menyimpan..." : "Simpan identitas"}</button></div>
@@ -141,9 +142,9 @@ export function AccountForms({ initialAccount }: { initialAccount?: Account }) {
           ? "Setelah diubah, sesi lain akan keluar. Sesi ini tetap aktif."
           : "Akun yang dibuat lewat Threads belum memiliki kata sandi. Buat kata sandi agar dapat masuk dengan email, termasuk dari aplikasi mobile."}</p>
       </div>
-      {account?.hasPassword && <div className="field"><label htmlFor="current-password">Kata sandi saat ini</label><input className="input" id="current-password" type="password" autoComplete="current-password" value={password.currentPassword} onChange={event => { setPassword(current => ({ ...current, currentPassword: event.target.value })); setPasswordError(undefined); setPasswordSaved(undefined); }} disabled={passwordBusy} required /></div>}
-      <div className="field"><label htmlFor="new-password">Kata sandi baru</label><input className="input" id="new-password" type="password" autoComplete="new-password" minLength={8} value={password.newPassword} onChange={event => { setPassword(current => ({ ...current, newPassword: event.target.value })); setPasswordError(undefined); setPasswordSaved(undefined); }} disabled={passwordBusy} required /></div>
-      <div className="field"><label htmlFor="confirm-password">Ulangi kata sandi baru</label><input className="input" id="confirm-password" type="password" autoComplete="new-password" minLength={8} value={password.confirmPassword} onChange={event => { setPassword(current => ({ ...current, confirmPassword: event.target.value })); setPasswordError(undefined); }} disabled={passwordBusy} required /></div>
+      {account?.hasPassword && <div className="field"><label htmlFor="current-password">Kata sandi saat ini</label><PasswordInput id="current-password" autoComplete="current-password" value={password.currentPassword} onChange={event => { setPassword(current => ({ ...current, currentPassword: event.target.value })); setPasswordError(undefined); setPasswordSaved(undefined); }} disabled={passwordBusy} required /></div>}
+      <div className="field"><label htmlFor="new-password">Kata sandi baru</label><PasswordInput id="new-password" autoComplete="new-password" minLength={8} value={password.newPassword} onChange={event => { setPassword(current => ({ ...current, newPassword: event.target.value })); setPasswordError(undefined); setPasswordSaved(undefined); }} disabled={passwordBusy} required /></div>
+      <div className="field"><label htmlFor="confirm-password">Ulangi kata sandi baru</label><PasswordInput id="confirm-password" autoComplete="new-password" minLength={8} value={password.confirmPassword} onChange={event => { setPassword(current => ({ ...current, confirmPassword: event.target.value })); setPasswordError(undefined); }} disabled={passwordBusy} required /></div>
       {passwordError && <p className="form-feedback form-feedback--error" role="alert">{passwordError}</p>}
       {passwordSaved && <p className="form-feedback form-feedback--success" role="status">{passwordSaved}</p>}
       <div className="settings-actions"><button className="button button--primary" type="submit" disabled={passwordBusy}>{passwordBusy ? "Menyimpan..." : account?.hasPassword ? "Ubah kata sandi" : "Buat kata sandi"}</button></div>

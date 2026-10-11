@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AtSign } from "lucide-react";
+import { PasswordInput } from "@/components/password-input";
 import { resolveNextPath } from "@/lib/redirects";
 
 export function LoginForm({ nextPath, expired = false }: { nextPath?: string; expired?: boolean }) {
@@ -55,7 +56,7 @@ export function LoginForm({ nextPath, expired = false }: { nextPath?: string; ex
         </div>
         <div className="field">
           <label htmlFor="password">Kata sandi</label>
-          <input className="input" id="password" name="password" type="password" placeholder="Kata sandi Anda" autoComplete="current-password" required />
+          <PasswordInput id="password" name="password" placeholder="Kata sandi Anda" autoComplete="current-password" required />
         </div>
         {error && <p className="form-error" role="alert">{error}</p>}
         <div className="form-row">

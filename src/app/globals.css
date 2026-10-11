@@ -63,6 +63,13 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .public-nav { margin-left: auto; display: flex; align-items: center; gap: 30px; color: #34405c; font-size: .9rem; font-weight: 650; }
 .public-nav a:hover { color: var(--brand-strong); }
 .public-header__actions { display: flex; align-items: center; gap: 8px; }
+.public-header__login { min-height: 40px; padding: 0 16px; gap: 7px; white-space: nowrap; font-size: .88rem; }
+@media (max-width: 520px) {
+  .public-header__inner { gap: 10px; }
+  .public-header__actions { gap: 6px; }
+  .public-header__login { min-height: 38px; padding: 0 12px; font-size: .82rem; }
+}
+.mobile-menu__login { margin-top: 4px; border-top: 1px solid var(--line); padding-top: 12px !important; color: var(--brand-deep); font-weight: 800 !important; }
 .mobile-menu { display: none; position: relative; }
 .mobile-menu summary { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 12px; list-style: none; display: grid; place-items: center; cursor: pointer; }
 .mobile-menu summary::-webkit-details-marker { display: none; }
@@ -1153,6 +1160,11 @@ html[data-theme="dark"] .inline-error { color: #ffb7b7; background: #311b1b; }
   .integration-connected__account { align-items: flex-start; }
 }
 
+.password-input { position: relative; display: grid; }
+.password-input .input { width: 100%; padding-right: 44px; }
+.password-input__toggle { position: absolute; top: 50%; right: 6px; width: 32px; height: 32px; transform: translateY(-50%); border: 0; border-radius: 8px; display: grid; place-items: center; color: var(--muted); background: transparent; cursor: pointer; transition: color .15s ease, background .15s ease; }
+.password-input__toggle:hover { color: var(--brand-deep); background: var(--brand-soft); }
+.password-input__toggle:disabled { opacity: .5; cursor: default; }
 .form-error { margin: 0; padding: 11px 13px; border: 1px solid #f0c7c7; border-radius: 11px; color: var(--danger); background: var(--danger-soft); font-size: .78rem; font-weight: 650; }
 .auth-notice { margin: 0 0 14px; padding: 11px 13px; border: 1px solid #eadb74; border-radius: 11px; color: var(--warning); background: var(--warning-soft); font-size: .78rem; font-weight: 650; }
 .logout-button { width: 100%; margin-top: 10px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: transparent; font-size: .74rem; font-weight: 750; cursor: pointer; transition: color .18s ease, background .18s ease, border-color .18s ease; }
