@@ -63,12 +63,14 @@ export function DashboardShell({ children, user }: { children: React.ReactNode; 
   const notificationLink = isSuperadmin ? "/superadmin/audit" : role === "admin" ? "/admin/moderasi" : "/dashboard/balasan";
   const notificationLabel = isSuperadmin ? "Buka audit log" : role === "admin" ? "Buka moderasi" : "Buka balasan";
 
-  return <div className={`app-shell ${isSuperadmin ? "app-shell--superadmin" : isUser ? "app-shell--user" : ""}`}>
+  // Admin memakai kerangka internal yang sama dengan Superadmin: tabel, kartu
+  // metrik, dan jarak panelnya satu aturan, bukan dua tampilan berbeda.
+  return <div className={`app-shell ${isUser ? "app-shell--user" : "app-shell--internal"}`}>
     <aside className={`app-sidebar ${open ? "app-sidebar--open" : ""}`}>
       <div className="sidebar-brand"><BrandLogo /><button onClick={() => setOpen(false)} aria-label="Tutup menu"><X size={20} /></button></div>
       <div className="workspace-chip"><span>{initials}</span><div><strong>{workspace}</strong><small>{role === "user" ? "Workspace bisnis" : "Workspace internal"}</small></div></div>
       <nav className="app-nav" aria-label="Navigasi dashboard">{nav.map(item => { const Icon = item.icon; const exact = item.href === "/dashboard" || item.href === "/admin" || item.href === "/superadmin"; const active = exact ? pathname === item.href : pathname.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? "active" : ""} onClick={() => setOpen(false)}><Icon size={18} /><span>{item.label}</span></Link>; })}</nav>
-      {!isSuperadmin && <div className="sidebar-help"><div><CircleHelp size={18} /><strong>Butuh bantuan?</strong></div><p>Tim kami siap membantu setup pencarian pertama Anda.</p><Link href="/kontak">Hubungi dukungan</Link></div>}
+      {isUser && <div className="sidebar-help"><div><CircleHelp size={18} /><strong>Butuh bantuan?</strong></div><p>Tim kami siap membantu setup pencarian pertama Anda.</p><Link href="/kontak">Hubungi dukungan</Link></div>}
       <div className="sidebar-profile"><span>{initials}</span><div><strong>{name}</strong><small>{workspace}</small></div></div>
       <LogoutButton />
     </aside>

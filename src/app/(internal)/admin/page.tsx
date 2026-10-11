@@ -18,7 +18,7 @@ export default async function AdminPage() {
       <div className="panel-heading"><div><h2>Antrian prioritas</h2><p>Item nyata yang membutuhkan tindakan operasional.</p></div></div>
       <div className="data-table internal-table">
         <div className="data-row data-head data-row--5"><span>Item</span><span>Pengguna</span><span>Kategori</span><span>Usia</span><span>Status</span></div>
-        {overview.queue.length === 0 && <div className="data-row data-row--5"><span>Tidak ada item yang membutuhkan tindakan saat ini.</span></div>}
+        {overview.queue.length === 0 && <div className="data-row table-empty-row data-row--5"><span>Tidak ada item yang membutuhkan tindakan saat ini.</span></div>}
         {overview.queue.map(item => (
           <div className="data-row data-row--5" key={item.id}>
             <span><Link className="table-link" href={item.href}>{item.label}</Link></span>

@@ -1175,6 +1175,8 @@ html[data-theme="dark"] .inline-error { color: #ffb7b7; background: #311b1b; }
 .mini-form-panel { margin-bottom: 18px; display: grid; gap: 10px; }
 .mini-form-panel > strong { font-size: .95rem; }
 .mini-form-panel > p { margin: 0; color: var(--muted); font-size: .74rem; }
+/* Tombol tunggal di panel grid akan meregang selebar panel bila tidak dibatasi. */
+.mini-form-panel > .button { justify-self: start; }
 .mini-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
 .mini-form .input { width: auto; min-width: 220px; height: 40px; }
 .checkbox-row { display: flex; flex-wrap: wrap; gap: 4px 14px; color: #34405c; font-size: .74rem; font-weight: 650; }
@@ -1274,104 +1276,104 @@ html[data-theme="dark"] .blog-empty { border-color: #2a3855; background: #0d1830
 html[data-theme="dark"] .stack-row__actions { border-color: #22304f; }
 
 /* Superadmin: consistent workspace, form, and table layout across every section. */
-.app-shell--superadmin .app-sidebar { overflow: hidden; }
-.app-shell--superadmin .app-nav { flex: 1 1 auto; min-height: 0; gap: 2px; overflow-y: auto; overflow-x: hidden; padding: 0 3px 8px 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
-.app-shell--superadmin .app-nav a { min-height: 39px; height: 39px; flex: 0 0 auto; }
-.app-shell--superadmin .sidebar-help { flex: 0 0 auto; margin-top: 12px; }
-.app-shell--superadmin .sidebar-profile, .app-shell--superadmin .logout-button { flex: 0 0 auto; }
-.app-shell--superadmin .app-main { min-width: 0; }
-.app-shell--superadmin .app-content { width: min(1440px, 100%); padding: 36px clamp(20px, 3vw, 48px) 64px; }
-.app-shell--superadmin .dash-heading { align-items: flex-start; margin-bottom: 26px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
-.app-shell--superadmin .dash-heading > div { min-width: 0; max-width: 760px; }
-.app-shell--superadmin .dash-heading h1 { font-size: clamp(1.8rem, 2.7vw, 2.45rem); line-height: 1.15; }
-.app-shell--superadmin .dash-heading span { margin-top: 10px; font-size: .9rem; line-height: 1.55; }
-.app-shell--superadmin .metric-grid { margin: 0 0 18px; }
-.app-shell--superadmin .metric-card { min-width: 0; padding: 22px; border-radius: 18px; }
-.app-shell--superadmin .metric-card > strong { font-size: clamp(1.55rem, 2vw, 2rem); }
-.app-shell--superadmin .metric-card > small { color: var(--muted); font-size: .76rem; line-height: 1.4; }
-.app-shell--superadmin .dashboard-grid { align-items: stretch; }
-.app-shell--superadmin .dashboard-grid > * { min-width: 0; }
-.app-shell--superadmin .panel { min-width: 0; }
-.app-shell--superadmin .panel-heading { padding: 20px 24px; }
-.app-shell--superadmin .panel-heading h2 { font-size: 1rem; }
-.app-shell--superadmin .panel-heading p { font-size: .78rem; line-height: 1.5; }
-.app-shell--superadmin .mini-form-panel { padding: 24px; gap: 14px; }
-.app-shell--superadmin .mini-form-panel > strong, .app-shell--superadmin .worker-head strong { font-size: 1.05rem; }
-.app-shell--superadmin .mini-form-panel > p { max-width: 760px; font-size: .82rem; line-height: 1.6; }
-.app-shell--superadmin .mini-form { align-items: stretch; gap: 12px; }
-.app-shell--superadmin .mini-form .input { min-width: min(100%, 240px); flex: 1 1 230px; height: 44px; }
-.app-shell--superadmin .mini-form .checkbox-row { flex: 1 1 100%; }
-.app-shell--superadmin .mini-form .button { align-self: flex-end; min-height: 44px; }
-.app-shell--superadmin .mini-form--stacked { max-width: 760px; display: grid; align-items: initial; gap: 9px; }
-.app-shell--superadmin .mini-form--stacked .input { width: 100%; min-width: 0; }
-.app-shell--superadmin .mini-form--stacked textarea.input { height: auto; min-height: 110px; resize: vertical; }
-.app-shell--superadmin .mini-form--stacked .button { justify-self: start; margin-top: 8px; }
-.app-shell--superadmin .field-label { color: var(--ink); font-size: .8rem; font-weight: 750; }
-.app-shell--superadmin .checkbox-row { gap: 8px; }
-.app-shell--superadmin .checkbox-row label { min-height: 36px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--canvas); font-size: .78rem; }
-.app-shell--superadmin .checkbox-row input { accent-color: var(--brand-strong); }
-.app-shell--superadmin .status-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; font-size: .82rem; line-height: 1.5; }
-.app-shell--superadmin .status-row > :first-child { min-width: 150px; color: var(--muted); }
-.app-shell--superadmin .status-row > :last-child { overflow-wrap: anywhere; }
-.app-shell--superadmin .internal-warning { margin: 0 0 18px; }
-.app-shell--superadmin .section-subtitle { margin: 30px 0 14px; }
-.app-shell--superadmin .stat-grid { gap: 16px; margin-bottom: 20px; }
-.app-shell--superadmin .stat-card { min-width: 0; padding: 22px; }
-.app-shell--superadmin .stat-card p { font-size: .78rem; line-height: 1.5; }
-.app-shell--superadmin .table-panel { margin-bottom: 18px; }
-.app-shell--superadmin .internal-panel-heading { align-items: center; }
-.app-shell--superadmin .internal-count { flex: 0 0 auto; padding: 7px 10px; border-radius: 999px; color: var(--brand-deep); background: var(--brand-soft); font-size: .72rem; font-weight: 800; white-space: nowrap; }
-.app-shell--superadmin .data-table { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
-.app-shell--superadmin .internal-table .data-row { min-height: 66px; padding: 12px 22px; gap: 14px; grid-template-columns: 1.6fr 1fr 1fr 1fr; align-items: center; font-size: .8rem; line-height: 1.45; }
-.app-shell--superadmin .internal-table .data-head { min-height: 44px; padding-block: 10px; font-size: .7rem; line-height: 1.3; }
-.app-shell--superadmin .internal-table .data-row > * { min-width: 0; overflow-wrap: anywhere; }
-.app-shell--superadmin .internal-table .data-row strong { font-size: .82rem; }
-.app-shell--superadmin .internal-table .data-row small { font-size: .73rem; line-height: 1.4; }
-.app-shell--superadmin .internal-table .data-row--3 { min-width: 680px; grid-template-columns: 1.1fr 2.2fr .7fr; }
-.app-shell--superadmin .internal-table .data-row--4 { min-width: 800px; grid-template-columns: 1.55fr 1fr 1.25fr 1.05fr; }
-.app-shell--superadmin .internal-table .data-row--5 { min-width: 900px; grid-template-columns: 1.4fr 1fr 1.15fr 1fr 1.15fr; }
-.app-shell--superadmin .internal-table .data-row--users { min-width: 900px; grid-template-columns: minmax(180px,1.5fr) minmax(110px,1fr) minmax(90px,.7fr) minmax(75px,.7fr) 60px minmax(215px,1.5fr); }
-.app-shell--superadmin .internal-table .table-empty-row { min-width: 0; display: block; padding: 30px 24px; color: var(--muted); }
-.app-shell--superadmin .data-row .button { border: 1px solid transparent; cursor: pointer; }
-.app-shell--superadmin .data-row .button--primary { color: #fff; background: var(--brand-strong); }
-.app-shell--superadmin .data-row .button--danger { color: var(--danger); background: var(--danger-soft); }
-.app-shell--superadmin .data-row .button--ghost { color: var(--ink); border-color: var(--line); background: var(--surface-raised); }
-.app-shell--superadmin .internal-table .stack-row { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 20px 24px; align-items: stretch; }
-.app-shell--superadmin .stack-row__top { gap: 8px 12px; }
-.app-shell--superadmin .stack-row__top strong { flex-basis: 100%; font-size: .94rem; }
-.app-shell--superadmin .stack-row__meta { gap: 8px 16px; font-size: .78rem; line-height: 1.5; }
-.app-shell--superadmin .stack-row__meta span { overflow-wrap: anywhere; }
-.app-shell--superadmin .stack-row__actions { padding-top: 14px; }
-.app-shell--superadmin .row-actions { align-items: flex-start; }
-.app-shell--superadmin .row-actions .button, .app-shell--superadmin .stack-row__actions .button { white-space: normal; text-align: center; }
-.app-shell--superadmin .cms-toolbar { margin-bottom: 18px; }
-.app-shell--superadmin .filter-tabs { max-width: 100%; }
-.app-shell--superadmin .worker-head { gap: 18px; }
+.app-shell--internal .app-sidebar { overflow: hidden; }
+.app-shell--internal .app-nav { flex: 1 1 auto; min-height: 0; align-content: start; gap: 2px; overflow-y: auto; overflow-x: hidden; padding: 0 3px 8px 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
+.app-shell--internal .app-nav a { min-height: 39px; height: 39px; flex: 0 0 auto; }
+.app-shell--internal .sidebar-help { flex: 0 0 auto; margin-top: 12px; }
+.app-shell--internal .sidebar-profile, .app-shell--internal .logout-button { flex: 0 0 auto; }
+.app-shell--internal .app-main { min-width: 0; }
+.app-shell--internal .app-content { width: min(1440px, 100%); padding: 36px clamp(20px, 3vw, 48px) 64px; }
+.app-shell--internal .dash-heading { align-items: flex-start; margin-bottom: 26px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+.app-shell--internal .dash-heading > div { min-width: 0; max-width: 760px; }
+.app-shell--internal .dash-heading h1 { font-size: clamp(1.8rem, 2.7vw, 2.45rem); line-height: 1.15; }
+.app-shell--internal .dash-heading span { margin-top: 10px; font-size: .9rem; line-height: 1.55; }
+.app-shell--internal .metric-grid { margin: 0 0 18px; }
+.app-shell--internal .metric-card { min-width: 0; padding: 22px; border-radius: 18px; }
+.app-shell--internal .metric-card > strong { font-size: clamp(1.55rem, 2vw, 2rem); }
+.app-shell--internal .metric-card > small { color: var(--muted); font-size: .76rem; line-height: 1.4; }
+.app-shell--internal .dashboard-grid { align-items: stretch; }
+.app-shell--internal .dashboard-grid > * { min-width: 0; }
+.app-shell--internal .panel { min-width: 0; }
+.app-shell--internal .panel-heading { padding: 20px 24px; }
+.app-shell--internal .panel-heading h2 { font-size: 1rem; }
+.app-shell--internal .panel-heading p { font-size: .78rem; line-height: 1.5; }
+.app-shell--internal .mini-form-panel { padding: 24px; gap: 14px; }
+.app-shell--internal .mini-form-panel > strong, .app-shell--internal .worker-head strong { font-size: 1.05rem; }
+.app-shell--internal .mini-form-panel > p { max-width: 760px; font-size: .82rem; line-height: 1.6; }
+.app-shell--internal .mini-form { align-items: stretch; gap: 12px; }
+.app-shell--internal .mini-form .input { min-width: min(100%, 240px); flex: 1 1 230px; height: 44px; }
+.app-shell--internal .mini-form .checkbox-row { flex: 1 1 100%; }
+.app-shell--internal .mini-form .button { align-self: flex-end; min-height: 44px; }
+.app-shell--internal .mini-form--stacked { max-width: 760px; display: grid; align-items: initial; gap: 9px; }
+.app-shell--internal .mini-form--stacked .input { width: 100%; min-width: 0; }
+.app-shell--internal .mini-form--stacked textarea.input { height: auto; min-height: 110px; resize: vertical; }
+.app-shell--internal .mini-form--stacked .button { justify-self: start; margin-top: 8px; }
+.app-shell--internal .field-label { color: var(--ink); font-size: .8rem; font-weight: 750; }
+.app-shell--internal .checkbox-row { gap: 8px; }
+.app-shell--internal .checkbox-row label { min-height: 36px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--canvas); font-size: .78rem; }
+.app-shell--internal .checkbox-row input { accent-color: var(--brand-strong); }
+.app-shell--internal .status-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; font-size: .82rem; line-height: 1.5; }
+.app-shell--internal .status-row > :first-child { min-width: 150px; color: var(--muted); }
+.app-shell--internal .status-row > :last-child { overflow-wrap: anywhere; }
+.app-shell--internal .internal-warning { margin: 0 0 18px; }
+.app-shell--internal .section-subtitle { margin: 30px 0 14px; }
+.app-shell--internal .stat-grid { gap: 16px; margin-bottom: 20px; }
+.app-shell--internal .stat-card { min-width: 0; padding: 22px; }
+.app-shell--internal .stat-card p { font-size: .78rem; line-height: 1.5; }
+.app-shell--internal .table-panel { margin-bottom: 18px; }
+.app-shell--internal .internal-panel-heading { align-items: center; }
+.app-shell--internal .internal-count { flex: 0 0 auto; padding: 7px 10px; border-radius: 999px; color: var(--brand-deep); background: var(--brand-soft); font-size: .72rem; font-weight: 800; white-space: nowrap; }
+.app-shell--internal .data-table { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.app-shell--internal .internal-table .data-row { min-height: 66px; padding: 12px 22px; gap: 14px; grid-template-columns: 1.6fr 1fr 1fr 1fr; align-items: center; font-size: .8rem; line-height: 1.45; }
+.app-shell--internal .internal-table .data-head { min-height: 44px; padding-block: 10px; font-size: .7rem; line-height: 1.3; }
+.app-shell--internal .internal-table .data-row > * { min-width: 0; overflow-wrap: anywhere; }
+.app-shell--internal .internal-table .data-row strong { font-size: .82rem; }
+.app-shell--internal .internal-table .data-row small { font-size: .73rem; line-height: 1.4; }
+.app-shell--internal .internal-table .data-row--3 { min-width: 680px; grid-template-columns: 1.1fr 2.2fr .7fr; }
+.app-shell--internal .internal-table .data-row--4 { min-width: 800px; grid-template-columns: 1.55fr 1fr 1.25fr 1.05fr; }
+.app-shell--internal .internal-table .data-row--5 { min-width: 900px; grid-template-columns: 1.4fr 1fr 1.15fr 1fr 1.15fr; }
+.app-shell--internal .internal-table .data-row--users { min-width: 900px; grid-template-columns: minmax(180px,1.5fr) minmax(110px,1fr) minmax(90px,.7fr) minmax(75px,.7fr) 60px minmax(215px,1.5fr); }
+.app-shell--internal .internal-table .table-empty-row { min-width: 0; display: block; padding: 30px 24px; color: var(--muted); }
+.app-shell--internal .data-row .button { border: 1px solid transparent; cursor: pointer; }
+.app-shell--internal .data-row .button--primary { color: #fff; background: var(--brand-strong); }
+.app-shell--internal .data-row .button--danger { color: var(--danger); background: var(--danger-soft); }
+.app-shell--internal .data-row .button--ghost { color: var(--ink); border-color: var(--line); background: var(--surface-raised); }
+.app-shell--internal .internal-table .stack-row { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 20px 24px; align-items: stretch; }
+.app-shell--internal .stack-row__top { gap: 8px 12px; }
+.app-shell--internal .stack-row__top strong { flex-basis: 100%; font-size: .94rem; }
+.app-shell--internal .stack-row__meta { gap: 8px 16px; font-size: .78rem; line-height: 1.5; }
+.app-shell--internal .stack-row__meta span { overflow-wrap: anywhere; }
+.app-shell--internal .stack-row__actions { padding-top: 14px; }
+.app-shell--internal .row-actions { align-items: flex-start; }
+.app-shell--internal .row-actions .button, .app-shell--internal .stack-row__actions .button { white-space: normal; text-align: center; }
+.app-shell--internal .cms-toolbar { margin-bottom: 18px; }
+.app-shell--internal .filter-tabs { max-width: 100%; }
+.app-shell--internal .worker-head { gap: 18px; }
 
-html[data-theme="dark"] .app-shell--superadmin .checkbox-row label { background: var(--canvas); }
-html[data-theme="dark"] .app-shell--superadmin .internal-count { color: #bbd0ff; background: #1c3158; }
+html[data-theme="dark"] .app-shell--internal .checkbox-row label { background: var(--canvas); }
+html[data-theme="dark"] .app-shell--internal .internal-count { color: #bbd0ff; background: #1c3158; }
 
 @media (max-width: 760px) {
-  .app-shell--superadmin .app-content { padding: 24px 16px 48px; }
-  .app-shell--superadmin .dash-heading { padding-bottom: 18px; margin-bottom: 20px; }
-  .app-shell--superadmin .mini-form-panel { padding: 18px; }
-  .app-shell--superadmin .mini-form .input, .app-shell--superadmin .mini-form .button { width: 100%; flex-basis: 100%; }
-  .app-shell--superadmin .mini-form--stacked .button { width: 100%; }
-  .app-shell--superadmin .panel-heading { padding: 17px 18px; }
-  .app-shell--superadmin .internal-panel-heading { align-items: flex-start; flex-direction: column; }
-  .app-shell--superadmin .filter-tabs { width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
-  .app-shell--superadmin .filter-tabs button { flex: 0 0 auto; white-space: nowrap; }
-  .app-shell--superadmin .internal-table .stack-row { padding: 18px; }
-  .app-shell--superadmin .stack-row__actions .button { flex: 1 1 145px; }
-  .app-shell--superadmin .stat-grid { grid-template-columns: 1fr; }
-  .app-shell--superadmin .internal-table { overflow: visible; }
-  .app-shell--superadmin .internal-table .data-head { display: none; }
-  .app-shell--superadmin .internal-table .data-row:not(.data-head):not(.stack-row):not(.table-empty-row) { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; padding: 18px; align-items: start; }
-  .app-shell--superadmin .internal-table .data-row:not(.data-head):not(.stack-row):not(.table-empty-row) > span:first-child { grid-column: 1 / -1; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
-  .app-shell--superadmin .internal-table .data-row:not(.data-head):not(.stack-row):not(.table-empty-row) > span.row-actions { grid-column: 1 / -1; padding-top: 9px; border-top: 1px solid var(--line); }
-  .app-shell--superadmin .internal-table .data-row:not(.data-head):not(.stack-row):not(.table-empty-row) > span[data-label]::before { content: attr(data-label); display: block; margin-bottom: 5px; color: var(--muted); font-size: .65rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-  .app-shell--superadmin .internal-table .data-row:not(.data-head):not(.stack-row):not(.table-empty-row) > span:first-child::before { margin-bottom: 7px; }
-  .app-shell--superadmin .internal-table .data-row--users > span:last-child { grid-column: 1 / -1; }
+  .app-shell--internal .app-content { padding: 24px 16px 48px; }
+  .app-shell--internal .dash-heading { padding-bottom: 18px; margin-bottom: 20px; }
+  .app-shell--internal .mini-form-panel { padding: 18px; }
+  .app-shell--internal .mini-form .input, .app-shell--internal .mini-form .button { width: 100%; flex-basis: 100%; }
+  .app-shell--internal .mini-form--stacked .button { width: 100%; }
+  .app-shell--internal .panel-heading { padding: 17px 18px; }
+  .app-shell--internal .internal-panel-heading { align-items: flex-start; flex-direction: column; }
+  .app-shell--internal .filter-tabs { width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+  .app-shell--internal .filter-tabs button { flex: 0 0 auto; white-space: nowrap; }
+  .app-shell--internal .internal-table .stack-row { padding: 18px; }
+  .app-shell--internal .stack-row__actions .button { flex: 1 1 145px; }
+  .app-shell--internal .stat-grid { grid-template-columns: 1fr; }
+  .app-shell--internal .internal-table { overflow: visible; }
+  .app-shell--internal .internal-table .data-head { display: none; }
+  .app-shell--internal .internal-table .data-row:not(.data-head):not(.stack-row):not(.table-empty-row) { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; padding: 18px; align-items: start; }
+  .app-shell--internal .internal-table .data-row:not(.data-head):not(.stack-row):not(.table-empty-row) > span:first-child { grid-column: 1 / -1; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
+  .app-shell--internal .internal-table .data-row:not(.data-head):not(.stack-row):not(.table-empty-row) > span.row-actions { grid-column: 1 / -1; padding-top: 9px; border-top: 1px solid var(--line); }
+  .app-shell--internal .internal-table .data-row:not(.data-head):not(.stack-row):not(.table-empty-row) > span[data-label]::before { content: attr(data-label); display: block; margin-bottom: 5px; color: var(--muted); font-size: .65rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+  .app-shell--internal .internal-table .data-row:not(.data-head):not(.stack-row):not(.table-empty-row) > span:first-child::before { margin-bottom: 7px; }
+  .app-shell--internal .internal-table .data-row--users > span:last-child { grid-column: 1 / -1; }
 }
 
 /* User workspace: shared rhythm, readable data, and compact phone layouts. */
@@ -1597,7 +1599,7 @@ html[data-theme="dark"] .app-shell--superadmin .internal-count { color: #bbd0ff;
 .field-hint { margin-top: 5px; display: block; color: var(--muted); font-size: .72rem; line-height: 1.45; }
 
 /* Pengelolaan paket langganan (Superadmin) */
-.plans-actions { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.plans-actions { margin: 18px 0 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .plan-form-panel { margin-top: 14px; padding: 22px; }
 .plan-form { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
 .plan-form__toggle { grid-column: 1 / -1; }
@@ -1698,6 +1700,9 @@ html[data-theme="dark"] .app-shell--superadmin .internal-count { color: #bbd0ff;
 .billing-history .data-row { padding: 12px 16px; gap: 12px; align-items: center; font-size: .74rem; }
 .billing-history .data-row small { color: var(--muted); }
 .billing-history h3 { margin: 0; display: flex; gap: 7px; align-items: center; font-size: .92rem; }
+.status-ok, .status-warn { display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: .72rem; font-weight: 800; }
+.status-ok { color: var(--success); background: var(--success-soft); }
+.status-warn { color: var(--warning); background: var(--warning-soft); }
 .pay-badge { display: inline-flex; padding: 4px 9px; border-radius: 999px; font-size: .67rem; font-weight: 800; white-space: nowrap; }
 .pay-badge--ok { color: var(--success); background: var(--success-soft); }
 .pay-badge--warn { color: var(--warning); background: var(--warning-soft); }
