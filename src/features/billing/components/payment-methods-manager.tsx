@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { FormEvent, useCallback, useState } from "react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { FormModal } from "@/components/form-modal";
 import type { AdminPaymentMethod } from "@/server/billing/payment-methods";
 
 /**
@@ -58,11 +59,7 @@ export function PaymentMethodsManager({ methods }: { methods: AdminPaymentMethod
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState<string>();
 
-  const firstFieldRef = useRef<HTMLSelectElement>(null);
-
   const channel = CHANNELS.find(entry => entry.value === form.channel) ?? CHANNELS[0];
-  const open = mode.kind !== "closed";
-
   // Menutup saat penyimpanan berjalan akan menyembunyikan hasilnya, jadi
   // tombol tutup, Escape, dan klik latar sama-sama menunggu proses selesai.
   const close = useCallback(() => {
@@ -70,16 +67,6 @@ export function PaymentMethodsManager({ methods }: { methods: AdminPaymentMethod
     setMode({ kind: "closed" });
     setError(undefined);
   }, [busy]);
-
-  useEffect(() => {
-    if (!open) return;
-    firstFieldRef.current?.focus();
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") close();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, close]);
 
   function update(key: keyof FormState, value: string | boolean) {
     setForm(current => ({ ...current, [key]: value }));
@@ -142,20 +129,16 @@ export function PaymentMethodsManager({ methods }: { methods: AdminPaymentMethod
       {error && <span className="form-feedback form-feedback--error" role="alert">{error}</span>}
     </div>
 
-    {mode.kind !== "closed" && <div className="modal-backdrop" onClick={event => { if (event.target === event.currentTarget) close(); }}>
-      <div className="modal-panel modal-panel--form" role="dialog" aria-modal="true" aria-label={mode.kind === "create" ? "Metode pembayaran baru" : `Ubah ${mode.method.label}`}>
-        <div className="modal-head">
-          <div>
-            <h2>{mode.kind === "create" ? "Metode pembayaran baru" : `Ubah ${mode.method.label}`}</h2>
-            <p>Nomor dan nama pemilik akun ini tampil apa adanya kepada pelanggan sebagai instruksi transfer. Periksa ketikannya sebelum menyimpan.</p>
-          </div>
-          <button className="icon-button" type="button" aria-label="Tutup form" onClick={close} disabled={busy}><X size={18} /></button>
-        </div>
-
+    {mode.kind !== "closed" && <FormModal
+      title={mode.kind === "create" ? "Metode pembayaran baru" : `Ubah ${mode.method.label}`}
+      description="Nomor dan nama pemilik akun ini tampil apa adanya kepada pelanggan sebagai instruksi transfer. Periksa ketikannya sebelum menyimpan."
+      busy={busy}
+      onClose={close}
+    >
         <form className="plan-form" onSubmit={event => void submit(event)}>
           <div className="field">
             <label htmlFor="method-channel">Saluran</label>
-            <select ref={firstFieldRef} className="input" id="method-channel" value={form.channel} onChange={event => update("channel", event.target.value)} disabled={busy}>
+            <select className="input" id="method-channel" value={form.channel} onChange={event => update("channel", event.target.value)} disabled={busy}>
               {CHANNELS.map(entry => <option key={entry.value} value={entry.value}>{entry.label}</option>)}
             </select>
           </div>
@@ -191,8 +174,7 @@ export function PaymentMethodsManager({ methods }: { methods: AdminPaymentMethod
             <button className="button button--ghost" type="button" onClick={close} disabled={busy}>Batal</button>
           </div>
         </form>
-      </div>
-    </div>}
+    </FormModal>}
 
     <section className="panel table-panel">
       <div className="panel-heading internal-panel-heading">

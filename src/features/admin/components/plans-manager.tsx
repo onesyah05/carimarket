@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { AlertTriangle, Pencil, Plus, Trash2, X } from "lucide-react";
+import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
+import { FormModal } from "@/components/form-modal";
 import { formatRupiah } from "@/lib/format";
 import type { AdminPlan } from "@/server/plans/admin";
 
@@ -145,15 +146,12 @@ export function PlansManager({ plans }: { plans: AdminPlan[] }) {
       {saved && <span className="form-feedback form-feedback--success" role="status">{saved}</span>}
     </div>
 
-    {mode.kind !== "closed" && <section className="panel plan-form-panel">
-      <div className="panel-heading internal-panel-heading">
-        <div>
-          <h2>{mode.kind === "create" ? "Paket baru" : `Ubah paket ${mode.plan.code}`}</h2>
-          <p>Kuota ditegakkan server dan tampil di halaman harga. Batas bernilai 0 berarti tanpa batas.</p>
-        </div>
-        <button className="icon-button" type="button" aria-label="Tutup form" onClick={close}><X size={18} /></button>
-      </div>
-
+    {mode.kind !== "closed" && <FormModal
+      title={mode.kind === "create" ? "Paket baru" : `Ubah paket ${mode.plan.code}`}
+      description="Kuota ditegakkan server dan tampil di halaman harga. Batas bernilai 0 berarti tanpa batas."
+      busy={busy}
+      onClose={close}
+    >
       <form className="plan-form" onSubmit={event => void submit(event)}>
         <div className="field">
           <label htmlFor="plan-code">Kode</label>
@@ -197,7 +195,7 @@ export function PlansManager({ plans }: { plans: AdminPlan[] }) {
           <button className="button button--ghost" type="button" onClick={close} disabled={busy}>Batal</button>
         </div>
       </form>
-    </section>}
+    </FormModal>}
 
     <section className="panel table-panel">
       <div className="panel-heading internal-panel-heading">

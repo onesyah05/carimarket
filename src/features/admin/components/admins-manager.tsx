@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
+import { FormModal } from "@/components/form-modal";
 import { statusLabel } from "@/lib/format";
 
 const PERMISSION_KEYS = ["SUPPORT_READ", "SUPPORT_REPLY", "MODERATION_REVIEW", "CONTENT_DRAFT"] as const;
@@ -20,6 +22,7 @@ export function AdminsManager({ admins }: { admins: AdminRow[] }) {
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [promotePermissions, setPromotePermissions] = useState<string[]>(["SUPPORT_READ"]);
+  const [promoting, setPromoting] = useState(false);
   const [draftPermissions, setDraftPermissions] = useState<Record<string, string[]>>(() => Object.fromEntries(admins.filter(a => a.role === "ADMIN").map(a => [a.id, a.permissions])));
 
   async function call(method: string, body: unknown, label: string) {
@@ -48,11 +51,21 @@ export function AdminsManager({ admins }: { admins: AdminRow[] }) {
 
   return (
     <>
-      <section className="panel mini-form-panel">
-        <strong>Jadikan Admin</strong>
-        <p>Promosikan akun pengguna yang sudah terdaftar menjadi Admin operasional.</p>
+      <div className="plans-actions">
+        <button className="button button--primary" type="button" onClick={() => { setPromoting(true); setError(null); }}>
+          <Plus size={16} /> Tambah admin
+        </button>
+        {error && !promoting && <span className="form-feedback form-feedback--error" role="alert">{error}</span>}
+      </div>
+
+      {promoting && <FormModal
+        title="Jadikan Admin"
+        description="Promosikan akun pengguna yang sudah terdaftar menjadi Admin operasional. Permission menentukan apa yang dapat mereka kerjakan."
+        busy={pending === "promote"}
+        onClose={() => { setPromoting(false); setError(null); }}
+      >
         <form
-          className="mini-form"
+          className="plan-form"
           onSubmit={event => {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
@@ -61,27 +74,41 @@ export function AdminsManager({ admins }: { admins: AdminRow[] }) {
               setError("Pilih minimal satu permission.");
               return;
             }
-            void call("POST", { email, permissions: promotePermissions }, "promote").then(ok => ok && (event.target as HTMLFormElement).reset());
+            const element = event.currentTarget;
+            void call("POST", { email, permissions: promotePermissions }, "promote").then(ok => {
+              if (!ok) return;
+              element.reset();
+              setPromoting(false);
+            });
           }}
         >
-          <input className="input" name="email" type="email" placeholder="email@pengguna" required />
-          <div className="checkbox-row">
-            {PERMISSION_KEYS.map(key => (
-              <label key={key}>
-                <input
-                  type="checkbox"
-                  checked={promotePermissions.includes(key)}
-                  onChange={() => togglePermission(promotePermissions, key, setPromotePermissions)}
-                /> {statusLabel(key)}
-              </label>
-            ))}
+          <div className="field plan-form__toggle">
+            <label htmlFor="promote-email">Email pengguna</label>
+            <input className="input" id="promote-email" name="email" type="email" placeholder="email@pengguna" required disabled={pending === "promote"} />
+            <small className="field-hint">Akun harus sudah terdaftar sebagai pengguna.</small>
           </div>
-          <button className="button button--primary button--small" type="submit" disabled={pending !== null}>
-            {pending === "promote" ? "Memproses…" : "Jadikan Admin"}
-          </button>
+          <div className="field plan-form__toggle">
+            <label>Permission</label>
+            <div className="checkbox-row">
+              {PERMISSION_KEYS.map(key => (
+                <label key={key}>
+                  <input
+                    type="checkbox"
+                    checked={promotePermissions.includes(key)}
+                    disabled={pending === "promote"}
+                    onChange={() => togglePermission(promotePermissions, key, setPromotePermissions)}
+                  /> {statusLabel(key)}
+                </label>
+              ))}
+            </div>
+          </div>
+          {error && <p className="form-feedback form-feedback--error plan-form__feedback" role="alert">{error}</p>}
+          <div className="plan-form__actions">
+            <button className="button button--primary" type="submit" disabled={pending !== null}>{pending === "promote" ? "Memproses…" : "Jadikan Admin"}</button>
+            <button className="button button--ghost" type="button" onClick={() => { setPromoting(false); setError(null); }} disabled={pending === "promote"}>Batal</button>
+          </div>
         </form>
-        {error && <p className="form-error" role="alert">{error}</p>}
-      </section>
+      </FormModal>}
 
       <section className="panel table-panel">
         <div className="panel-heading internal-panel-heading"><div><h2>Tim internal</h2><p>Hak akses Admin dan status akun.</p></div><span className="internal-count">{admins.length.toLocaleString("id-ID")} total</span></div>

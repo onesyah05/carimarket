@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
+import { FormModal } from "@/components/form-modal";
 import { formatDateTime } from "@/lib/format";
 
 type TermRow = { id: string; term: string; reason: string | null; createdAt: string; creator: string | null };
@@ -10,6 +12,7 @@ export function BlacklistManager({ terms }: { terms: TermRow[] }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
 
   async function addTerm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,6 +32,7 @@ export function BlacklistManager({ terms }: { terms: TermRow[] }) {
         return;
       }
       form.reset();
+      setAdding(false);
       router.refresh();
     } catch {
       setError("Tidak dapat menghubungi server.");
@@ -61,18 +65,35 @@ export function BlacklistManager({ terms }: { terms: TermRow[] }) {
 
   return (
     <>
-      <section className="panel mini-form-panel">
-        <strong>Tambah istilah terlarang</strong>
-        <p>Istilah pada draft balasan yang memuat kata ini akan ditahan untuk tinjauan.</p>
-        <form className="mini-form" onSubmit={addTerm}>
-          <input className="input" name="term" placeholder="Istilah, mis. dijamin" required minLength={2} maxLength={120} />
-          <input className="input" name="reason" placeholder="Alasan (opsional)" maxLength={255} />
-          <button className="button button--primary button--small" type="submit" disabled={pending !== null}>
-            {pending === "add" ? "Menyimpan…" : "Tambah"}
-          </button>
+      <div className="plans-actions">
+        <button className="button button--primary" type="button" onClick={() => { setAdding(true); setError(null); }}>
+          <Plus size={16} /> Tambah istilah
+        </button>
+        {error && !adding && <span className="form-feedback form-feedback--error" role="alert">{error}</span>}
+      </div>
+
+      {adding && <FormModal
+        title="Tambah istilah terlarang"
+        description="Draft balasan yang memuat istilah ini ditahan untuk ditinjau sebelum dikirim."
+        busy={pending === "add"}
+        onClose={() => { setAdding(false); setError(null); }}
+      >
+        <form className="plan-form" onSubmit={addTerm}>
+          <div className="field">
+            <label htmlFor="blacklist-term">Istilah</label>
+            <input className="input" id="blacklist-term" name="term" placeholder="Mis. dijamin" required minLength={2} maxLength={120} disabled={pending === "add"} />
+          </div>
+          <div className="field">
+            <label htmlFor="blacklist-reason">Alasan (opsional)</label>
+            <input className="input" id="blacklist-reason" name="reason" placeholder="Mis. klaim berlebihan" maxLength={255} disabled={pending === "add"} />
+          </div>
+          {error && <p className="form-feedback form-feedback--error plan-form__feedback" role="alert">{error}</p>}
+          <div className="plan-form__actions">
+            <button className="button button--primary" type="submit" disabled={pending !== null}>{pending === "add" ? "Menyimpan…" : "Tambah istilah"}</button>
+            <button className="button button--ghost" type="button" onClick={() => { setAdding(false); setError(null); }} disabled={pending === "add"}>Batal</button>
+          </div>
         </form>
-        {error && <p className="form-error" role="alert">{error}</p>}
-      </section>
+      </FormModal>}
 
       <section className="panel table-panel">
         <div className="panel-heading internal-panel-heading"><div><h2>Daftar istilah</h2><p>Istilah yang digunakan untuk menahan draft berisiko.</p></div><span className="internal-count">{terms.length.toLocaleString("id-ID")} total</span></div>
