@@ -34,6 +34,16 @@ export async function createSession(userId: string, meta?: { ip?: string; userAg
   });
 }
 
+/**
+ * Cookie sesi terbaca di permintaan, tanpa memastikan sesinya masih berlaku.
+ * Dipakai penjaga halaman untuk membedakan pengunjung yang belum pernah masuk
+ * dari pemilik cookie basi yang perlu dibersihkan.
+ */
+export async function hasSessionCookie(): Promise<boolean> {
+  const jar = await cookies();
+  return Boolean(jar.get(SESSION_COOKIE)?.value);
+}
+
 export async function getSessionUser(): Promise<User | null> {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;

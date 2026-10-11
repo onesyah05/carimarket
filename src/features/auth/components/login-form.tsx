@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { AtSign } from "lucide-react";
 import { resolveNextPath } from "@/lib/redirects";
 
-export function LoginForm({ nextPath }: { nextPath?: string }) {
+export function LoginForm({ nextPath, expired = false }: { nextPath?: string; expired?: boolean }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -47,6 +47,7 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
   return (
     <div className="auth-card">
       <h2>Masuk ke akun</h2>
+      {expired && <p className="auth-notice" role="status">Sesi Anda sudah berakhir. Silakan masuk kembali untuk melanjutkan.</p>}
       <form className="form-grid" onSubmit={onSubmit} noValidate={false}>
         <div className="field">
           <label htmlFor="email">Email</label>

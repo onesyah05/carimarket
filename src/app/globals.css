@@ -1154,6 +1154,7 @@ html[data-theme="dark"] .inline-error { color: #ffb7b7; background: #311b1b; }
 }
 
 .form-error { margin: 0; padding: 11px 13px; border: 1px solid #f0c7c7; border-radius: 11px; color: var(--danger); background: var(--danger-soft); font-size: .78rem; font-weight: 650; }
+.auth-notice { margin: 0 0 14px; padding: 11px 13px; border: 1px solid #eadb74; border-radius: 11px; color: var(--warning); background: var(--warning-soft); font-size: .78rem; font-weight: 650; }
 .logout-button { width: 100%; margin-top: 10px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: transparent; font-size: .74rem; font-weight: 750; cursor: pointer; transition: color .18s ease, background .18s ease, border-color .18s ease; }
 .logout-button:hover { color: var(--danger); border-color: #f0c7c7; background: var(--danger-soft); }
 .logout-button:disabled { opacity: .6; cursor: default; }
@@ -1240,6 +1241,7 @@ html[data-theme="dark"] .filter-tabs button.active { color: #0b1739; background:
 html[data-theme="dark"] .modal-panel { background: #101d38; }
 html[data-theme="dark"] .checkbox-row { color: #a9b6d4; }
 html[data-theme="dark"] .form-error { border-color: #6b3030; }
+html[data-theme="dark"] .auth-notice { border-color: #6b5a23; color: #f2d99a; background: #3a2f12; }
 html[data-theme="dark"] .row-error { color: #ff9b9b; }
 html[data-theme="dark"] .button--danger { color: #ff9b9b; }
 html[data-theme="dark"] .chip--draft { color: #a9b6d4; background: #1a2745; }
