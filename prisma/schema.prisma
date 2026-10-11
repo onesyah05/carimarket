@@ -542,6 +542,10 @@ model Transaction {
   payerName       String?           @db.VarChar(120)
   payerNote       String?           @db.VarChar(500)
   reviewNote      String?           @db.VarChar(500)
+  proofPath       String?           @db.VarChar(255)
+  proofMimeType   String?           @db.VarChar(100)
+  proofSize       Int?
+  proofUploadedAt DateTime?         @db.DateTime(3)
   submittedAt     DateTime?         @db.DateTime(3)
   reviewedAt      DateTime?         @db.DateTime(3)
   reviewedById    String?

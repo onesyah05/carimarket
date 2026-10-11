@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, XCircle } from "lucide-react";
+import { BadgeCheck, Paperclip, XCircle } from "lucide-react";
 import { formatDateTime, formatRupiah } from "@/lib/format";
 import type { AdminTransaction, AdminTransactionList } from "@/server/billing/transactions";
 
@@ -113,6 +113,11 @@ function Row({ transaction, busy, onDecide }: { transaction: AdminTransaction; b
     <span data-label="Nominal">
       <strong>{formatRupiah(transaction.totalAmount)}</strong><br />
       <small>kode unik {transaction.uniqueCode}</small>
+      {transaction.proof && <><br />
+        <a className="proof-link" href={`/api/billing/transactions/${encodeURIComponent(transaction.id)}/bukti`} target="_blank" rel="noreferrer">
+          <Paperclip size={13} /> Lihat bukti
+        </a>
+      </>}
     </span>
     <span data-label="Status" className="pay-cell">
       <span className={`pay-badge ${tone}`}>{transaction.statusLabel}</span>

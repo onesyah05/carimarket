@@ -10,3 +10,6 @@ tsconfig.tsbuildinfo
 
 # local HTTPS dev certificates
 certificates/
+
+# bukti pembayaran yang diunggah pelanggan
+storage/

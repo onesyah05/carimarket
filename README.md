@@ -333,8 +333,8 @@ Alurnya jujur terhadap kenyataan bahwa payment gateway belum terpasang:
    pembayaran, lalu menerima tagihan `INV-YYYYMMDD-XXXX`.
 2. Nominal tagihan memuat **kode unik tiga digit** (mis. Rp 98.417) sehingga
    satu mutasi rekening hanya cocok dengan satu tagihan.
-3. Pelanggan menekan "Saya sudah transfer" dan mengisi nama pengirim; tagihan
-   masuk antrean verifikasi.
+3. Pelanggan menekan "Saya sudah transfer", mengisi nama pengirim, dan boleh
+   melampirkan bukti transfer; tagihan masuk antrean verifikasi.
 4. Superadmin memverifikasi di Superadmin → **Pembayaran**. Menyetujui
    mengaktifkan paket, menolak mengirim notifikasi beserta alasannya.
 
@@ -364,10 +364,21 @@ terbuka yang memakainya. **Instalasi baru belum memiliki metode pembayaran,
 sehingga pelanggan belum dapat membuat tagihan sampai minimal satu metode
 aktif ditambahkan.**
 
+Bukti transfer bersifat pelengkap, karena kode unik sudah cukup untuk
+mencocokkan mutasi, tetapi lampiran mempercepat verifikasi saat nama pengirim
+berbeda dengan nama akun. Berkas diterima dalam JPG, PNG, WebP, atau PDF
+maksimal 4 MB; jenisnya diperiksa dari isi berkas, bukan dari nama atau header
+kiriman, sehingga HTML dan SVG selalu ditolak. Berkas disimpan di luar
+direktori publik (`PAYMENT_PROOF_DIR`, bawaan `storage/payment-proofs`) dan
+hanya dapat dibuka pemilik tagihan serta Superadmin melalui
+`GET /api/billing/transactions/{id}/bukti`. Pelanggan dapat mengganti atau
+menghapus buktinya selama tagihan belum diverifikasi.
+
 Seluruh pembuatan, konfirmasi, pembatalan, dan keputusan verifikasi tercatat di
 audit log. Dari aplikasi mobile, alur yang sama tersedia di
 `GET /api/v1/me/billing`, `POST /api/v1/me/transactions`, dan
-`PATCH /api/v1/me/transactions/{id}`.
+`PATCH /api/v1/me/transactions/{id}`, dengan unggahan bukti pada
+`POST /api/v1/me/transactions/{id}/proof`.
 
 ## Profil akun internal
 

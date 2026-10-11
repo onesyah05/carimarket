@@ -9,7 +9,7 @@
  * database.
  */
 
-export type ApiFieldType = "string" | "number" | "integer" | "boolean" | "array" | "object";
+export type ApiFieldType = "string" | "number" | "integer" | "boolean" | "array" | "object" | "file";
 
 export type ApiField = {
   name: string;
@@ -124,6 +124,7 @@ const transactionExample = {
   payerName: null,
   payerNote: null,
   reviewNote: null,
+  proof: null,
   expiresAt: "2026-10-12T07:00:00.000Z",
   submittedAt: null,
   reviewedAt: null,
@@ -505,6 +506,27 @@ export const API_ENDPOINTS: ApiEndpoint[] = [
     ],
     dataExample: { ...transactionExample, status: "REVIEW", statusLabel: "Menunggu verifikasi", payerName: "Nadia Pratama", submittedAt: "2026-10-11T08:10:00.000Z" },
     errors: ["INVALID_INPUT", "NOT_FOUND", "CONFLICT"],
+  },
+  {
+    method: "POST",
+    path: "/api/v1/me/transactions/{id}/proof",
+    group: "Pembayaran",
+    summary: "Unggah bukti pembayaran",
+    description: "Kirim sebagai multipart/form-data dengan field `proof` berisi JPG, PNG, WebP, atau PDF maksimal 4 MB. Mengunggah ulang menggantikan bukti sebelumnya, dan DELETE pada alamat yang sama menghapusnya. Bukti hanya dapat diunggah selama tagihan belum diverifikasi.",
+    body: [
+      { name: "proof", type: "file", required: true, description: "Berkas bukti transfer; jenisnya diperiksa dari isi berkas, bukan dari namanya." },
+    ],
+    dataExample: { ...transactionExample, status: "REVIEW", statusLabel: "Menunggu verifikasi", proof: { mimeType: "image/jpeg", size: 184320, uploadedAt: "2026-10-11T08:12:00.000Z" } },
+    errors: ["INVALID_INPUT", "NOT_FOUND", "CONFLICT", "RATE_LIMITED"],
+  },
+  {
+    method: "DELETE",
+    path: "/api/v1/me/transactions/{id}/proof",
+    group: "Pembayaran",
+    summary: "Hapus bukti pembayaran",
+    description: "Menghapus bukti yang terlanjur salah unggah selama tagihan belum diverifikasi. Status tagihan tidak berubah.",
+    dataExample: { ...transactionExample, status: "REVIEW", statusLabel: "Menunggu verifikasi", proof: null },
+    errors: ["NOT_FOUND", "CONFLICT", "RATE_LIMITED"],
   },
   {
     method: "GET",

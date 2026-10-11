@@ -71,6 +71,7 @@ export type BillingTransaction = {
   payerName: string | null;
   payerNote: string | null;
   reviewNote: string | null;
+  proof: { mimeType: string; size: number; uploadedAt: string } | null;
   expiresAt: string;
   submittedAt: string | null;
   reviewedAt: string | null;
@@ -130,6 +131,9 @@ function serialize(transaction: TransactionWithRelations): BillingTransaction {
     payerName: transaction.payerName,
     payerNote: transaction.payerNote,
     reviewNote: transaction.reviewNote,
+    proof: transaction.proofPath && transaction.proofMimeType && transaction.proofUploadedAt
+      ? { mimeType: transaction.proofMimeType, size: transaction.proofSize ?? 0, uploadedAt: transaction.proofUploadedAt.toISOString() }
+      : null,
     expiresAt: transaction.expiresAt.toISOString(),
     submittedAt: transaction.submittedAt?.toISOString() ?? null,
     reviewedAt: transaction.reviewedAt?.toISOString() ?? null,

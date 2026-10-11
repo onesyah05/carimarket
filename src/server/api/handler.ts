@@ -30,6 +30,8 @@ export type ApiContext = {
   searchParams: URLSearchParams;
   /** Body JSON tervalidasi; melempar INVALID_INPUT bila tidak sesuai skema. */
   json<T>(schema: ZodType<T>): Promise<T>;
+  /** Berkas dari body multipart/form-data, mis. unggahan bukti pembayaran. */
+  formFile(name: string): Promise<File>;
   /** Segmen dinamis rute, mis. `id` pada /leads/[id]. */
   param(name: string): Promise<string>;
 };
@@ -117,6 +119,14 @@ export function withApiAuth<T>(handler: (context: ApiContext) => Promise<ApiResu
         if (!single) throw new ApiError("NOT_FOUND", "Sumber daya tidak ditemukan.");
         return single;
       },
+      async formFile(name) {
+        const form = await request.formData().catch(() => null);
+        const file = form?.get(name);
+        if (!(file instanceof File)) {
+          throw new ApiError("INVALID_INPUT", `Berkas pada field ${name} belum disertakan.`);
+        }
+        return file;
+      },
       async json(schema) {
         const payload = await request.json().catch(() => null);
         const parsed = schema.safeParse(payload);
@@ -153,7 +163,7 @@ function fieldErrors(error: ZodError): Record<string, string> {
 }
 
 /** Endpoint yang hanya mendukung sebagian metode HTTP. */
-type PublicApiContext = Omit<ApiContext, "user" | "credentialId"> & { clientIp: string };
+type PublicApiContext = Omit<ApiContext, "user" | "credentialId" | "formFile"> & { clientIp: string };
 
 const PUBLIC_RATE_LIMIT_PER_MINUTE = 20;
 

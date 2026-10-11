@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { AlertTriangle, BadgeCheck, Check, ClipboardCopy, Clock, Receipt, X } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Check, ClipboardCopy, Clock, Paperclip, Receipt, Trash2, X } from "lucide-react";
 import { formatDateTime, formatRupiah } from "@/lib/format";
 import type { BillingOverview, BillingTransaction } from "@/server/billing/transactions";
 
@@ -27,6 +27,7 @@ export function UpgradeCenter({ initial }: { initial: BillingOverview }) {
     paymentMethodId: initial.paymentMethods[0]?.id ?? "",
   });
   const [payer, setPayer] = useState({ payerName: "", payerNote: "" });
+  const [proofFile, setProofFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState<string>();
@@ -36,21 +37,34 @@ export function UpgradeCenter({ initial }: { initial: BillingOverview }) {
   const selectedPlan = overview.options.find(option => option.id === draft.planId) ?? null;
   const projectedTotal = selectedPlan ? selectedPlan.monthlyPrice * draft.periodMonths : 0;
 
-  async function send(url: string, body: unknown, method: "POST" | "PATCH", successMessage: string) {
+  /** Setiap endpoint billing menjawab dengan ringkasan terbaru, jadi satu pembaca cukup. */
+  async function request(url: string, init: RequestInit) {
+    const response = await fetch(url, init);
+    const payload = await response.json().catch(() => null) as { data?: BillingOverview; error?: string } | null;
+    if (!response.ok || !payload?.data) throw new Error(payload?.error ?? "Permintaan belum dapat diproses.");
+    return payload.data;
+  }
+
+  function sendJson(url: string, body: unknown, method: "POST" | "PATCH") {
+    return request(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  }
+
+  function sendProof(transactionId: string, file: File) {
+    const form = new FormData();
+    form.append("proof", file);
+    // Content-Type sengaja tidak diisi agar peramban menyusun boundary multipart.
+    return request(`/api/billing/transactions/${encodeURIComponent(transactionId)}/bukti`, { method: "POST", body: form });
+  }
+
+  async function run(action: () => Promise<BillingOverview>, successMessage: string) {
     setBusy(true);
     setError(undefined);
     setSaved(undefined);
     try {
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const payload = await response.json().catch(() => null) as { data?: BillingOverview; error?: string } | null;
-      if (!response.ok || !payload?.data) throw new Error(payload?.error ?? "Permintaan belum dapat diproses.");
-      setOverview(payload.data);
+      setOverview(await action());
       setSaved(successMessage);
       setPayer({ payerName: "", payerNote: "" });
+      setProofFile(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Permintaan belum dapat diproses.");
     } finally {
@@ -70,18 +84,33 @@ export function UpgradeCenter({ initial }: { initial: BillingOverview }) {
 
   function createInvoice(event: FormEvent) {
     event.preventDefault();
-    void send("/api/billing/transactions", draft, "POST", "Tagihan dibuat. Ikuti instruksi pembayaran di bawah.");
+    void run(() => sendJson("/api/billing/transactions", draft, "POST"), "Tagihan dibuat. Ikuti instruksi pembayaran di bawah.");
   }
 
   function confirmPaid(event: FormEvent) {
     event.preventDefault();
     if (!open) return;
-    void send(`/api/billing/transactions/${encodeURIComponent(open.id)}`, { action: "confirm", ...payer }, "PATCH", "Konfirmasi terkirim. Tim akan memverifikasi mutasi pembayaran Anda.");
+    const transactionId = open.id;
+    // Bukti diunggah lebih dulu supaya tim melihatnya bersamaan dengan konfirmasi.
+    void run(async () => {
+      if (proofFile) await sendProof(transactionId, proofFile);
+      return sendJson(`/api/billing/transactions/${encodeURIComponent(transactionId)}`, { action: "confirm", ...payer }, "PATCH");
+    }, "Konfirmasi terkirim. Tim akan memverifikasi mutasi pembayaran Anda.");
+  }
+
+  function uploadProof(file: File) {
+    if (!open) return;
+    void run(() => sendProof(open.id, file), "Bukti pembayaran terunggah.");
+  }
+
+  function removeProof() {
+    if (!open) return;
+    void run(() => request(`/api/billing/transactions/${encodeURIComponent(open.id)}/bukti`, { method: "DELETE" }), "Bukti pembayaran dihapus.");
   }
 
   function cancelInvoice() {
     if (!open) return;
-    void send(`/api/billing/transactions/${encodeURIComponent(open.id)}`, { action: "cancel" }, "PATCH", "Tagihan dibatalkan.");
+    void run(() => sendJson(`/api/billing/transactions/${encodeURIComponent(open.id)}`, { action: "cancel" }, "PATCH"), "Tagihan dibatalkan.");
   }
 
   return <section className="panel upgrade-panel">
@@ -99,6 +128,7 @@ export function UpgradeCenter({ initial }: { initial: BillingOverview }) {
 
     {open
       ? <Invoice transaction={open} busy={busy} copied={copied} payer={payer} windowHours={overview.paymentWindowHours}
+        proofFile={proofFile} onProofPick={setProofFile} onProofUpload={uploadProof} onProofRemove={removeProof}
         onCopy={copy} onPayerChange={setPayer} onConfirm={confirmPaid} onCancel={cancelInvoice} />
       : overview.options.length === 0
         ? <p className="billing-empty">Belum ada paket berbayar yang aktif. Hubungi tim melalui halaman kontak untuk kebutuhan khusus.</p>
@@ -169,12 +199,16 @@ function StatusBadge({ transaction }: { transaction: BillingTransaction }) {
   return <span className={`pay-badge ${tone}`}>{transaction.statusLabel}</span>;
 }
 
-function Invoice({ transaction, busy, copied, payer, windowHours, onCopy, onPayerChange, onConfirm, onCancel }: {
+function Invoice({ transaction, busy, copied, payer, windowHours, proofFile, onProofPick, onProofUpload, onProofRemove, onCopy, onPayerChange, onConfirm, onCancel }: {
   transaction: BillingTransaction;
   busy: boolean;
   copied: string | undefined;
   payer: { payerName: string; payerNote: string };
   windowHours: number;
+  proofFile: File | null;
+  onProofPick: (file: File | null) => void;
+  onProofUpload: (file: File) => void;
+  onProofRemove: () => void;
   onCopy: (value: string, field: string) => Promise<void>;
   onPayerChange: (value: { payerName: string; payerNote: string }) => void;
   onConfirm: (event: FormEvent) => void;
@@ -230,6 +264,7 @@ function Invoice({ transaction, busy, copied, payer, windowHours, onCopy, onPaye
         ? <div className="invoice__side">
           <h3><BadgeCheck size={16} /> Menunggu verifikasi</h3>
           <p>Pembayaran atas nama {transaction.payerName ?? "—"} sedang diperiksa tim. Anda akan menerima notifikasi begitu paket aktif.</p>
+          <ProofField transaction={transaction} busy={busy} proofFile={proofFile} onProofPick={onProofPick} onProofUpload={onProofUpload} onProofRemove={onProofRemove} />
           <div className="invoice__actions">
             <button className="button button--ghost" type="button" onClick={onCancel} disabled={busy}><X size={15} /> Batalkan tagihan</button>
           </div>
@@ -245,6 +280,7 @@ function Invoice({ transaction, busy, copied, payer, windowHours, onCopy, onPaye
             <label htmlFor="payer-note">Catatan (opsional)</label>
             <input className="input" id="payer-note" value={payer.payerNote} onChange={event => onPayerChange({ ...payer, payerNote: event.target.value })} maxLength={500} placeholder="Mis. transfer dari BCA pukul 14.20" disabled={busy} />
           </div>
+          <ProofField transaction={transaction} busy={busy} proofFile={proofFile} onProofPick={onProofPick} onProofUpload={onProofUpload} onProofRemove={onProofRemove} />
           <div className="invoice__actions">
             <button className="button button--primary" type="submit" disabled={busy}>{busy ? "Mengirim..." : "Saya sudah transfer"}</button>
             <button className="button button--ghost" type="button" onClick={onCancel} disabled={busy}><X size={15} /> Batalkan tagihan</button>
@@ -252,4 +288,66 @@ function Invoice({ transaction, busy, copied, payer, windowHours, onCopy, onPaye
         </form>}
     </div>
   </div>;
+}
+
+/**
+ * Unggahan bukti transfer.
+ *
+ * Bukti bersifat pelengkap: kode unik sudah cukup untuk mencocokkan mutasi,
+ * tetapi lampiran mempercepat verifikasi ketika nama pengirim berbeda dengan
+ * nama akun. Berkasnya hanya dapat dibuka pemilik tagihan dan tim verifikasi.
+ */
+function ProofField({ transaction, busy, proofFile, onProofPick, onProofUpload, onProofRemove }: {
+  transaction: BillingTransaction;
+  busy: boolean;
+  proofFile: File | null;
+  onProofPick: (file: File | null) => void;
+  onProofUpload: (file: File) => void;
+  onProofRemove: () => void;
+}) {
+  const proof = transaction.proof;
+  const waiting = transaction.status === "REVIEW";
+  const href = `/api/billing/transactions/${encodeURIComponent(transaction.id)}/bukti`;
+
+  if (proof) {
+    return <div className="proof-field">
+      <span className="proof-field__label">Bukti transfer</span>
+      <div className="proof-field__saved">
+        <Paperclip size={15} />
+        <div>
+          <a href={href} target="_blank" rel="noreferrer">Lihat bukti</a>
+          <small>{formatFileSize(proof.size)} · diunggah {formatDateTime(proof.uploadedAt)}</small>
+        </div>
+        <button className="button button--ghost button--small" type="button" onClick={onProofRemove} disabled={busy}>
+          <Trash2 size={14} /> Hapus
+        </button>
+      </div>
+    </div>;
+  }
+
+  return <div className="field proof-field">
+    <label htmlFor="payment-proof">Bukti transfer (opsional)</label>
+    <input
+      className="input proof-field__input"
+      id="payment-proof"
+      type="file"
+      accept="image/jpeg,image/png,image/webp,application/pdf"
+      disabled={busy}
+      onChange={event => {
+        const file = event.target.files?.[0] ?? null;
+        onProofPick(file);
+        // Saat tagihan sudah dikonfirmasi tidak ada tombol kirim lagi, jadi
+        // berkas langsung diunggah begitu dipilih.
+        if (file && waiting) onProofUpload(file);
+      }}
+    />
+    <small className="field-hint">
+      {proofFile ? `${proofFile.name} siap dikirim. ` : ""}JPG, PNG, WebP, atau PDF maksimal 4 MB. Bukti mempercepat verifikasi bila nama pengirim berbeda dengan nama akun Anda.
+    </small>
+  </div>;
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
