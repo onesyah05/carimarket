@@ -1207,6 +1207,12 @@ html[data-theme="dark"] .inline-error { color: #ffb7b7; background: #311b1b; }
 .modal-panel { width: min(920px, 100%); max-height: 88vh; overflow: auto; padding: 24px; border-radius: 22px; background: white; box-shadow: 0 30px 80px rgba(11, 23, 57, .3); }
 .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .modal-head h2 { margin: 0; font-size: 1.2rem; }
+.modal-head > div { display: grid; gap: 5px; }
+.modal-head p { margin: 0; max-width: 60ch; color: var(--muted); font-size: .8rem; line-height: 1.55; }
+.modal-head { align-items: flex-start; }
+/* Form pendek tidak perlu selebar editor artikel. */
+.modal-panel--form { width: min(620px, 100%); }
+.modal-panel--form .plan-form { margin-top: 0; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
 .editor-grid { display: grid; grid-template-columns: 1.7fr 1fr; gap: 18px; }
 .editor-main { display: grid; gap: 13px; align-content: start; }
 .editor-aside { display: grid; gap: 13px; align-content: start; padding: 15px; border: 1px solid var(--line); border-radius: 16px; background: var(--canvas); }
