@@ -2,10 +2,9 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { decryptToken, encryptToken } from "@/server/security/token-encryption";
 import { ThreadsIntegrationError } from "./errors";
+import { resetUnofficialSessionCache } from "./unofficial-adapter";
 import {
   SECRET_THREADS_WEB_COOKIE,
-  SECRET_THREADS_WEB_CSRF,
-  SECRET_THREADS_WEB_LSD,
   parseUnofficialCredentials,
   type UnofficialCredentials,
 } from "./unofficial-config";
@@ -16,7 +15,8 @@ import {
  * pernah dikembalikan ke klien dalam bentuk apa pun.
  */
 
-const SECRET_KEYS = [SECRET_THREADS_WEB_COOKIE, SECRET_THREADS_WEB_LSD, SECRET_THREADS_WEB_CSRF] as const;
+/** Kunci lama dari versi yang masih meminta lsd & csrftoken terpisah. */
+const LEGACY_SECRET_KEYS = ["threads_web_lsd", "threads_web_csrf"] as const;
 
 async function putSecret(key: string, value: string, note: string | null) {
   const encrypted = encryptToken(value);
@@ -51,41 +51,36 @@ async function getSecret(key: string): Promise<string | null> {
   }
 }
 
-export async function saveUnofficialCredentials(input: {
-  cookie: string;
-  lsd: string;
-  csrf: string;
-  note?: string;
-}) {
-  const parsed = parseUnofficialCredentials(input.cookie, input.lsd, input.csrf);
+export async function saveUnofficialCredentials(input: { cookie: string; note?: string }) {
+  const parsed = parseUnofficialCredentials(input.cookie);
   if (!parsed) {
     throw new ThreadsIntegrationError(
       "THREADS_CREDENTIALS_INVALID",
-      "Kredensial tidak lengkap. Pastikan cookie memuat sessionid, csrftoken, dan ds_user_id, serta token lsd terisi.",
+      "Cookie tidak lengkap. Pastikan cookie memuat sessionid, csrftoken, dan ds_user_id.",
       400,
     );
   }
 
-  await Promise.all([
-    putSecret(SECRET_THREADS_WEB_COOKIE, parsed.cookie, input.note ?? null),
-    putSecret(SECRET_THREADS_WEB_LSD, parsed.lsd, null),
-    putSecret(SECRET_THREADS_WEB_CSRF, parsed.csrf, null),
-  ]);
+  await putSecret(SECRET_THREADS_WEB_COOKIE, parsed.cookie, input.note ?? null);
+  // Sisa dari versi lama: tidak lagi dipakai, dan tidak boleh tertinggal
+  // terenkripsi di basis data.
+  await prisma.platformSecret.deleteMany({ where: { key: { in: [...LEGACY_SECRET_KEYS] } } });
 }
 
 export async function clearUnofficialCredentials() {
-  await prisma.platformSecret.deleteMany({ where: { key: { in: [...SECRET_KEYS] } } });
+  resetUnofficialSessionCache();
+  await prisma.platformSecret.deleteMany({
+    where: { key: { in: [SECRET_THREADS_WEB_COOKIE, ...LEGACY_SECRET_KEYS] } },
+  });
 }
 
 /**
  * Status untuk UI admin: apakah kredensial sudah diisi. Tidak mengembalikan nilai.
  */
 export async function getUnofficialCredentialsStatus() {
-  const rows = await prisma.platformSecret.findMany({ where: { key: { in: [...SECRET_KEYS] } } });
-  const present = new Set(rows.map(row => row.key));
-  const cookieRow = rows.find(row => row.key === SECRET_THREADS_WEB_COOKIE);
+  const cookieRow = await prisma.platformSecret.findUnique({ where: { key: SECRET_THREADS_WEB_COOKIE } });
   return {
-    configured: SECRET_KEYS.every(key => present.has(key)),
+    configured: cookieRow !== null,
     note: cookieRow?.note ?? null,
     lastCheckedAt: cookieRow?.lastCheckedAt?.toISOString() ?? null,
     updatedAt: cookieRow?.updatedAt?.toISOString() ?? null,
@@ -97,12 +92,7 @@ export async function getUnofficialCredentialsStatus() {
  * Mengembalikan null bila belum diisi atau tidak dapat didekripsi.
  */
 export async function loadUnofficialCredentials(): Promise<UnofficialCredentials | null> {
-  const [cookie, lsd, csrf] = await Promise.all([
-    getSecret(SECRET_THREADS_WEB_COOKIE),
-    getSecret(SECRET_THREADS_WEB_LSD),
-    getSecret(SECRET_THREADS_WEB_CSRF),
-  ]);
-  return parseUnofficialCredentials(cookie ?? "", lsd ?? "", csrf ?? "");
+  return parseUnofficialCredentials((await getSecret(SECRET_THREADS_WEB_COOKIE)) ?? "");
 }
 
 /**

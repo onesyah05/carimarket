@@ -488,13 +488,13 @@ Sebelum Meta menyetujui App Review, pencarian keyword tetap jalan dengan memakai
 Cara mengaktifkan (hanya Superadmin):
 
 1. Buka `https://www.threads.com` di browser, masuk dengan akun yang dipakai untuk memantau.
-2. Ambil nilai cookie berikut: `sessionid`, `csrftoken`, `ds_user_id` (cukup salin ketiganya sebagai satu string cookie).
-3. Ambil token `lsd` dari header `x-fb-lsd` request GraphQL apa pun di halaman search Threads (lihat DevTools → Network).
-4. Buka Superadmin → **Integrasi** (`/superadmin/integrasi`), isi form, lalu simpan.
-5. Sistem menyimpan kredensial terenkripsi (AES-256-GCM) di database dan langsung menjalankan satu pencarian uji. Jika sukses, pencarian keyword aktif.
+2. DevTools (F12) → tab **Network** → pilih permintaan apa pun → salin seluruh header `Cookie`. Harus memuat `sessionid`, `csrftoken`, dan `ds_user_id`.
+3. Buka Superadmin → **Integrasi** (`/superadmin/integrasi`), tempel cookie itu (satu-satunya isian wajib), lalu simpan.
+4. Sistem menyimpan cookie terenkripsi (AES-256-GCM) di database dan langsung menjalankan satu pencarian uji. Jika sukses, pencarian keyword aktif.
 
 Catatan penting:
 
+- Hanya cookie yang diminta. Token `fb_dtsg` dan `lsd` berumur beberapa jam, jadi server mengambilnya sendiri dari halaman depan Threads (hasilnya disimpan di memori 10 menit) dan `csrftoken` dibaca dari cookie — meminta ketiganya ke operator hanya membuat kredensial basi.
 - Cookie sesi web bisa kedaluwarsa. Saat itu terjadi, pencarian gagal dengan pesan "Sesi Threads kedaluwarsa" dan Superadmin cukup mengisi ulang form yang sama.
 - Jalur ini **hanya untuk pencarian**. Mengirim balasan tetap butuh API resmi Meta; setelah App Review disetujui, hubungkan akun via OAuth (Pengaturan → Integrasi Threads) dan jalur resmi akan otomatis dipakai.
 - Saat keduanya tersedia, OAuth resmi dipakai lebih dulu; jalur pra-App-Review menjadi cadangan.

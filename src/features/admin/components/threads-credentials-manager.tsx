@@ -37,8 +37,6 @@ export function ThreadsCredentialsManager({ status }: { status: CredentialStatus
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cookie: data.get("cookie"),
-          lsd: data.get("lsd"),
-          csrf: data.get("csrf"),
           note: String(data.get("note") ?? "").trim() || undefined,
         }),
       });
@@ -82,8 +80,9 @@ export function ThreadsCredentialsManager({ status }: { status: CredentialStatus
         <strong>Kredensial Threads (mode pra-App-Review)</strong>
         <p>
           Pencarian Threads dapat berjalan sebelum Meta menyetujui App Review dengan memakai sesi web Threads.
-          Isi cookie sesi dari browser yang sudah masuk Threads. Nilai disimpan terenkripsi dan tidak pernah
-          ditampilkan kembali. Hanya Superadmin yang dapat mengisi.
+          Cukup tempel cookie dari browser yang sudah masuk Threads — token <code>lsd</code> dan <code>fb_dtsg</code>
+          berganti tiap beberapa jam, jadi sistem mengambilnya sendiri setiap kali mencari. Nilai disimpan
+          terenkripsi dan tidak pernah ditampilkan kembali. Hanya Superadmin yang dapat mengisi.
         </p>
         <div className="status-row">
           <span>Status:</span>
@@ -108,32 +107,16 @@ export function ThreadsCredentialsManager({ status }: { status: CredentialStatus
             placeholder="sessionid=...; csrftoken=...; ds_user_id=...; ig_did=...; mid=..."
             required
             minLength={20}
-            rows={3}
+            rows={4}
             spellCheck={false}
             autoComplete="off"
+            aria-describedby="threads-cookie-help"
           />
-          <label className="field-label" htmlFor="threads-lsd">Token lsd (x-fb-lsd)</label>
-          <input
-            className="input"
-            id="threads-lsd"
-            name="lsd"
-            placeholder="Mis. KBSzAYNLbg-aESJzrrdG06"
-            required
-            minLength={8}
-            spellCheck={false}
-            autoComplete="off"
-          />
-          <label className="field-label" htmlFor="threads-csrf">csrftoken</label>
-          <input
-            className="input"
-            id="threads-csrf"
-            name="csrf"
-            placeholder="Nilai cookie csrftoken"
-            required
-            minLength={8}
-            spellCheck={false}
-            autoComplete="off"
-          />
+          <p className="field-hint" id="threads-cookie-help">
+            Buka www.threads.com dalam keadaan sudah masuk → DevTools (F12) → tab Network → pilih salah satu
+            permintaan → salin seluruh header <code>Cookie</code>. Harus memuat <code>sessionid</code>,
+            <code>csrftoken</code>, dan <code>ds_user_id</code>.
+          </p>
           <label className="field-label" htmlFor="threads-note">Catatan (opsional)</label>
           <input className="input" id="threads-note" name="note" placeholder="Mis. Akun marketing@carimarket.id" maxLength={255} />
           <button className="button button--primary button--small" type="submit" disabled={pending !== null}>

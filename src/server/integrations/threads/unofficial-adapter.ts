@@ -1,185 +1,205 @@
 import "server-only";
-import { z } from "zod";
 import { ThreadsIntegrationError } from "./errors";
 import type { SearchCapability, ThreadSearchResult, ThreadsAdapter, ThreadsPublishingLimit } from "./types";
+import { collectThreadPosts } from "./unofficial-response";
 import {
   UNOFFICIAL_APP_ID,
   UNOFFICIAL_ASBD_ID,
+  UNOFFICIAL_BLOKS_VERSION,
+  UNOFFICIAL_BOOTSTRAP_URL,
   UNOFFICIAL_DOC_ID,
   UNOFFICIAL_ENDPOINT,
   UNOFFICIAL_OPERATION_NAME,
+  UNOFFICIAL_RELAY_PROVIDERS,
   UNOFFICIAL_ROOT_FIELD,
+  UNOFFICIAL_USER_AGENT,
+  extractSessionTokens,
   type UnofficialCredentials,
+  type UnofficialSessionTokens,
 } from "./unofficial-config";
 
 /**
- * Adapter TIDAK RESMI untuk threads.com/graphql/query.
+ * Adapter TIDAK RESMI untuk threads.com/api/graphql.
  *
  * Mengimplementasikan ThreadsAdapter sehingga search-service tidak perlu tahu
  * sumber datanya. Memakai cookie sesi web Threads, jadi pencarian berjalan
  * tanpa App Review Meta. Reply & publish TIDAK didukung di jalur ini —
  * setelah App Review disetujui, jalur resmi yang menangani publish.
+ *
+ * Satu-satunya kredensial yang disimpan adalah cookie. Token `fb_dtsg` dan
+ * `lsd` berganti tiap beberapa jam, jadi adapter mengambilnya sendiri dari
+ * halaman depan Threads dan menyimpannya sebentar di memori.
  */
 
-const userSchema = z.object({
-  username: z.string().optional(),
-  full_name: z.string().optional().nullable(),
-});
+const TOKEN_TTL_MS = 10 * 60 * 1000;
 
-const postSchema = z.object({
-  pk: z.union([z.string(), z.number()]).transform(String),
-  code: z.string().optional().nullable(),
-  caption: z.object({ text: z.string().optional().nullable() }).optional().nullable(),
-  taken_at: z.number().optional().nullable(),
-  user: userSchema.optional().nullable(),
-  like_count: z.number().optional().nullable(),
-  text_post_app_info: z.object({
-    direct_reply_count: z.number().optional().nullable(),
-    repost_count: z.number().optional().nullable(),
-    quote_count: z.number().optional().nullable(),
-  }).optional().nullable(),
-});
+/**
+ * Cache satu entri saja: hanya ada satu kredensial platform, dan menahan lebih
+ * banyak hanya memperpanjang umur token sesi di memori tanpa manfaat.
+ */
+let tokenCache: { cookie: string; tokens: UnofficialSessionTokens; expiresAt: number } | null = null;
 
-const threadSchema = z.object({
-  thread_items: z.array(z.object({ post: postSchema.optional().nullable() })).optional().nullable(),
-});
-
-const edgeSchema = z.object({
-  node: z.object({ thread: threadSchema.optional().nullable() }).optional().nullable(),
-});
-
-const searchResponseSchema = z.object({
-  data: z
-    .object({
-      searchResults: z
-        .object({
-          edges: z.array(edgeSchema).default([]),
-        })
-        .optional()
-        .nullable(),
-    })
-    .optional()
-    .nullable(),
-});
-
-function buildVariables(query: string) {
-  return {
-    after: null,
-    before: null,
-    first: 10,
-    last: null,
-    query,
-    recent: 1,
-    search_surface: "default",
-    tagID: null,
-    trend_fbid: null,
-    meta_place_id: null,
-    pinned_ids: null,
-    power_search_info: null,
-    has_communities: true,
-    has_community_green_dot: false,
-    has_favicons: false,
-    has_live_chats: false,
-    has_serp_header: false,
-    // Provider flags wajib; tanpa ini server GraphQL menolak eksekusi.
-    __relay_internal__pv__BarcelonaHasSERPHeaderrelayprovider: false,
-    __relay_internal__pv__BarcelonaHasCommunitiesOrLoggedOutrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasWebFaviconsrelayprovider: false,
-    __relay_internal__pv__BarcelonaHasCommunityGreenDotrelayprovider: false,
-    __relay_internal__pv__BarcelonaMessagesHasLiveChatMessagingrelayprovider: false,
-    __relay_internal__pv__BarcelonaHasCommunityTopContributorsrelayprovider: false,
-    __relay_internal__pv__BarcelonaHasCommunityBobbleheadsrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasCommunityTrendingBadgingrelayprovider: false,
-    __relay_internal__pv__BarcelonaIsLoggedInrelayprovider: true,
-    __relay_internal__pv__BarcelonaShouldFetchPostAuthorFullNamerelayprovider: true,
-    __relay_internal__pv__BarcelonaHasDearAlgoConsumptionrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasMetaAiContentAttachmentsrelayprovider: false,
-    __relay_internal__pv__BarcelonaHasEventBadgerelayprovider: false,
-    __relay_internal__pv__BarcelonaHasBestOfThreadsrelayprovider: false,
-    __relay_internal__pv__BarcelonaMessagingHasMetaAIBotrelayprovider: false,
-    __relay_internal__pv__BarcelonaGenAIRepliesEnabledrelayprovider: true,
-    __relay_internal__pv__BarcelonaIsSearchDiscoveryEnabledrelayprovider: false,
-    __relay_internal__pv__BarcelonaHasCommunitiesrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasGameScoreSharerelayprovider: true,
-    __relay_internal__pv__BarcelonaHasPublicViewCountCardrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasCommunityEmojiUpdateCardrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasCommunityEntityCardrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasScorecardCommunityrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasSportTeamAllegianceCardrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasMusicrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasNewspaperLinkStylerelayprovider: false,
-    __relay_internal__pv__BarcelonaHasMessagingrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasPodcastV2Consumptionrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasPodcastTranscriptConsumptionrelayprovider: true,
-    __relay_internal__pv__BarcelonaOptionalCookiesEnabledrelayprovider: true,
-    __relay_internal__pv__BarcelonaShouldFulfillLightboxQueryrelayprovider: true,
-    __relay_internal__pv__BarcelonaCanSeeSponsoredContentrelayprovider: false,
-    __relay_internal__pv__BarcelonaIsCrawlerrelayprovider: false,
-    __relay_internal__pv__BarcelonaHasDearAlgoWebProductionrelayprovider: false,
-    __relay_internal__pv__BarcelonaHasViewerRepliedrelayprovider: true,
-    __relay_internal__pv__BarcelonaHasPrivateRepliesDeprecationrelayprovider: false,
-    __relay_internal__pv__BarcelonaHasGhostPostEmojiActivationrelayprovider: false,
-    __relay_internal__pv__BarcelonaShouldShowFediverseM075Featuresrelayprovider: true,
-    __relay_internal__pv__BarcelonaIsInternalUserrelayprovider: false,
-  };
+function sessionExpired(diagnostics: string) {
+  return new ThreadsIntegrationError(
+    "THREADS_WEB_SESSION_EXPIRED",
+    "Sesi Threads kedaluwarsa. Admin perlu memperbarui cookie di panel superadmin.",
+    400,
+    diagnostics,
+  );
 }
 
-async function requestUnofficial<T>(
-  credentials: UnofficialCredentials,
-  body: URLSearchParams,
-  schema: z.ZodType<T>,
-): Promise<T> {
-  const response = await fetch(UNOFFICIAL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      accept: "*/*",
-      "content-type": "application/x-www-form-urlencoded",
-      cookie: credentials.cookie,
-      origin: "https://www.threads.com",
-      referer: "https://www.threads.com/search",
-      "user-agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
-      "x-asbd-id": UNOFFICIAL_ASBD_ID,
-      "x-csrftoken": credentials.csrf,
-      "x-fb-friendly-name": UNOFFICIAL_OPERATION_NAME,
-      "x-fb-lsd": credentials.lsd,
-      "x-ig-app-id": UNOFFICIAL_APP_ID,
-      "x-root-field-name": UNOFFICIAL_ROOT_FIELD,
-    },
-    body: body.toString(),
-    cache: "no-store",
-    signal: AbortSignal.timeout(20_000),
-  });
+/** Membuang token sesi yang tersimpan, mis. setelah Threads menolak request. */
+export function resetUnofficialSessionCache() {
+  tokenCache = null;
+}
 
-  const payload = (await response.json().catch(() => null)) as { errors?: Array<{ message?: string }>; data?: unknown } | null;
+async function loadSessionTokens(credentials: UnofficialCredentials): Promise<UnofficialSessionTokens> {
+  if (tokenCache && tokenCache.cookie === credentials.cookie && tokenCache.expiresAt > Date.now()) {
+    return tokenCache.tokens;
+  }
 
-  if (!response.ok || (payload?.errors && payload.errors.length > 0)) {
-    const message = payload?.errors?.[0]?.message ?? "Threads sedang tidak dapat memproses permintaan.";
-    // 401/403 → cookie kedaluwarsa; admin harus update.
-    const expired = response.status === 401 || response.status === 403 || /login|session|authen/i.test(message);
+  let response: Response;
+  try {
+    response = await fetch(UNOFFICIAL_BOOTSTRAP_URL, {
+      headers: {
+        accept: "text/html,application/xhtml+xml",
+        "accept-language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+        cookie: credentials.cookie,
+        "user-agent": UNOFFICIAL_USER_AGENT,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch {
     throw new ThreadsIntegrationError(
-      expired ? "THREADS_WEB_SESSION_EXPIRED" : `THREADS_WEB_${response.status}`,
-      expired
-        ? "Sesi Threads kedaluwarsa. Admin perlu memperbarui kredensial di panel superadmin."
-        : "Threads sedang tidak dapat memproses permintaan. Silakan coba lagi nanti.",
-      response.status >= 400 && response.status < 500 ? 400 : 502,
+      "THREADS_WEB_UNREACHABLE",
+      "Threads sedang tidak dapat dihubungi. Silakan coba lagi nanti.",
+      502,
+      "bootstrap fetch failed",
     );
   }
 
-  const parsed = schema.safeParse(payload);
-  if (!parsed.success) {
+  if (!response.ok) {
+    throw sessionExpired(`bootstrap HTTP ${response.status}`);
+  }
+
+  const tokens = extractSessionTokens(await response.text());
+  if (!tokens) {
+    throw sessionExpired("token fb_dtsg/lsd tidak ditemukan di halaman");
+  }
+
+  tokenCache = { cookie: credentials.cookie, tokens, expiresAt: Date.now() + TOKEN_TTL_MS };
+  return tokens;
+}
+
+function buildVariables(query: string) {
+  return {
+    query,
+    // Harus integer 1/0, bukan boolean: server menolak nilai bertipe lain.
+    recent: 1,
+    search_surface: "default",
+    after: null,
+    before: null,
+    meta_place_id: null,
+    pinned_ids: null,
+    power_search_info: null,
+    tagID: null,
+    trend_fbid: null,
+    ...UNOFFICIAL_RELAY_PROVIDERS,
+  };
+}
+
+async function runSearch(
+  credentials: UnofficialCredentials,
+  tokens: UnofficialSessionTokens,
+  query: string,
+): Promise<unknown> {
+  const body = new URLSearchParams({
+    __a: "1",
+    __comet_req: "29",
+    __req: "1",
+    __user: "0",
+    fb_api_caller_class: "RelayModern",
+    fb_api_req_friendly_name: UNOFFICIAL_OPERATION_NAME,
+    fb_dtsg: tokens.fbDtsg,
+    jazoest: tokens.jazoest,
+    lsd: tokens.lsd,
+    server_timestamps: "true",
+    variables: JSON.stringify(buildVariables(query)),
+    doc_id: UNOFFICIAL_DOC_ID,
+  });
+
+  let response: Response;
+  try {
+    response = await fetch(UNOFFICIAL_ENDPOINT, {
+      method: "POST",
+      headers: {
+        accept: "*/*",
+        "accept-language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+        "content-type": "application/x-www-form-urlencoded",
+        cookie: credentials.cookie,
+        origin: "https://www.threads.com",
+        referer: `https://www.threads.com/search?q=${encodeURIComponent(query)}&serp_type=default&filter=recent`,
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-origin",
+        "user-agent": UNOFFICIAL_USER_AGENT,
+        "x-asbd-id": UNOFFICIAL_ASBD_ID,
+        "x-bloks-version-id": UNOFFICIAL_BLOKS_VERSION,
+        "x-csrftoken": credentials.csrf,
+        "x-fb-friendly-name": UNOFFICIAL_OPERATION_NAME,
+        "x-fb-lsd": tokens.lsd,
+        "x-ig-app-id": UNOFFICIAL_APP_ID,
+        "x-root-field-name": UNOFFICIAL_ROOT_FIELD,
+      },
+      body: body.toString(),
+      cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch {
+    throw new ThreadsIntegrationError(
+      "THREADS_WEB_UNREACHABLE",
+      "Threads sedang tidak dapat dihubungi. Silakan coba lagi nanti.",
+      502,
+      "graphql fetch failed",
+    );
+  }
+
+  const payload = (await response.json().catch(() => null)) as
+    | { errors?: Array<{ message?: string }>; data?: unknown }
+    | null;
+
+  if (!response.ok) {
+    // 401/403 → cookie kedaluwarsa; admin harus memperbarui.
+    if (response.status === 401 || response.status === 403) {
+      resetUnofficialSessionCache();
+      throw sessionExpired(`graphql HTTP ${response.status}`);
+    }
+    throw new ThreadsIntegrationError(
+      `THREADS_WEB_${response.status}`,
+      "Threads sedang tidak dapat memproses permintaan. Silakan coba lagi nanti.",
+      response.status >= 400 && response.status < 500 ? 400 : 502,
+      `graphql HTTP ${response.status}`,
+    );
+  }
+
+  const firstError = payload?.errors?.[0]?.message;
+  // Payload parsial masih berisi hasil; hanya error sesi yang benar-benar fatal.
+  if (firstError && /login|session|authen|not authorized/i.test(firstError)) {
+    resetUnofficialSessionCache();
+    throw sessionExpired("graphql menolak sesi");
+  }
+
+  if (!payload) {
     throw new ThreadsIntegrationError(
       "THREADS_WEB_RESPONSE_INVALID",
       "Threads sedang tidak dapat memproses permintaan. Silakan coba lagi nanti.",
       502,
+      "respons bukan JSON",
     );
   }
-  return parsed.data;
-}
 
-/** Hanya menerima angka yang benar-benar dikirim Threads; sisanya tetap tidak diketahui. */
-function nonNegative(value: number | null | undefined): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.trunc(value) : undefined;
+  return payload;
 }
 
 export function createUnofficialThreadsAdapter(credentials: UnofficialCredentials): ThreadsAdapter {
@@ -189,42 +209,18 @@ export function createUnofficialThreadsAdapter(credentials: UnofficialCredential
     },
 
     async searchPosts(query: string): Promise<ThreadSearchResult[]> {
-      const body = new URLSearchParams();
-      body.append("lsd", credentials.lsd);
-      body.append("variables", JSON.stringify(buildVariables(query)));
-      body.append("doc_id", UNOFFICIAL_DOC_ID);
-      body.append("fb_api_caller_class", "RelayModern");
-      body.append("fb_api_req_friendly_name", UNOFFICIAL_OPERATION_NAME);
-      body.append("server_timestamps", "true");
-
-      const payload = await requestUnofficial(credentials, body, searchResponseSchema);
-      const edges = payload.data?.searchResults?.edges ?? [];
-
-      const results: ThreadSearchResult[] = [];
-      for (const edge of edges) {
-        const post = edge.node?.thread?.thread_items?.[0]?.post;
-        if (!post) continue;
-        const text = post.caption?.text?.trim() ?? "";
-        if (!text) continue;
-
-        const code = post.code ?? post.pk;
-        const handle = post.user?.username ?? "";
-        const engagement = post.text_post_app_info;
-        results.push({
-          externalPostId: post.pk,
-          authorHandle: handle ? `@${handle}` : "",
-          authorName: post.user?.full_name ?? handle ?? "",
-          body: text,
-          permalink: handle ? `https://www.threads.com/@${handle}/post/${code}` : `https://www.threads.com/post/${code}`,
-          postedAt: new Date((post.taken_at ?? 0) * 1000),
-          capability: "PUBLIC_SEARCH",
-          simulated: false,
-          likeCount: nonNegative(post.like_count),
-          replyCount: nonNegative(engagement?.direct_reply_count),
-          repostCount: nonNegative(engagement?.repost_count),
-        });
+      const tokens = await loadSessionTokens(credentials);
+      let payload: unknown;
+      try {
+        payload = await runSearch(credentials, tokens, query);
+      } catch (error) {
+        // Token bisa kedaluwarsa di tengah TTL cache; coba sekali lagi dengan
+        // token segar sebelum menyimpulkan cookie-nya yang sudah mati.
+        if (!(error instanceof ThreadsIntegrationError) || error.code !== "THREADS_WEB_SESSION_EXPIRED") throw error;
+        resetUnofficialSessionCache();
+        payload = await runSearch(credentials, await loadSessionTokens(credentials), query);
       }
-      return results;
+      return collectThreadPosts(payload);
     },
 
     async publishReply(): Promise<{ status: "SENT" | "SIMULATED_SENT"; externalReplyId?: string }> {

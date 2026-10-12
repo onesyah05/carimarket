@@ -18,8 +18,6 @@ const PROBE_QUERY = "jasa website";
 
 const saveSchema = z.object({
   cookie: z.string().trim().min(20, "Cookie tidak lengkap."),
-  lsd: z.string().trim().min(8, "Token lsd tidak valid."),
-  csrf: z.string().trim().min(8, "Token csrftoken tidak valid."),
   note: z.string().trim().max(255).optional(),
 });
 
@@ -57,7 +55,7 @@ export async function POST(request: Request) {
     }
 
     // Validasi dulu sebelum menyimpan: cookie harus benar-benar berfungsi.
-    const probe = parseUnofficialCredentials(input.data.cookie, input.data.lsd, input.data.csrf);
+    const probe = parseUnofficialCredentials(input.data.cookie);
     if (!probe) {
       throw new ThreadsIntegrationError(
         "THREADS_CREDENTIALS_INVALID",
@@ -82,12 +80,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: message, code: "THREADS_CREDENTIALS_PROBE_FAILED" }, { status: 400 });
     }
 
-    await saveUnofficialCredentials({
-      cookie: input.data.cookie,
-      lsd: input.data.lsd,
-      csrf: input.data.csrf,
-      note: input.data.note,
-    });
+    await saveUnofficialCredentials({ cookie: input.data.cookie, note: input.data.note });
 
     await recordAudit({
       actorId: actor.id,
