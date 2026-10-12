@@ -80,9 +80,9 @@ export function ThreadsCredentialsManager({ status }: { status: CredentialStatus
         <strong>Kredensial Threads (mode pra-App-Review)</strong>
         <p>
           Pencarian Threads dapat berjalan sebelum Meta menyetujui App Review dengan memakai sesi web Threads.
-          Cukup tempel cookie dari browser yang sudah masuk Threads — token <code>lsd</code> dan <code>fb_dtsg</code>
-          berganti tiap beberapa jam, jadi sistem mengambilnya sendiri setiap kali mencari. Nilai disimpan
-          terenkripsi dan tidak pernah ditampilkan kembali. Hanya Superadmin yang dapat mengisi.
+          Cukup tempel cookie dari browser yang sudah masuk Threads — token <code>lsd</code> dan{" "}
+          <code>fb_dtsg</code> berganti tiap beberapa jam, jadi sistem mengambilnya sendiri setiap kali mencari.
+          Nilai disimpan terenkripsi dan tidak pernah ditampilkan kembali. Hanya Superadmin yang dapat mengisi.
         </p>
         <div className="status-row">
           <span>Status:</span>
@@ -114,7 +114,7 @@ export function ThreadsCredentialsManager({ status }: { status: CredentialStatus
           />
           <p className="field-hint" id="threads-cookie-help">
             Buka www.threads.com dalam keadaan sudah masuk → DevTools (F12) → tab Network → pilih salah satu
-            permintaan → salin seluruh header <code>Cookie</code>. Harus memuat <code>sessionid</code>,
+            permintaan → salin seluruh header <code>Cookie</code>. Harus memuat <code>sessionid</code>,{" "}
             <code>csrftoken</code>, dan <code>ds_user_id</code>.
           </p>
           <label className="field-label" htmlFor="threads-note">Catatan (opsional)</label>
