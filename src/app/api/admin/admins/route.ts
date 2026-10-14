@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     const target = await prisma.user.findUnique({ where: { email: input.data.email } });
-    if (!target) throw new ThreadsIntegrationError("USER_NOT_FOUND", "Tidak ada akun dengan email tersebut. Minta orang tersebut mendaftar lebih dulu.", 404);
+    if (!target) throw new ThreadsIntegrationError("USER_NOT_FOUND", "Tidak ada akun dengan email tersebut. Buat akunnya lebih dulu di menu Pengguna.", 404);
     if (target.role !== "USER") throw new ThreadsIntegrationError("INVALID_TARGET", "Akun ini sudah menjadi bagian tim internal.", 400);
     if (target.status !== "ACTIVE") throw new ThreadsIntegrationError("ACCOUNT_INACTIVE", "Akun pengguna tidak aktif.", 409);
 

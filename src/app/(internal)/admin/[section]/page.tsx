@@ -7,12 +7,14 @@ import { InternalProfile } from "@/features/account/components/internal-profile"
 import { isThreadsConfigured } from "@/server/integrations/threads/config";
 import { listArticlesForCms } from "@/server/cms/articles";
 import { serializeCmsArticle } from "@/server/cms/serialize";
-import { listContactSubmissions, listFlaggedReplies, listMonitoringSnapshot, listSupportTickets } from "@/server/admin/queries";
+import { listContactSubmissions, listFlaggedReplies, listMonitoringSnapshot, listPlatformUsers, listSupportTickets } from "@/server/admin/queries";
 import { getWorkerStatus } from "@/server/jobs/runtime";
-import { ContactSubmissionsTable, MonitoringPanels, ModerationQueue, TicketsTable } from "@/features/admin/components/internal-tables";
+import { ContactSubmissionsTable, MonitoringPanels, ModerationQueue, TicketsTable, UsersTable } from "@/features/admin/components/internal-tables";
+import { AddUserButton } from "@/features/admin/components/add-user-button";
 import { ArticlesManager } from "@/features/cms/components/articles-manager";
 
 const HEADINGS: Record<string, { title: string; copy: string }> = {
+  pengguna: { title: "Pengguna", copy: "Daftarkan pelanggan baru dan lihat akun yang sudah ada. Menangguhkan akun dan mencabut koneksi tetap di tangan Superadmin." },
   tiket: { title: "Tiket dukungan", copy: "Tanggapi pertanyaan pengguna dan pesan dari formulir kontak tanpa membuka data sensitif." },
   moderasi: { title: "Moderasi balasan", copy: "Setujui draft yang lolos aturan atau tolak draft berisiko. Keputusan tercatat di audit log." },
   monitoring: { title: "Monitoring integrasi", copy: "Kesehatan integrasi 24 jam terakhir, read-only." },
@@ -30,6 +32,15 @@ export default async function AdminSection({ params }: { params: Promise<{ secti
     return <>
       <PageHeading eyebrow="Admin" title={heading.title} copy={heading.copy} />
       <InternalProfile account={await getAccountOverview(actor)} />
+    </>;
+  }
+
+  if (section === "pengguna") {
+    const users = await listPlatformUsers();
+    return <>
+      <PageHeading eyebrow="Admin" title={heading.title} copy={heading.copy} />
+      <AddUserButton />
+      <UsersTable users={users} canModerate={false} />
     </>;
   }
 

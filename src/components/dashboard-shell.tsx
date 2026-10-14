@@ -43,6 +43,7 @@ const adminNav: NavGroup[] = [
     caption: "Operasional",
     items: [
       { label: "Ringkasan", href: "/admin", icon: LayoutDashboard },
+      { label: "Pengguna", href: "/admin/pengguna", icon: Users },
       { label: "Tiket", href: "/admin/tiket", icon: CircleHelp },
       { label: "Moderasi", href: "/admin/moderasi", icon: ShieldCheck },
       { label: "Monitoring", href: "/admin/monitoring", icon: Gauge },

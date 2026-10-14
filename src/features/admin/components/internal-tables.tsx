@@ -14,12 +14,17 @@ function TableHeading({ title, description, count }: { title: string; descriptio
   return <div className="panel-heading internal-panel-heading"><div><h2>{title}</h2><p>{description}</p></div>{count !== undefined && <span className="internal-count">{count.toLocaleString("id-ID")} total</span>}</div>;
 }
 
-export function UsersTable({ users }: { users: Array<Record<string, unknown>> & SharedProps }) {
+/**
+ * `canModerate` memisahkan apa yang boleh dilakukan tiap peran: Admin menambah
+ * dan melihat akun, sedangkan menangguhkan akun atau mencabut koneksi Threads
+ * tetap milik Superadmin — sama seperti yang ditegakkan API-nya.
+ */
+export function UsersTable({ users, canModerate = true }: { users: Array<Record<string, unknown>> & SharedProps; canModerate?: boolean }) {
   return (
     <section className="panel table-panel">
-      <TableHeading title="Daftar pengguna" description="Akun, bisnis, paket, dan tindakan akun." count={users.length} />
+      <TableHeading title="Daftar pengguna" description={canModerate ? "Akun, bisnis, paket, dan tindakan akun." : "Akun, bisnis, dan paket pelanggan."} count={users.length} />
       <div className="data-table internal-table">
-        <div className="data-row data-head data-row--users"><span>Pengguna</span><span>Bisnis</span><span>Role</span><span>Status</span><span>Paket</span><span>Aksi</span></div>
+        <div className="data-row data-head data-row--users"><span>Pengguna</span><span>Bisnis</span><span>Role</span><span>Status</span><span>Paket</span><span>{canModerate ? "Aksi" : "Terdaftar"}</span></div>
         {users.length === 0 && <EmptyRow cols="" message="Belum ada pengguna terdaftar." />}
         {users.map(user => {
           const plan = (user.subscriptions as Array<{ plan: { name: string } }>)[0]?.plan.name ?? "—";
@@ -30,11 +35,15 @@ export function UsersTable({ users }: { users: Array<Record<string, unknown>> & 
               <span data-label="Role">{statusLabel(String(user.role))}</span>
               <span data-label="Status">{statusLabel(String(user.status))}</span>
               <span data-label="Paket">{plan}</span>
-              <span data-label="Aksi">
-                {user.role === "SUPERADMIN" ? <small>Akun tertinggi</small> : (
-                  <UserRowActions userId={String(user.id)} name={String(user.name)} status={user.status as "ACTIVE" | "SUSPENDED" | "PENDING_VERIFICATION"} />
-                )}
-              </span>
+              {canModerate ? (
+                <span data-label="Aksi">
+                  {user.role === "SUPERADMIN" ? <small>Akun tertinggi</small> : (
+                    <UserRowActions userId={String(user.id)} name={String(user.name)} status={user.status as "ACTIVE" | "SUSPENDED" | "PENDING_VERIFICATION"} />
+                  )}
+                </span>
+              ) : (
+                <span data-label="Terdaftar">{formatDateTime(user.createdAt as string)}</span>
+              )}
             </div>
           );
         })}

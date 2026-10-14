@@ -237,6 +237,23 @@ ini tidak memiliki email dari Meta, jadi:
 - setel `THREADS_SIGNUP_ENABLED="false"` untuk melarang pembuatan akun baru dari
   OAuth; jalur itu hanya menghubungkan akun yang sudah masuk.
 
+## Membuat akun dari konsol internal
+
+Selain OAuth Threads, akun pelanggan dapat dibuat manual dari **Superadmin →
+Pengguna** maupun **Admin → Pengguna** (`POST /api/admin/users`). Operator
+mengisi nama, email, dan kata sandi awal; akun langsung berstatus `ACTIVE`
+dengan role `USER`, dan pembuatannya tercatat di audit log sebagai
+`USER_CREATED`.
+
+Email **tidak** ditandai terverifikasi, karena yang mengetiknya adalah operator
+dan bukan pemilik akun — daftar pengguna menampilkannya sebagai "Email belum
+terverifikasi" sampai pemiliknya mengubah email sendiri di Pengaturan.
+
+Batas peran: Admin boleh menambah dan melihat akun karena itu bagian dari
+onboarding pelanggan. Menangguhkan akun dan mencabut koneksi Threads tetap
+hanya milik Superadmin, ditegakkan di `PATCH /api/admin/users` dan
+`POST /api/admin/users/connections`.
+
 ## Formulir kontak
 
 `POST /api/contact` menyimpan pesan ke tabel `ContactSubmission` dengan

@@ -1629,6 +1629,8 @@ html[data-theme="dark"] .app-shell--internal .internal-count { color: #bbd0ff; b
 .plan-form { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
 .plan-form__toggle { grid-column: 1 / -1; }
 .plan-form__feedback, .plan-form__actions { grid-column: 1 / -1; }
+/* Tombol pembantu di dalam satu kolom isian, mis. "Buat kata sandi acak". */
+.plan-form .field > .button { justify-self: start; }
 .plan-form__actions { display: flex; flex-wrap: wrap; gap: 9px; }
 .plan-warning { display: inline-flex; gap: 5px; align-items: flex-start; color: var(--warning); line-height: 1.45; }
 .plan-warning svg { flex: 0 0 auto; margin-top: 2px; }

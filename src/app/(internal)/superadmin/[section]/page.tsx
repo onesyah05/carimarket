@@ -31,6 +31,7 @@ import { listTransactionsForAdmin } from "@/server/billing/transactions";
 import { PLAN_CATALOG } from "../../../../../prisma/plan-catalog";
 import { ApiDocs } from "@/features/admin/components/api-docs";
 import { listCredentials } from "@/server/api/credentials";
+import { AddUserButton } from "@/features/admin/components/add-user-button";
 import { AdminsManager } from "@/features/admin/components/admins-manager";
 import { BlacklistManager } from "@/features/admin/components/blacklist-manager";
 import { ThreadsCredentialsManager } from "@/features/admin/components/threads-credentials-manager";
@@ -78,6 +79,7 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
     const users = await listPlatformUsers();
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
+      <AddUserButton />
       <UsersTable users={users} />
     </>;
   }
