@@ -1635,6 +1635,25 @@ html[data-theme="dark"] .app-shell--internal .internal-count { color: #bbd0ff; b
 .plan-warning { display: inline-flex; gap: 5px; align-items: flex-start; color: var(--warning); line-height: 1.45; }
 .plan-warning svg { flex: 0 0 auto; margin-top: 2px; }
 
+/* Pencarian Threads ad hoc (Superadmin) */
+.lead-scan__bar { margin-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: stretch; }
+.lead-scan__bar .filter-search { min-width: 0; min-height: 44px; border: 1px solid var(--line); }
+.lead-scan__bar .filter-search input { min-width: 0; font-size: .82rem; }
+.lead-scan__bar > .button { min-height: 44px; }
+.lead-scan__hint { color: var(--muted); }
+.lead-scan__list { display: grid; gap: 12px; }
+.lead-scan__item { padding: 18px 20px; display: grid; gap: 10px; }
+.lead-scan__item > header { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; justify-content: space-between; }
+.lead-scan__item > header strong { display: block; font-size: .84rem; }
+.lead-scan__item > header span { color: var(--muted); font-size: .71rem; }
+.lead-scan__item > p { margin: 0; color: var(--ink); font-size: .8rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lead-scan__item > footer { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: .71rem; }
+.lead-scan__item > footer span { display: inline-flex; align-items: center; gap: 5px; }
+
+@media (max-width: 640px) {
+  .lead-scan__bar { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* Profil akun internal */
 .profile-layout { margin-top: 18px; display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 16px; align-items: start; }
 .profile-summary { padding: 22px; display: grid; gap: 18px; }

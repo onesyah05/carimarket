@@ -62,6 +62,7 @@ const superNav: NavGroup[] = [
     caption: "Ikhtisar",
     items: [
       { label: "Metrik", href: "/superadmin", icon: LayoutDashboard },
+      { label: "Cari lead", href: "/superadmin/cari-lead", icon: Search },
       { label: "Audit", href: "/superadmin/audit", icon: FileText },
     ],
   },

@@ -32,6 +32,7 @@ import { PLAN_CATALOG } from "../../../../../prisma/plan-catalog";
 import { ApiDocs } from "@/features/admin/components/api-docs";
 import { listCredentials } from "@/server/api/credentials";
 import { AddUserButton } from "@/features/admin/components/add-user-button";
+import { LeadSearchConsole } from "@/features/admin/components/lead-search-console";
 import { AdminsManager } from "@/features/admin/components/admins-manager";
 import { BlacklistManager } from "@/features/admin/components/blacklist-manager";
 import { ThreadsCredentialsManager } from "@/features/admin/components/threads-credentials-manager";
@@ -39,6 +40,7 @@ import { ArticlesManager } from "@/features/cms/components/articles-manager";
 
 const HEADINGS: Record<string, { title: string; copy: string }> = {
   admin: { title: "Manajemen Admin", copy: "Promosikan akun pengguna menjadi Admin dan atur permission mereka." },
+  "cari-lead": { title: "Cari lead", copy: "Telusuri percakapan Threads dengan kata kunci apa pun. Tanpa batas kata kunci dan tanpa memakai kuota, karena hasilnya tidak disimpan sebagai lead." },
   users: { title: "Manajemen Pengguna", copy: "Pantau akun, paket, dan status koneksi. Token tidak pernah ditampilkan di panel ini." },
   paket: { title: "Paket dan billing", copy: "Tambah dan ubah paket langganan. Harga serta kuota di sini langsung berlaku di halaman harga dan penegakan kuota." },
   pembayaran: { title: "Verifikasi pembayaran", copy: "Cocokkan nominal beserta kode uniknya dengan mutasi rekening. Menyetujui pembayaran langsung mengaktifkan paket pelanggan." },
@@ -72,6 +74,13 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
       <AdminsManager admins={admins.map(admin => ({ id: admin.id, name: admin.name, email: admin.email, role: admin.role, status: admin.status, permissions: admin.adminPermissions.map(item => item.permission) }))} />
+    </>;
+  }
+
+  if (section === "cari-lead") {
+    return <>
+      <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
+      <LeadSearchConsole />
     </>;
   }
 

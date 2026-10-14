@@ -237,6 +237,22 @@ ini tidak memiliki email dari Meta, jadi:
 - setel `THREADS_SIGNUP_ENABLED="false"` untuk melarang pembuatan akun baru dari
   OAuth; jalur itu hanya menghubungkan akun yang sudah masuk.
 
+## Cari lead di konsol Superadmin
+
+**Superadmin → Cari lead** (`POST /api/admin/lead-search`) menjalankan pencarian
+Threads ad hoc dengan kata kunci apa pun. Berbeda dengan pencarian pelanggan,
+jalur ini tidak menyimpan apa pun: tidak membuat `Keyword`, tidak membuat
+`Lead`, tidak mencatat `SearchRun`, dan tidak menambah `MonthlyUsage` — jadi
+tidak ada batas kata kunci maupun kuota bulanan yang berlaku. Satu-satunya
+batas yang tersisa adalah 60 permintaan per menit, supaya sesi Threads platform
+tidak habis terpakai.
+
+Adapter yang dipakai sama dengan pencarian pelanggan (OAuth resmi bila ada,
+jika tidak cookie pra-App-Review). Halaman menampilkan catatan saat capability
+yang aktif masih `SELF_ONLY` atau datanya berasal dari adapter lokal.
+
+Hanya Superadmin; Admin menerima 403.
+
 ## Membuat akun dari konsol internal
 
 Selain OAuth Threads, akun pelanggan dapat dibuat manual dari **Superadmin →
