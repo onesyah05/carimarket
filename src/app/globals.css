@@ -310,6 +310,10 @@ textarea.input { min-height: 120px; padding-block: 13px; resize: vertical; }
 .app-main { width: calc(100% - 252px); margin-left: 252px; }
 .app-topbar { position: sticky; top: 0; z-index: 30; height: 68px; padding: 0 28px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: flex-end; gap: 12px; background: rgba(255,255,255,.9); backdrop-filter: blur(14px); }
 .menu-button { display: none; }
+/* Pintasan di bar atas. Dulu berbentuk kotak pencarian padahal hanya tautan;
+   bentuknya kini tombol supaya tidak ada yang mencoba mengetik di dalamnya. */
+.top-action { height: 40px; margin-right: auto; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; color: var(--ink); background: var(--surface-raised); font-size: .78rem; font-weight: 650; transition: border-color .15s ease, color .15s ease; }
+.top-action:hover { color: var(--brand-strong); border-color: var(--brand-strong); }
 .top-search { width: 310px; height: 40px; margin-right: auto; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; display: flex; align-items: center; gap: 9px; color: var(--muted); background: var(--canvas); font-size: .72rem; }
 .top-search kbd { margin-left: auto; padding: 2px 6px; border: 1px solid var(--line); border-radius: 5px; color: #7e899c; background: white; font-size: .6rem; }
 .icon-button, .menu-button { position: relative; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 9px; place-items: center; color: var(--ink); background: var(--surface-raised); cursor: pointer; transition: all .15s ease; }
@@ -457,6 +461,7 @@ textarea.input { min-height: 120px; padding-block: 13px; resize: vertical; }
   .app-content { padding: 22px 16px 50px; }
   .app-topbar { height: 62px; padding: 0 16px; }
   .top-search { width: auto; flex: 1; }
+  .top-action { flex: 0 1 auto; min-width: 0; overflow: hidden; }
   .top-search kbd { display: none; }
   .dash-heading { align-items: start; flex-direction: column; }
   .dash-heading > .button, .dash-heading > button { width: 100%; }
@@ -750,7 +755,7 @@ html[data-theme="dark"] .app-nav a em { background: #101d38; color: #081329; }
   .settings-nav { display: flex; overflow-x: auto; }
   .settings-nav button { flex: 0 0 auto; }
   .app-topbar .theme-toggle { width: 40px; height: 40px; }
-  .top-search span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .top-search span, .top-action span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
 @media (max-width: 440px) {
@@ -1626,6 +1631,9 @@ html[data-theme="dark"] .app-shell--internal .internal-count { color: #bbd0ff; b
 
 /* Petunjuk kecil di bawah input, dipakai form akun dan paket */
 .field-hint { margin-top: 5px; display: block; color: var(--muted); font-size: .72rem; line-height: 1.45; }
+/* Ikon pendamping (mis. gembok kategori) tetap sebaris dengan teksnya. */
+.field-hint svg { vertical-align: -2px; margin-right: 4px; }
+.field-hint a { color: var(--brand-strong); font-weight: 650; }
 
 /* Pengelolaan paket langganan (Superadmin) */
 .plans-actions { margin: 18px 0 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
@@ -1638,6 +1646,62 @@ html[data-theme="dark"] .app-shell--internal .internal-count { color: #bbd0ff; b
 .plan-form__actions { display: flex; flex-wrap: wrap; gap: 9px; }
 .plan-warning { display: inline-flex; gap: 5px; align-items: flex-start; color: var(--warning); line-height: 1.45; }
 .plan-warning svg { flex: 0 0 auto; margin-top: 2px; }
+
+/* Penyusunan kata kunci: onboarding dan halaman Kata kunci memakai bentuk
+   yang sama, dua kolom sejajar dengan takaran jatah paket di atasnya. */
+.keyword-setup__meter { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; justify-content: space-between; color: var(--muted); font-size: .76rem; }
+.keyword-setup__meter strong { color: var(--ink); }
+.keyword-setup__meter > span { display: inline-flex; align-items: center; gap: 7px; }
+.keyword-setup__split { font-size: .72rem; }
+.keyword-setup__bar { height: 5px; margin: 10px 0 18px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.keyword-setup__bar span { height: 100%; display: block; border-radius: inherit; background: var(--brand-strong); transition: width .2s ease; }
+.keyword-setup__full { margin: 0 0 16px; color: var(--warning); font-size: .76rem; }
+.keyword-setup__columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 16px; align-items: start; }
+
+.keyword-column { display: grid; gap: 12px; align-content: start; padding: 20px; }
+.keyword-column > header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+.keyword-column > header h2, .keyword-column > header h3 { margin: 0; font-size: .95rem; }
+.keyword-column > header h3 small { color: var(--muted); font-weight: 500; }
+.keyword-column > header p { margin: 4px 0 0; color: var(--muted); font-size: .74rem; line-height: 1.5; }
+.keyword-column__icon { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; }
+.keyword-column__icon--find { color: var(--brand-deep); background: var(--brand-soft); }
+.keyword-column__icon--exclude { color: var(--warning); background: var(--warning-soft); }
+.keyword-column__count { padding: 3px 10px; border-radius: 99px; color: var(--muted); background: var(--canvas); font-size: .74rem; font-weight: 700; }
+.keyword-column__empty { margin: 0; color: var(--muted); font-size: .74rem; }
+
+.keyword-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.keyword-rows li { padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; }
+.keyword-rows strong { display: block; font-size: .82rem; overflow-wrap: anywhere; }
+.keyword-rows small { color: var(--muted); font-size: .68rem; }
+.keyword-rows .icon-button { width: 36px; height: 36px; }
+.keyword-rows .icon-button:disabled { opacity: .55; cursor: not-allowed; }
+
+.keyword-suggest-chips { display: grid; gap: 8px; }
+.keyword-suggest-chips > span { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: .7rem; font-weight: 700; }
+.keyword-suggest-chips > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.keyword-suggest-chips button { padding: 6px 11px; border: 1px dashed var(--line); border-radius: 99px; color: var(--text-subtle); background: transparent; font-size: .73rem; cursor: pointer; transition: all .15s ease; }
+.keyword-suggest-chips button:hover:not(:disabled) { color: var(--brand-deep); border-style: solid; border-color: var(--brand-strong); background: var(--brand-soft); }
+.keyword-suggest-chips button:disabled { opacity: .55; cursor: default; }
+
+/* Tombol besar "Cari leads sekarang" di feed lead */
+.lead-search { padding: 22px 24px; display: grid; gap: 16px; }
+.lead-search__main { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; }
+.lead-search__main h2 { margin: 0 0 5px; font-size: 1.1rem; }
+.lead-search__main p { margin: 0; max-width: 54ch; color: var(--muted); font-size: .79rem; line-height: 1.6; }
+.lead-search__button { min-height: 48px; padding: 0 22px; gap: 9px; font-size: .92rem; }
+.lead-search__keywords { padding-top: 14px; border-top: 1px solid var(--line); display: grid; gap: 9px; }
+.lead-search__label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: .7rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.lead-search__keywords ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+.lead-search__keywords li { padding: 7px 12px; border-radius: 99px; display: grid; gap: 1px; background: var(--canvas); }
+.lead-search__keywords li strong { font-size: .76rem; }
+.lead-search__keywords li small { color: var(--muted); font-size: .65rem; }
+.lead-search__empty { margin: 0; color: var(--muted); font-size: .76rem; }
+.lead-search__summary { margin: 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: .76rem; }
+
+@media (max-width: 640px) {
+  .lead-search__main { align-items: stretch; }
+  .lead-search__button { width: 100%; justify-content: center; }
+}
 
 /* Pendaftaran, verifikasi email, dan pemilihan paket */
 .auth-badge { margin: 0 0 14px; display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 99px; color: var(--brand-strong); background: color-mix(in srgb, var(--brand-strong) 12%, transparent); font-size: .7rem; font-weight: 700; }

@@ -553,6 +553,40 @@ memastikan kunci asing dan kunci tercabut ditolak, lalu mencabut kredensial itu
 kembali. Tidak ada endpoint yang mengubah data workspace atau memakai kuota yang
 dipanggil.
 
+## Kata kunci: kategori, jatah, dan masa kunci
+
+Kata kunci terikat pada kategori bisnis akun. `src/lib/keyword-categories.ts`
+menyimpan saran per kategori sekaligus penanda khasnya; `checkKeywordCategory`
+menolak istilah pencarian yang memuat penanda kategori lain sementara
+kategorinya sendiri tidak terwakili (mis. akun Properti memasukkan "jasa
+drone"). Frasa umum tetap bebas, dan istilah **eksklusi** tidak dinilai sama
+sekali karena memang sengaja berada di luar bidang usaha. Penolakan ditegakkan
+di `POST /api/keywords`, bukan hanya di antarmuka.
+
+Kategori hanya dapat ditetapkan sekali. `updateBusinessProfile` menolak
+perubahannya setelah terisi, dan halaman Pengaturan menampilkannya sebagai
+kolom terkunci. Pemindahan dilakukan Superadmin lewat tombol **Kategori** di
+Superadmin → Pengguna (`PATCH /api/admin/users/kategori`), tercatat di audit
+log sebagai `BUSINESS_CATEGORY_CHANGED`.
+
+Kata kunci yang baru dibuat terkunci 24 jam (`src/lib/keyword-lock.ts`):
+`DELETE /api/keywords` menolaknya, dan tombol hapus berubah menjadi gembok
+dengan sisa waktunya. Menambah kata kunci baru tetap bebas selama jatah paket
+masih ada. Tujuannya menahan pergantian bolak-balik yang membuat satu jatah
+ditukar berkali-kali dalam sehari.
+
+Pencarian lead dijalankan dari satu tombol **Cari leads sekarang**
+(`POST /api/threads/search`), yang menjalankan seluruh kata kunci pencarian
+aktif, didahulukan yang paling lama tidak berjalan. Kuota habis menghentikan
+sisanya; kegagalan lain dilewati agar satu kata kunci bermasalah tidak
+membatalkan yang lain. Endpoint ini tidak lagi menerima frasa bebas —
+menyusun kata kunci sepenuhnya milik halaman Kata kunci.
+
+Urutan onboarding dijaga satu pintu lewat `nextOnboardingPath`
+(`src/server/onboarding/progress.ts`): profil bisnis → kata kunci → mode
+balasan. Layout dashboard dan callback OAuth Threads sama-sama bertanya ke
+sana, jadi menghubungkan Threads tidak lagi melompati langkah kata kunci.
+
 ## Mode pra-App-Review (pencarian Threads tanpa persetujuan Meta)
 
 Sebelum Meta menyetujui App Review, pencarian keyword tetap jalan dengan memakai sesi web Threads. Tidak butuh `THREADS_APP_ID`/`THREADS_APP_SECRET`; yang dibutuhkan adalah cookie sesi browser yang sudah masuk Threads.

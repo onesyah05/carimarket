@@ -1,13 +1,15 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { requirePageRole } from "@/server/auth/page-guards";
-import { hasCompleteBusinessProfile } from "@/server/settings/business-profile";
+import { nextOnboardingPath } from "@/server/onboarding/progress";
 
+/**
+ * Ruang kerja hanya terbuka setelah seluruh langkah onboarding selesai.
+ * Pemeriksaannya satu pintu lewat `nextOnboardingPath`, jadi tidak ada lagi
+ * jalur yang menjatuhkan pengguna ke dashboard tanpa kata kunci.
+ */
 export default async function ReadyDashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePageRole(["USER"], "/dashboard");
-  const profile = await prisma.businessProfile.findUnique({ where: { userId: user.id } });
-  // Profil belum lengkap berarti onboarding belum selesai: arahkan ke langkah
-  // pertama wizard, bukan langsung ke halaman pengaturan.
-  if (!hasCompleteBusinessProfile(profile)) redirect("/onboarding/bisnis");
+  const pending = await nextOnboardingPath(user.id);
+  if (pending) redirect(pending);
   return children;
 }

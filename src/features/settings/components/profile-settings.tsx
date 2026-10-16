@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Lock } from "lucide-react";
 import { businessCategoryOptions } from "@/features/settings/lib/business-categories";
 
 type Profile = { name: string; category: string; serviceArea: string; description: string };
@@ -17,6 +19,8 @@ export function ProfileSettings({ redirectAfterSave }: { redirectAfterSave: bool
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState(false);
+  // Kategori terkunci begitu terisi; antarmuka mengikuti aturan server.
+  const [categoryLocked, setCategoryLocked] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -24,7 +28,7 @@ export function ProfileSettings({ redirectAfterSave }: { redirectAfterSave: bool
       .then(async response => {
         const payload = await response.json() as ResponseBody;
         if (!response.ok || !payload.data) throw new Error(payload.error ?? "Profil bisnis belum dapat dimuat.");
-        if (active) { setProfile(payload.data); setExists(Boolean(payload.exists)); }
+        if (active) { setProfile(payload.data); setExists(Boolean(payload.exists)); setCategoryLocked(Boolean(payload.data.category?.trim())); }
       })
       .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : "Profil bisnis belum dapat dimuat."); })
       .finally(() => { if (active) setLoading(false); });
@@ -67,7 +71,9 @@ export function ProfileSettings({ redirectAfterSave }: { redirectAfterSave: bool
     {!loading && !exists && <p className="settings-empty-note">Isi seluruh profil bisnis sesuai usaha Anda sebelum membuka dashboard.</p>}
     <form className="form-grid" onSubmit={event => void save(event)}>
       <div className="field"><label htmlFor="business-name">Nama bisnis</label><input className="input" id="business-name" value={profile.name} onChange={event => update("name", event.target.value)} disabled={loading || saving} minLength={2} maxLength={140} required /></div>
-      <div className="form-two"><div className="field"><label htmlFor="business-category">Kategori</label><select className="input" id="business-category" value={profile.category} onChange={event => update("category", event.target.value)} disabled={loading || saving} required><option value="">Pilih kategori</option>{businessCategoryOptions(profile.category).map(category => <option key={category} value={category}>{category}</option>)}</select></div><div className="field"><label htmlFor="business-area">Area layanan</label><input className="input" id="business-area" value={profile.serviceArea} onChange={event => update("serviceArea", event.target.value)} disabled={loading || saving} minLength={2} maxLength={255} required /></div></div>
+      <div className="form-two"><div className="field"><label htmlFor="business-category">Kategori</label>{categoryLocked
+        ? <><input className="input" id="business-category" value={profile.category} readOnly aria-readonly="true" /><span className="field-hint"><Lock size={12} /> Kategori menentukan kata kunci yang boleh dipakai, jadi terkunci setelah dipilih. <Link href="/kontak">Hubungi dukungan</Link> bila perlu dipindahkan.</span></>
+        : <select className="input" id="business-category" value={profile.category} onChange={event => update("category", event.target.value)} disabled={loading || saving} required><option value="">Pilih kategori</option>{businessCategoryOptions(profile.category).map(category => <option key={category} value={category}>{category}</option>)}</select>}</div><div className="field"><label htmlFor="business-area">Area layanan</label><input className="input" id="business-area" value={profile.serviceArea} onChange={event => update("serviceArea", event.target.value)} disabled={loading || saving} minLength={2} maxLength={255} required /></div></div>
       <div className="field"><label htmlFor="business-description">Deskripsi</label><textarea className="input" id="business-description" value={profile.description} onChange={event => update("description", event.target.value)} disabled={loading || saving} minLength={2} maxLength={5000} required /></div>
       {error && <p className="form-feedback form-feedback--error" role="alert">{error}</p>}
       {saved && <p className="form-feedback form-feedback--success" role="status">Profil bisnis tersimpan.</p>}

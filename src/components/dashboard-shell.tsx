@@ -116,7 +116,9 @@ export function DashboardShell({ children, user }: { children: React.ReactNode; 
   const isSuperadmin = role === "superadmin";
   const isUser = role === "user";
   const quickLink = isSuperadmin ? "/superadmin/users" : role === "admin" ? "/admin/tiket" : "/dashboard/leads";
-  const quickLabel = isSuperadmin ? "Kelola pengguna" : role === "admin" ? "Lihat tiket dukungan" : "Cari lead atau kata kunci";
+  // Label kerja, bukan placeholder: tautan ini membuka halaman, bukan kolom
+  // yang bisa diketik.
+  const quickLabel = isSuperadmin ? "Kelola pengguna" : role === "admin" ? "Tiket dukungan" : "Buka feed lead";
   const notificationLink = isSuperadmin ? "/superadmin/audit" : role === "admin" ? "/admin/moderasi" : "/dashboard/balasan";
   const notificationLabel = isSuperadmin ? "Buka audit log" : role === "admin" ? "Buka moderasi" : "Buka balasan";
   const accountLink = isSuperadmin ? "/superadmin/profil" : role === "admin" ? "/admin/profil" : "/dashboard/pengaturan";
@@ -150,7 +152,7 @@ export function DashboardShell({ children, user }: { children: React.ReactNode; 
     </aside>
     {open && <button className="sidebar-backdrop" onClick={() => setOpen(false)} aria-label="Tutup navigasi" />}
     <div className="app-main">
-      <header className="app-topbar"><button className="menu-button" onClick={() => setOpen(true)} aria-label="Buka menu"><Menu size={21} /></button><Link className="top-search" href={quickLink}><Search size={17} /><span>{quickLabel}</span></Link><ThemeToggle /><NotificationBell enabled={isUser} fallbackHref={notificationLink} fallbackLabel={notificationLabel} fallbackCopy={isSuperadmin ? "Aktivitas penting platform dapat ditinjau melalui audit log." : "Periksa antrean moderasi untuk tindakan yang menunggu keputusan."} /></header>
+      <header className="app-topbar"><button className="menu-button" onClick={() => setOpen(true)} aria-label="Buka menu"><Menu size={21} /></button><Link className="top-action" href={quickLink}><Search size={16} /><span>{quickLabel}</span></Link><ThemeToggle /><NotificationBell enabled={isUser} fallbackHref={notificationLink} fallbackLabel={notificationLabel} fallbackCopy={isSuperadmin ? "Aktivitas penting platform dapat ditinjau melalui audit log." : "Periksa antrean moderasi untuk tindakan yang menunggu keputusan."} /></header>
       <div className="app-content">{children}</div>
     </div>
   </div>;

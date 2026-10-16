@@ -1,19 +1,13 @@
-import { KeywordKind } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { listKeywordSuggestions } from "@/server/leads/keyword-suggestions";
 import { listWorkspaceLeads } from "@/server/leads/queries";
-import { runKeywordSearch } from "@/server/leads/search-service";
+import { runAllActiveKeywords } from "@/server/leads/search-service";
 import { enforceRateLimit, enforceSameOrigin } from "@/server/http/request-guards";
-import { assertKeywordQuota } from "@/server/usage/limits";
 import { isThreadsAvailable } from "@/server/integrations/threads/config";
 import { publicThreadsError, ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 import { requireEntitledUser } from "@/server/auth/access-gate";
 
 export const runtime = "nodejs";
-
-const inputSchema = z.object({ query: z.string().trim().min(2).max(100) });
 
 export async function GET() {
   try {
@@ -27,28 +21,25 @@ export async function GET() {
   }
 }
 
+/**
+ * POST — menjalankan seluruh kata kunci pencarian yang aktif.
+ *
+ * Dulu endpoint ini menerima satu frasa bebas dan menyimpannya sebagai
+ * Keyword baru. Itu membuat kotak pencarian diam-diam memakan jatah paket
+ * dan menumpuk kata kunci kembar. Menyusun kata kunci kini sepenuhnya milik
+ * halaman Kata kunci; di sini tinggal menjalankannya.
+ */
 export async function POST(request: Request) {
   try {
     enforceSameOrigin(request);
     if (!(await isThreadsAvailable())) throw new ThreadsIntegrationError("THREADS_NOT_CONFIGURED", "Koneksi Threads belum tersedia. Silakan hubungi administrator.", 409);
-    const input = inputSchema.safeParse(await request.json().catch(() => null));
-    if (!input.success) return NextResponse.json({ error: "Kata kunci harus terdiri dari 2 sampai 100 karakter.", code: "INVALID_INPUT" }, { status: 400 });
 
     const user = await requireEntitledUser();
-    enforceRateLimit(`threads-search:${user.id}`, 30, 60_000);
-    const normalized = input.data.query.toLocaleLowerCase("id-ID");
-    await assertKeywordQuota(user.id, KeywordKind.INCLUDE, normalized);
-    const keyword = await prisma.keyword.upsert({
-      where: { userId_normalized_kind: { userId: user.id, normalized, kind: KeywordKind.INCLUDE } },
-      update: { phrase: input.data.query, isActive: true, lastRunAt: new Date() },
-      create: { userId: user.id, phrase: input.data.query, normalized, kind: KeywordKind.INCLUDE, lastRunAt: new Date() },
-    });
+    enforceRateLimit(`threads-search:${user.id}`, 10, 60_000);
 
-    const { resultCount, excludedCount } = await runKeywordSearch(keyword.id);
-    // Saran ikut dikirim ulang supaya kata kunci yang baru dipakai langsung
-    // naik ke urutan teratas tanpa memuat ulang halaman.
+    const summary = await runAllActiveKeywords(user.id);
     const [leads, suggestions] = await Promise.all([listWorkspaceLeads(user.id), listKeywordSuggestions(user.id)]);
-    return NextResponse.json({ success: true, data: leads, meta: { resultCount, excludedCount, suggestions } });
+    return NextResponse.json({ success: true, data: leads, meta: { ...summary, suggestions } });
   } catch (error) {
     const result = publicThreadsError(error);
     return NextResponse.json(result.body, { status: result.status });

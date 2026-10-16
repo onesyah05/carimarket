@@ -38,7 +38,7 @@ export function UsersTable({ users, canModerate = true }: { users: Array<Record<
               {canModerate ? (
                 <span data-label="Aksi">
                   {user.role === "SUPERADMIN" ? <small>Akun tertinggi</small> : (
-                    <UserRowActions userId={String(user.id)} name={String(user.name)} status={user.status as "ACTIVE" | "SUSPENDED" | "PENDING_VERIFICATION"} />
+                    <UserRowActions userId={String(user.id)} name={String(user.name)} status={user.status as "ACTIVE" | "SUSPENDED" | "PENDING_VERIFICATION"} category={(user.businessProfile as { category?: string } | null)?.category ?? null} />
                   )}
                 </span>
               ) : (

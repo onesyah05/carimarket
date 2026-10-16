@@ -2,6 +2,7 @@ import "server-only";
 import { ReplyMode } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 
 /**
  * Pengaturan workspace pengguna: profil bisnis, mode balasan, dan preferensi
@@ -112,13 +113,39 @@ export async function getBusinessProfile(userId: string) {
   return { exists: Boolean(profile), profile: serializeBusinessProfile(profile) };
 }
 
+/**
+ * Menyimpan profil bisnis.
+ *
+ * Kategori hanya dapat ditetapkan sekali. Kata kunci yang boleh dipakai
+ * mengikuti kategori, jadi mengganti kategori berarti memindahkan seluruh
+ * dasar pencarian akun — dan itu bukan sesuatu yang pantas terjadi diam-diam
+ * lewat satu dropdown. Setelah terisi, perubahannya lewat dukungan dan
+ * dikerjakan Superadmin dari konsol.
+ */
 export async function updateBusinessProfile(userId: string, input: BusinessProfileInput) {
+  const existing = await prisma.businessProfile.findUnique({ where: { userId }, select: { category: true } });
+  const locked = Boolean(existing?.category?.trim());
+
+  if (locked && input.category.trim() !== existing?.category) {
+    throw new ThreadsIntegrationError(
+      "CATEGORY_LOCKED",
+      "Kategori bisnis tidak dapat diubah sendiri karena menentukan kata kunci yang boleh dipakai. Hubungi dukungan bila kategori akun Anda perlu dipindahkan.",
+      409,
+    );
+  }
+
   const profile = await prisma.businessProfile.upsert({
     where: { userId },
-    update: input,
+    update: locked ? { ...input, category: existing!.category } : input,
     create: { userId, ...input },
   });
   return serializeBusinessProfile(profile);
+}
+
+/** Dipakai antarmuka untuk menandai kategori sebagai terkunci. */
+export async function isCategoryLocked(userId: string) {
+  const profile = await prisma.businessProfile.findUnique({ where: { userId }, select: { category: true } });
+  return Boolean(profile?.category?.trim());
 }
 
 export const notificationPreferenceSchema = z.object({

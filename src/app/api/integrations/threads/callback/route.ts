@@ -9,7 +9,7 @@ import { ThreadsIntegrationError, threadsErrorDetail } from "@/server/integratio
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
 import { createSession } from "@/server/auth/session";
-import { hasCompleteBusinessProfile } from "@/server/settings/business-profile";
+import { nextOnboardingPath } from "@/server/onboarding/progress";
 
 export const runtime = "nodejs";
 
@@ -144,8 +144,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user) {
-      const businessProfile = await prisma.businessProfile.findUnique({ where: { userId: targetUserId } });
-      const destination = hasCompleteBusinessProfile(businessProfile) ? "/dashboard" : "/onboarding/bisnis";
+      // Menghubungkan Threads bukan akhir onboarding: antar ke langkah yang
+      // masih kurang, bukan langsung ke dashboard.
+      const destination = (await nextOnboardingPath(targetUserId)) ?? "/dashboard";
       const response = NextResponse.redirect(new URL(destination, getThreadsConfig().appUrl));
       response.cookies.set("threads_oauth_state", "", { httpOnly: true, sameSite: "lax", secure: true, path: "/api/integrations/threads/callback", maxAge: 0 });
       return response;

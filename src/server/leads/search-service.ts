@@ -3,6 +3,7 @@ import { KeywordKind, SearchCapability, SearchFrequency, SearchRunStatus } from 
 import { prisma } from "@/lib/prisma";
 import { getThreadsAdapter } from "@/server/integrations/threads";
 import { isThreadsAvailable } from "@/server/integrations/threads/config";
+import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 import { createNotification } from "@/server/notifications/service";
 import { assertSearchQuota, hasSearchQuota, resolveSearchIntervalHours } from "@/server/usage/limits";
 import { recordUsage } from "@/server/usage/service";
@@ -155,4 +156,69 @@ export async function findDueKeywordIds(limit = 20) {
     if (allowed) dueIds.push(keyword.id);
   }
   return dueIds;
+}
+
+export type BulkSearchResult = {
+  /** Kata kunci aktif yang benar-benar dijalankan. */
+  ran: number;
+  total: number;
+  resultCount: number;
+  excludedCount: number;
+  createdCount: number;
+  /** Terisi bila penelusuran berhenti sebelum semua kata kunci dijalankan. */
+  stopped: string | null;
+};
+
+/**
+ * Menjalankan seluruh kata kunci pencarian yang aktif sekaligus.
+ *
+ * Inilah yang sebenarnya diinginkan pelanggan saat menekan "Cari leads
+ * sekarang": satu tindakan untuk semua kata kunci yang sudah mereka susun,
+ * bukan mengetik ulang satu frasa dan diam-diam membuat kata kunci baru yang
+ * memakan jatah paket.
+ *
+ * Kuota yang habis di tengah jalan menghentikan sisanya, bukan menggagalkan
+ * semuanya: hasil kata kunci yang sempat berjalan tetap tersimpan dan
+ * pemanggil melaporkan apa adanya.
+ */
+export async function runAllActiveKeywords(userId: string): Promise<BulkSearchResult> {
+  const keywords = await prisma.keyword.findMany({
+    where: { userId, kind: KeywordKind.INCLUDE, isActive: true },
+    select: { id: true },
+    // Yang paling lama tidak dijalankan didahulukan, supaya kuota yang terbatas
+    // tidak selalu habis untuk kata kunci yang sama.
+    orderBy: [{ lastRunAt: "asc" }, { createdAt: "asc" }],
+  });
+
+  if (keywords.length === 0) {
+    throw new ThreadsIntegrationError(
+      "NO_ACTIVE_KEYWORD",
+      "Belum ada kata kunci pencarian yang aktif. Tambahkan kata kunci dulu di halaman Kata kunci.",
+      409,
+    );
+  }
+
+  const totals: BulkSearchResult = { ran: 0, total: keywords.length, resultCount: 0, excludedCount: 0, createdCount: 0, stopped: null };
+  for (const keyword of keywords) {
+    try {
+      const result = await runKeywordSearch(keyword.id);
+      totals.ran += 1;
+      totals.resultCount += result.resultCount;
+      totals.excludedCount += result.excludedCount;
+      totals.createdCount += result.createdCount;
+    } catch (error) {
+      // Penyebabnya dicatat supaya kegagalan massal dapat didiagnosis; pesan
+      // untuk pengguna tetap umum bila errornya bukan error integrasi.
+      console.warn(`Pencarian massal gagal pada kata kunci ${keyword.id}: ${error instanceof Error ? `${error.name}: ${error.message.slice(0, 160)}` : "penyebab tidak diketahui"}`);
+      totals.stopped ??= error instanceof ThreadsIntegrationError
+        ? error.message
+        : "Sebagian kata kunci gagal dijalankan. Coba lagi beberapa saat.";
+
+      // Kuota habis berlaku untuk seluruh akun, jadi melanjutkan hanya
+      // mengulang kegagalan yang sama. Kegagalan lain bisa kebetulan mengenai
+      // satu kata kunci saja, dan sisanya tetap layak dicoba.
+      if (error instanceof ThreadsIntegrationError && error.code === "SEARCH_QUOTA_EXCEEDED") break;
+    }
+  }
+  return totals;
 }

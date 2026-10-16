@@ -1,3 +1,7 @@
+/**
+ * Satu kata kunci pencarian milik pengguna, dipakai halaman lead untuk
+ * menunjukkan apa yang akan dijalankan tombol "Cari leads sekarang".
+ */
 export type KeywordSuggestion = {
   phrase: string;
   /** Jumlah lead yang pernah ditemukan kata kunci ini. */
@@ -7,32 +11,6 @@ export type KeywordSuggestion = {
   /** Kata kunci yang dijeda tetap disarankan, tetapi ditandai. */
   active: boolean;
 };
-
-/**
- * Saran kata kunci dari riwayat pencarian pengguna.
- *
- * Diurutkan dari yang paling mungkin diketik: awalan yang cocok lebih dulu,
- * lalu kecocokan di tengah kata. Urutan dasarnya sudah "terakhir dipakai"
- * dari server, dan urutan itu dipertahankan di dalam tiap kelompok supaya
- * kata kunci yang baru saja dicari tetap berada di atas.
- *
- * Murni dan tanpa jaringan: dipakai di komponen klien saat pengguna mengetik.
- */
-export function matchSuggestions(all: KeywordSuggestion[], query: string, limit = 6): KeywordSuggestion[] {
-  const needle = query.trim().toLocaleLowerCase("id-ID");
-  if (!needle) return all.slice(0, limit);
-
-  const prefix: KeywordSuggestion[] = [];
-  const contains: KeywordSuggestion[] = [];
-  for (const suggestion of all) {
-    const phrase = suggestion.phrase.toLocaleLowerCase("id-ID");
-    // Menyarankan persis apa yang sudah diketik tidak menambah apa pun.
-    if (phrase === needle) continue;
-    if (phrase.startsWith(needle)) prefix.push(suggestion);
-    else if (phrase.includes(needle)) contains.push(suggestion);
-  }
-  return [...prefix, ...contains].slice(0, limit);
-}
 
 /**
  * Keterangan singkat di bawah tiap saran: kapan terakhir dipakai, berapa lead
