@@ -17,6 +17,13 @@ export type ThreadSearchResult = {
   likeCount?: number;
   replyCount?: number;
   repostCount?: number;
+  /**
+   * Konteks percakapan: balasan atas postingan lain, atau bagian dari utas
+   * penulis yang sama. `undefined` berarti sumbernya tidak memberi tahu.
+   */
+  isReply?: boolean;
+  replyToHandle?: string;
+  threadSize?: number;
 };
 
 export type ThreadsPublishingLimit = {

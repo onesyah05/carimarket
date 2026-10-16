@@ -553,6 +553,27 @@ memastikan kunci asing dan kunci tercabut ditolak, lalu mencabut kredensial itu
 kembali. Tidak ada endpoint yang mengubah data workspace atau memakai kuota yang
 dipanggil.
 
+## Membaca feed lead
+
+Tiap lead diberi label niat — **mencari jasa**, **menawarkan jasa**, atau
+**belum jelas** — oleh `src/lib/lead-intent.ts`. Penilaiannya berbasis frasa,
+bukan kata tunggal, karena kata yang sama berbalik arti tergantung
+rangkaiannya: "aku butuh jasa ketik" adalah permintaan, "kalau ada yang butuh
+jasa ketik" adalah penawaran. Label dihitung saat dibaca, bukan disimpan, agar
+penyempurnaan aturan langsung berlaku untuk lead lama tanpa backfill. Feed
+menampilkan semua lead secara bawaan; saringan niat ada satu klik di atas
+daftar.
+
+Konteks percakapan ikut tersimpan dari Threads: `ThreadPost.isReply`,
+`replyToHandle`, dan `threadSize`. Kartu lead dan halaman detail menyebutkan
+apakah postingan itu pembuka utas, bagian dari utas, atau balasan untuk akun
+tertentu.
+
+Status baca disimpan di `Lead.viewedAt`. Lead yang belum dibaca ditandai di
+kartunya; membuka halaman detail menandainya otomatis, dan ada tombol
+"Tandai sudah dibaca" per lead serta "Tandai semua sudah dibaca" di atas
+daftar. Penandaannya idempoten, jadi waktu baca pertama tidak pernah bergeser.
+
 ## Kata kunci: kategori, jatah, dan masa kunci
 
 Kata kunci terikat pada kategori bisnis akun. `src/lib/keyword-categories.ts`

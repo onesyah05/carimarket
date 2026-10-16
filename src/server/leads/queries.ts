@@ -1,6 +1,7 @@
 import "server-only";
 import { LeadStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { classifyLeadIntent } from "@/lib/lead-intent";
 import { isRiskyText, loadBlacklistTerms } from "@/server/replies/blacklist";
 
 const leadInclude = {
@@ -43,6 +44,14 @@ export function serializeLead(lead: StoredLead, options?: { flagged?: boolean })
     replies: lead.threadPost.replyCount,
     reposts: lead.threadPost.repostCount,
     location: "Threads",
+    // Niat postingan dihitung saat dibaca, bukan disimpan: aturannya masih
+    // disempurnakan, dan menghitung ulang membuat perbaikan langsung berlaku
+    // untuk lead lama tanpa backfill.
+    intent: classifyLeadIntent(lead.threadPost.body),
+    isReply: lead.threadPost.isReply,
+    replyToHandle: lead.threadPost.replyToHandle,
+    threadSize: lead.threadPost.threadSize,
+    viewedAt: lead.viewedAt?.toISOString() ?? null,
     status: displayStatus(lead.status),
     matchReason: lead.matchReason,
     sourceMode: lead.sourceMode,

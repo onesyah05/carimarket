@@ -64,6 +64,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .public-nav a:hover { color: var(--brand-strong); }
 .public-header__actions { display: flex; align-items: center; gap: 8px; }
 .public-header__login { min-height: 40px; padding: 0 16px; gap: 7px; white-space: nowrap; font-size: .88rem; }
+.public-header__account { min-height: 40px; max-width: 220px; padding: 0 16px; gap: 7px; white-space: nowrap; font-size: .88rem; }
+.public-header__account span { overflow: hidden; text-overflow: ellipsis; }
 .public-header__signin { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px; min-height: 40px; color: #34405c; font-size: .88rem; font-weight: 650; white-space: nowrap; }
 .public-header__signin:hover { color: var(--brand-strong); }
 @media (max-width: 520px) {
@@ -296,11 +298,6 @@ textarea.input { min-height: 120px; padding-block: 13px; resize: vertical; }
 .app-nav a:hover { color: var(--brand-deep); background: var(--brand-soft); }
 .app-nav a.active { color: var(--brand-deep); background: var(--brand-soft); font-weight: 800; }
 .app-nav a em { min-width: 22px; height: 20px; margin-left: auto; border-radius: 99px; display: grid; place-items: center; color: var(--ink); background: var(--accent); font-size: .62rem; font-style: normal; }
-.sidebar-help { margin-top: auto; padding: 14px; border-radius: 13px; color: var(--ink); background: var(--warning-soft); }
-.sidebar-help > div { display: flex; align-items: center; gap: 8px; }
-.sidebar-help strong { font-size: .75rem; }
-.sidebar-help p { margin: 9px 0; color: #6c5a00; font-size: .66rem; line-height: 1.5; }
-.sidebar-help a { color: #544600; text-decoration: underline; font-size: .67rem; font-weight: 800; }
 .sidebar-profile { margin-top: 14px; padding: 11px 8px 11px; border-top: 1px solid var(--line); border-radius: 0 0 12px 12px; display: flex; align-items: center; gap: 9px; flex-shrink: 0; transition: background .18s ease; }
 .sidebar-profile svg { flex: 0 0 auto; opacity: .55; }
 .sidebar-profile:hover { background: rgba(255,255,255,.07); }
@@ -700,7 +697,7 @@ body { min-width: 320px; background: var(--surface); }
 .form-feedback--error { color: var(--danger); }
 .oauth-button { min-height: 46px; justify-content: center; }
 .review-label { letter-spacing: .02em; text-transform: none; }
-.lead-card header span, .lead-card footer span, .panel-heading p, .composer-title p, .composer-title button, .tone-row > span, .tone-row button, .approval-title span, .approval-box > label, .composer-disclaimer, .data-row, .article-meta, .sidebar-help p, .sidebar-help a { font-size: .75rem; }
+.lead-card header span, .lead-card footer span, .panel-heading p, .composer-title p, .composer-title button, .tone-row > span, .tone-row button, .approval-title span, .approval-box > label, .composer-disclaimer, .data-row, .article-meta { font-size: .75rem; }
 .input-action button, .keyword-list button { min-width: 44px; min-height: 44px; border: 0; display: inline-grid; place-items: center; color: var(--muted); background: transparent; cursor: pointer; }
 .keyword-list span { display: inline-flex; align-items: center; }
 
@@ -858,10 +855,6 @@ body { background: var(--surface); }
 .app-nav a:hover { color: #fff; background: rgba(255,255,255,.08); }
 .app-nav a.active { color: #0b1739; background: var(--accent); box-shadow: 0 10px 22px rgba(244, 242, 11, .14); }
 .app-nav a em { background: #fff; }
-.sidebar-help { color: #fff; background: rgba(101, 153, 255, .17); }
-.sidebar-help p, .sidebar-help a { color: #dbe4f7; }
-html[data-theme="dark"] .sidebar-help { color: #f4f7ff; background: rgba(139, 179, 255, .16); }
-html[data-theme="dark"] .sidebar-help p, html[data-theme="dark"] .sidebar-help a { color: #cdd9f2; }
 html[data-theme="dark"] .field label { color: #c3cfe8; }
 .sidebar-profile { border-color: rgba(255,255,255,.12); }
 .app-topbar { height: 74px; border-bottom: 0; background: rgba(255,255,255,.88); box-shadow: 0 5px 22px rgba(25, 58, 120, .06); }
@@ -1313,7 +1306,6 @@ html[data-theme="dark"] .stack-row__actions { border-color: #22304f; }
 .app-shell--internal .app-sidebar { overflow: hidden; }
 .app-shell--internal .app-nav { flex: 1 1 auto; min-height: 0; align-content: start; gap: 2px; overflow-y: auto; overflow-x: hidden; padding: 0 3px 8px 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
 .app-shell--internal .app-nav a { min-height: 38px; height: 38px; flex: 0 0 auto; font-size: .8rem; }
-.app-shell--internal .sidebar-help { flex: 0 0 auto; margin-top: 12px; }
 .app-shell--internal .sidebar-profile, .app-shell--internal .logout-button { flex: 0 0 auto; }
 .app-shell--internal .app-main { min-width: 0; }
 .app-shell--internal .app-content { width: min(1440px, 100%); padding: 36px clamp(20px, 3vw, 48px) 64px; }
@@ -1414,7 +1406,6 @@ html[data-theme="dark"] .app-shell--internal .internal-count { color: #bbd0ff; b
 .app-shell--user .app-sidebar { overflow: hidden; }
 .app-shell--user .app-nav { min-height: 0; flex: 1 1 auto; overflow-y: auto; padding-right: 3px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
 .app-shell--user .app-nav a { min-height: 38px; height: 38px; flex: 0 0 auto; font-size: .8rem; }
-.app-shell--user .sidebar-help { flex: 0 0 auto; margin-top: 12px; }
 .app-shell--user .app-main { min-width: 0; }
 .app-shell--user .app-content { width: min(1320px, 100%); padding: 36px clamp(20px, 3vw, 44px) 64px; }
 .app-shell--user .dash-heading { align-items: flex-start; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
@@ -1646,6 +1637,34 @@ html[data-theme="dark"] .app-shell--internal .internal-count { color: #bbd0ff; b
 .plan-form__actions { display: flex; flex-wrap: wrap; gap: 9px; }
 .plan-warning { display: inline-flex; gap: 5px; align-items: flex-start; color: var(--warning); line-height: 1.45; }
 .plan-warning svg { flex: 0 0 auto; margin-top: 2px; }
+
+/* Bantuan sebagai ikon melayang, menggantikan kartu permanen di sidebar */
+.help-launcher { position: fixed; right: 20px; bottom: 20px; z-index: 60; display: grid; justify-items: end; gap: 10px; }
+.help-launcher__button { width: 48px; height: 48px; border: 0; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--brand-strong); box-shadow: var(--shadow-md); cursor: pointer; transition: transform .15s ease; }
+.help-launcher__button:hover { transform: translateY(-2px); }
+.help-launcher__panel { width: min(270px, calc(100vw - 40px)); padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-raised); box-shadow: var(--shadow-md); }
+.help-launcher__panel strong { display: block; font-size: .85rem; }
+.help-launcher__panel p { margin: 7px 0 12px; color: var(--muted); font-size: .74rem; line-height: 1.55; }
+.help-launcher__panel a { color: var(--brand-strong); font-size: .76rem; font-weight: 700; }
+
+/* Niat postingan dan status baca pada kartu lead */
+.intent-chip { padding: 4px 10px; border-radius: 99px; font-size: .68rem; font-weight: 750; }
+.intent-chip--mencari { color: #0f6b3f; background: #e4f6ec; }
+.intent-chip--menawarkan { color: #8a5300; background: #fdf0d8; }
+.intent-chip--tidak-jelas { color: var(--muted); background: var(--canvas); }
+html[data-theme="dark"] .intent-chip--mencari { color: #92e5b8; background: #10301f; }
+html[data-theme="dark"] .intent-chip--menawarkan { color: #ffd79a; background: #3a2a0d; }
+.lead-card--unread { border-left: 3px solid var(--brand-strong); }
+.lead-unread { margin-left: auto; padding: 3px 9px; border-radius: 99px; color: var(--brand-deep); background: var(--brand-soft); font-size: .64rem; font-weight: 800; white-space: nowrap; }
+.lead-card__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.lead-filters { display: grid; gap: 10px; justify-items: start; }
+.result-summary > button { display: inline-flex; align-items: center; gap: 6px; }
+
+@media (max-width: 640px) {
+  .help-launcher { right: 14px; bottom: 14px; }
+  .lead-card__actions { width: 100%; }
+  .lead-card__actions .button { flex: 1 1 auto; justify-content: center; }
+}
 
 /* Penyusunan kata kunci: onboarding dan halaman Kata kunci memakai bentuk
    yang sama, dua kolom sejajar dengan takaran jatah paket di atasnya. */

@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { LoaderCircle, Search, Tags } from "lucide-react";
+import { CheckCheck, LoaderCircle, Search, Tags } from "lucide-react";
 import { LeadCard } from "@/components/dashboard-ui";
 import { suggestionMeta, type KeywordSuggestion } from "@/lib/keyword-suggestions";
+import { LEAD_INTENT_LABEL, type LeadIntent } from "@/lib/lead-intent";
 import type { Lead } from "@/lib/workspace-data";
 
 type SearchMeta = {
@@ -17,6 +18,13 @@ type SearchMeta = {
   suggestions?: KeywordSuggestion[];
 };
 type ApiResponse = { data?: Lead[]; error?: string; code?: string; meta?: SearchMeta };
+
+const intentFilters: Array<{ label: string; value: LeadIntent | "semua" }> = [
+  { label: "Semua postingan", value: "semua" },
+  { label: LEAD_INTENT_LABEL.mencari, value: "mencari" },
+  { label: LEAD_INTENT_LABEL.menawarkan, value: "menawarkan" },
+  { label: LEAD_INTENT_LABEL["tidak jelas"], value: "tidak jelas" },
+];
 
 const engagementFilters = [
   { label: "Semua engagement", value: 0 },
@@ -35,6 +43,10 @@ const engagementFilters = [
  */
 export function LeadFeed() {
   const [status, setStatus] = useState("Semua");
+  // Bawaannya "semua": menyaring sejak awal akan menyembunyikan sebagian besar
+  // feed tanpa diminta. Chip di tiap kartu sudah cukup untuk membedakan, dan
+  // saringannya satu klik ketika memang hanya permintaan yang dicari.
+  const [intent, setIntent] = useState<LeadIntent | "semua">("semua");
   const [sort, setSort] = useState("relevansi");
   const [minEngagement, setMinEngagement] = useState(0);
   const [items, setItems] = useState<Lead[]>([]);
@@ -82,14 +94,29 @@ export function LeadFeed() {
   }
 
   const active = keywords.filter(keyword => keyword.active);
+  const unread = items.filter(lead => lead.viewedAt === null).length;
+
+  async function markRead(leadId: string) {
+    setItems(current => current.map(lead => lead.id === leadId ? { ...lead, viewedAt: new Date().toISOString() } : lead));
+    const response = await fetch(`/api/leads/${encodeURIComponent(leadId)}/dibaca`, { method: "POST" });
+    if (!response.ok) setError("Penandaan baca belum tersimpan. Muat ulang halaman untuk melihat status terbaru.");
+  }
+
+  async function markAllRead() {
+    const stamp = new Date().toISOString();
+    setItems(current => current.map(lead => lead.viewedAt === null ? { ...lead, viewedAt: stamp } : lead));
+    const response = await fetch("/api/leads/dibaca", { method: "POST" });
+    if (!response.ok) setError("Penandaan baca belum tersimpan. Muat ulang halaman untuk melihat status terbaru.");
+  }
   const filtered = useMemo(() => items
     .filter(lead => status === "Semua" || lead.status === status)
+    .filter(lead => intent === "semua" || lead.intent === intent)
     // Lead tanpa metrik tidak dapat dibandingkan, jadi hanya disaring saat
     // pengguna benar-benar meminta ambang engagement.
     .filter(lead => minEngagement === 0 || (lead.likes ?? 0) + (lead.replies ?? 0) >= minEngagement)
     .sort((a, b) => sort === "relevansi"
       ? b.score - a.score
-      : new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()), [items, status, sort, minEngagement]);
+      : new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()), [items, status, intent, sort, minEngagement]);
 
   return <>
     <section className="panel lead-search">
@@ -124,24 +151,28 @@ export function LeadFeed() {
 
     {error && <div className="inline-error" role="alert"><strong>Pencarian belum dapat dijalankan.</strong><span>{error}</span></div>}
 
-    <div className="filter-bar">
+    <div className="filter-bar lead-filters">
+      <div className="filter-tabs" aria-label="Filter niat postingan">{intentFilters.map(item => <button type="button" className={intent === item.value ? "active" : ""} key={item.value} onClick={() => setIntent(item.value)}>{item.label}</button>)}</div>
       <div className="filter-tabs" aria-label="Filter status">{["Semua", "Baru", "Tersimpan", "Dibalas"].map(item => <button type="button" className={status === item ? "active" : ""} key={item} onClick={() => setStatus(item)}>{item}</button>)}</div>
     </div>
 
     <div className="result-summary">
-      <span><strong>{filtered.length}</strong> lead ditemukan</span>
+      <span><strong>{filtered.length}</strong> lead ditemukan{unread > 0 ? ` · ${unread} belum dibaca` : ""}</span>
+      {unread > 0 && <button type="button" onClick={() => void markAllRead()}><CheckCheck size={15} /> Tandai semua sudah dibaca</button>}
       <label>Engagement <select value={minEngagement} onChange={event => setMinEngagement(Number(event.target.value))} aria-label="Filter engagement minimum">{engagementFilters.map(filter => <option key={filter.value} value={filter.value}>{filter.label}</option>)}</select></label>
       <label>Urutkan <select value={sort} onChange={event => setSort(event.target.value)}><option value="relevansi">Paling relevan</option><option value="terbaru">Terbaru</option></select></label>
     </div>
 
     <div className="lead-list">
-      {filtered.map(lead => <LeadCard key={lead.id} lead={lead} />)}
+      {filtered.map(lead => <LeadCard key={lead.id} lead={lead} onMarkRead={id => void markRead(id)} />)}
       {!loading && filtered.length === 0 && <div className="empty-state">
         <Search />
-        <h2>{lastRun ? "Tidak ada lead yang cocok" : "Belum ada lead"}</h2>
-        <p>{lastRun
-          ? "Pencarian selesai, tetapi tidak ada postingan baru yang cocok. Coba lagi nanti atau sesuaikan kata kunci Anda."
-          : "Tekan “Cari leads sekarang” untuk menjalankan kata kunci Anda dan menarik percakapan Threads terbaru."}</p>
+        <h2>{items.length > 0 ? "Tidak ada lead pada saringan ini" : lastRun ? "Tidak ada lead yang cocok" : "Belum ada lead"}</h2>
+        <p>{items.length > 0
+          ? `Saringan “${intentFilters.find(item => item.value === intent)?.label}” menyembunyikan ${items.length} lead lain. Pilih “Semua postingan” untuk melihat semuanya.`
+          : lastRun
+            ? "Pencarian selesai, tetapi tidak ada postingan baru yang cocok. Coba lagi nanti atau sesuaikan kata kunci Anda."
+            : "Tekan “Cari leads sekarang” untuk menjalankan kata kunci Anda dan menarik percakapan Threads terbaru."}</p>
       </div>}
     </div>
   </>;

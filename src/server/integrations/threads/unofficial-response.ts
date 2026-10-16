@@ -20,7 +20,13 @@ type RawPost = {
   taken_at?: unknown;
   like_count?: unknown;
   user?: { username?: unknown; full_name?: unknown } | null;
-  text_post_app_info?: { direct_reply_count?: unknown; repost_count?: unknown } | null;
+  text_post_app_info?: {
+    direct_reply_count?: unknown;
+    repost_count?: unknown;
+    is_reply?: unknown;
+    reply_to_author?: { username?: unknown } | null;
+    self_thread_count?: unknown;
+  } | null;
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -65,6 +71,9 @@ function toSearchResult(raw: RawPost): ThreadSearchResult | null {
     likeCount: nonNegative(raw.like_count),
     replyCount: nonNegative(raw.text_post_app_info?.direct_reply_count),
     repostCount: nonNegative(raw.text_post_app_info?.repost_count),
+    isReply: raw.text_post_app_info?.is_reply === true,
+    replyToHandle: text(raw.text_post_app_info?.reply_to_author?.username) || undefined,
+    threadSize: nonNegative(raw.text_post_app_info?.self_thread_count),
   };
 }
 

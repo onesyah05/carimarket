@@ -7,6 +7,7 @@ import { BookOpen, CircleHelp, CreditCard, Landmark, Receipt, FileCheck2, FileTe
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoutButton } from "@/features/auth/components/logout-button";
+import { HelpLauncher } from "@/components/help-launcher";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import { useState } from "react";
 
@@ -142,7 +143,7 @@ export function DashboardShell({ children, user }: { children: React.ReactNode; 
           })}
         </div>)}
       </nav>
-      {isUser && <div className="sidebar-help"><div><CircleHelp size={18} /><strong>Butuh bantuan?</strong></div><p>Tim kami siap membantu setup pencarian pertama Anda.</p><Link href="/kontak">Hubungi dukungan</Link></div>}
+
       <Link className="sidebar-profile" href={accountLink} onClick={() => setOpen(false)}>
         <span>{initials}</span>
         <div><strong>{name}</strong><small>{accountLabel}</small></div>
@@ -155,5 +156,6 @@ export function DashboardShell({ children, user }: { children: React.ReactNode; 
       <header className="app-topbar"><button className="menu-button" onClick={() => setOpen(true)} aria-label="Buka menu"><Menu size={21} /></button><Link className="top-action" href={quickLink}><Search size={16} /><span>{quickLabel}</span></Link><ThemeToggle /><NotificationBell enabled={isUser} fallbackHref={notificationLink} fallbackLabel={notificationLabel} fallbackCopy={isSuperadmin ? "Aktivitas penting platform dapat ditinjau melalui audit log." : "Periksa antrean moderasi untuk tindakan yang menunggu keputusan."} /></header>
       <div className="app-content">{children}</div>
     </div>
+    {isUser && <HelpLauncher />}
   </div>;
 }

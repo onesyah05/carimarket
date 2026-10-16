@@ -386,6 +386,12 @@ model ThreadPost {
   repostCount    Int?
   postedAt       DateTime @db.DateTime(3)
   capturedAt     DateTime @default(now()) @db.DateTime(3)
+  /// Postingan ini balasan atas postingan lain, bukan pembuka percakapan.
+  isReply        Boolean  @default(false)
+  /// Handle yang dibalas, bila postingan ini balasan.
+  replyToHandle  String?  @db.VarChar(100)
+  /// Jumlah postingan dalam utas penulis yang sama; >1 berarti bagian dari utas.
+  threadSize     Int?
   leads          Lead[]
 
   @@index([postedAt])
@@ -401,6 +407,8 @@ model Lead {
   matchReason    String?      @db.VarChar(255)
   sourceMode     SearchCapability
   discoveredAt   DateTime     @default(now()) @db.DateTime(3)
+  /// Kapan pemiliknya membuka lead ini. Null berarti belum dibaca.
+  viewedAt       DateTime?    @db.DateTime(3)
   updatedAt      DateTime     @updatedAt @db.DateTime(3)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   threadPost     ThreadPost    @relation(fields: [threadPostId], references: [id], onDelete: Restrict)

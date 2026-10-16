@@ -77,10 +77,18 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
           ...(result.replyCount === undefined ? {} : { replyCount: result.replyCount }),
           ...(result.repostCount === undefined ? {} : { repostCount: result.repostCount }),
         };
+        // Konteks percakapan hanya ditulis bila adapter mengirimkannya, dengan
+        // alasan yang sama seperti metrik: jangan menimpa yang sudah diketahui
+        // dengan ketidaktahuan.
+        const context = {
+          ...(result.isReply === undefined ? {} : { isReply: result.isReply }),
+          ...(result.replyToHandle === undefined ? {} : { replyToHandle: result.replyToHandle }),
+          ...(result.threadSize === undefined ? {} : { threadSize: result.threadSize }),
+        };
         const post = await tx.threadPost.upsert({
           where: { externalPostId: result.externalPostId },
-          update: { authorHandle: result.authorHandle, authorName: result.authorName, body: result.body, permalink: result.permalink, postedAt: result.postedAt, capturedAt: new Date(), ...engagement },
-          create: { externalPostId: result.externalPostId, authorHandle: result.authorHandle, authorName: result.authorName, body: result.body, permalink: result.permalink, postedAt: result.postedAt, ...engagement },
+          update: { authorHandle: result.authorHandle, authorName: result.authorName, body: result.body, permalink: result.permalink, postedAt: result.postedAt, capturedAt: new Date(), ...engagement, ...context },
+          create: { externalPostId: result.externalPostId, authorHandle: result.authorHandle, authorName: result.authorName, body: result.body, permalink: result.permalink, postedAt: result.postedAt, ...engagement, ...context },
         });
         const existing = await tx.lead.findUnique({
           where: { userId_threadPostId: { userId: keyword.userId, threadPostId: post.id } },
