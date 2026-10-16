@@ -64,10 +64,14 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .public-nav a:hover { color: var(--brand-strong); }
 .public-header__actions { display: flex; align-items: center; gap: 8px; }
 .public-header__login { min-height: 40px; padding: 0 16px; gap: 7px; white-space: nowrap; font-size: .88rem; }
+.public-header__signin { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px; min-height: 40px; color: #34405c; font-size: .88rem; font-weight: 650; white-space: nowrap; }
+.public-header__signin:hover { color: var(--brand-strong); }
 @media (max-width: 520px) {
   .public-header__inner { gap: 10px; }
   .public-header__actions { gap: 6px; }
   .public-header__login { min-height: 38px; padding: 0 12px; font-size: .82rem; }
+  /* Di layar sempit cukup satu ajakan; "Masuk" tetap tersedia di menu. */
+  .public-header__signin { display: none; }
 }
 .mobile-menu__login { margin-top: 4px; border-top: 1px solid var(--line); padding-top: 12px !important; color: var(--brand-deep); font-weight: 800 !important; }
 .mobile-menu { display: none; position: relative; }
@@ -1634,6 +1638,41 @@ html[data-theme="dark"] .app-shell--internal .internal-count { color: #bbd0ff; b
 .plan-form__actions { display: flex; flex-wrap: wrap; gap: 9px; }
 .plan-warning { display: inline-flex; gap: 5px; align-items: flex-start; color: var(--warning); line-height: 1.45; }
 .plan-warning svg { flex: 0 0 auto; margin-top: 2px; }
+
+/* Pendaftaran, verifikasi email, dan pemilihan paket */
+.auth-badge { margin: 0 0 14px; display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 99px; color: var(--brand-strong); background: color-mix(in srgb, var(--brand-strong) 12%, transparent); font-size: .7rem; font-weight: 700; }
+.auth-consent { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 9px; align-items: start; color: var(--muted); font-size: .74rem; line-height: 1.55; }
+.auth-consent input { margin-top: 2px; }
+.auth-consent a { color: var(--brand-strong); font-weight: 700; }
+.auth-card .form-feedback { margin-top: 12px; display: flex; align-items: center; gap: 7px; justify-content: center; font-size: .74rem; }
+
+.start-shell { min-height: 100dvh; background: var(--canvas); }
+.start-shell__bar { min-height: 74px; padding: 0 clamp(18px, 4vw, 36px); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--surface-raised); }
+.start-shell__actions { display: flex; align-items: center; gap: 10px; }
+/* Tombol keluar dirancang untuk sidebar (selebar kolomnya); di bar atas ia
+   harus menyusut agar tidak mendorong halaman melebar. */
+.start-shell__actions .logout-button { width: auto; margin-top: 0; padding: 0 14px; white-space: nowrap; }
+.start-shell__body { width: min(880px, calc(100% - 32px)); margin: clamp(32px, 6vw, 64px) auto; }
+.start-shell__body h1 { margin: 8px 0 0; font-size: clamp(1.7rem, 3.4vw, 2.5rem); letter-spacing: -.04em; }
+.start-shell__copy { margin: 12px 0 26px; color: var(--muted); line-height: 1.7; }
+
+.free-plan { padding: 22px 24px; display: grid; gap: 14px; }
+.free-plan__head { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; }
+.free-plan__head h2 { margin: 6px 0 4px; font-size: 1.2rem; }
+.free-plan__head p { margin: 0; max-width: 46ch; color: var(--muted); font-size: .78rem; line-height: 1.6; }
+.free-plan__head .eyebrow { display: inline-flex; align-items: center; gap: 6px; }
+.free-plan__list { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: .76rem; }
+.free-plan__list li { display: inline-flex; align-items: center; gap: 6px; }
+.free-plan__list svg { color: var(--success); }
+
+.grace-notice a { color: var(--brand-strong); font-weight: 700; }
+
+@media (max-width: 640px) {
+  .start-shell__bar { padding: 0 14px; gap: 8px; }
+  .start-shell__actions { gap: 6px; }
+  .free-plan__head { align-items: stretch; }
+  .free-plan__head .button { width: 100%; }
+}
 
 /* Saran kata kunci dari riwayat pencarian (lead feed pelanggan) */
 .keyword-suggest { position: relative; min-width: 0; }

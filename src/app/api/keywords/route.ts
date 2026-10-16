@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { enforceSameOrigin } from "@/server/http/request-guards";
 import { assertKeywordQuota, getQuotaSnapshot } from "@/server/usage/limits";
 import { publicThreadsError, ThreadsIntegrationError } from "@/server/integrations/threads/errors";
-import { getWorkspaceUser } from "@/server/workspace-user";
+import { requireEntitledUser } from "@/server/auth/access-gate";
 
 export const runtime = "nodejs";
 
@@ -19,7 +19,7 @@ function serialize(keyword: { id: string; phrase: string; kind: KeywordKind; isA
 
 export async function GET() {
   try {
-    const user = await getWorkspaceUser();
+    const user = await requireEntitledUser();
     const [keywords, quota] = await Promise.all([
       prisma.keyword.findMany({ where: { userId: user.id }, include: { _count: { select: { leadMatches: true } } }, orderBy: { createdAt: "desc" } }),
       getQuotaSnapshot(user.id),
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     enforceSameOrigin(request);
     const input = createSchema.safeParse(await request.json().catch(() => null));
     if (!input.success) return NextResponse.json({ error: "Kata kunci harus terdiri dari 2 sampai 120 karakter.", code: "INVALID_INPUT" }, { status: 400 });
-    const user = await getWorkspaceUser();
+    const user = await requireEntitledUser();
     const kind = input.data.negative ? KeywordKind.EXCLUDE : KeywordKind.INCLUDE;
     const normalized = input.data.phrase.toLocaleLowerCase("id-ID");
     await assertKeywordQuota(user.id, kind, normalized);
@@ -67,7 +67,7 @@ export async function PATCH(request: Request) {
     enforceSameOrigin(request);
     const input = updateSchema.safeParse(await request.json().catch(() => null));
     if (!input.success) return NextResponse.json({ error: "Perubahan kata kunci tidak valid.", code: "INVALID_INPUT" }, { status: 400 });
-    const user = await getWorkspaceUser();
+    const user = await requireEntitledUser();
     const result = await prisma.keyword.updateMany({ where: { id: input.data.id, userId: user.id }, data: { isActive: input.data.active } });
     if (!result.count) throw new ThreadsIntegrationError("KEYWORD_NOT_FOUND", "Kata kunci tidak ditemukan.", 404);
     return NextResponse.json({ success: true });
@@ -82,7 +82,7 @@ export async function DELETE(request: Request) {
     enforceSameOrigin(request);
     const input = deleteSchema.safeParse(await request.json().catch(() => null));
     if (!input.success) return NextResponse.json({ error: "Kata kunci tidak valid.", code: "INVALID_INPUT" }, { status: 400 });
-    const user = await getWorkspaceUser();
+    const user = await requireEntitledUser();
     const result = await prisma.keyword.deleteMany({ where: { id: input.data.id, userId: user.id } });
     if (!result.count) throw new ThreadsIntegrationError("KEYWORD_NOT_FOUND", "Kata kunci tidak ditemukan.", 404);
     return NextResponse.json({ success: true });

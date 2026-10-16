@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { enforceSameOrigin } from "@/server/http/request-guards";
 import { publicThreadsError, ThreadsIntegrationError } from "@/server/integrations/threads/errors";
-import { getWorkspaceUser } from "@/server/workspace-user";
+import { requireEntitledUser } from "@/server/auth/access-gate";
 
 export const runtime = "nodejs";
 
@@ -15,7 +15,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     enforceSameOrigin(request);
     const input = schema.safeParse(await request.json().catch(() => null));
     if (!input.success) return NextResponse.json({ error: "Status lead tidak valid." }, { status: 400 });
-    const user = await getWorkspaceUser();
+    const user = await requireEntitledUser();
     const { id } = await params;
     const lead = await prisma.lead.findFirst({ where: { id, userId: user.id }, select: { id: true, status: true } });
     if (!lead) throw new ThreadsIntegrationError("LEAD_NOT_FOUND", "Lead tidak ditemukan.", 404);

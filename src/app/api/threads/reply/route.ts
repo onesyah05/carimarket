@@ -3,7 +3,7 @@ import { z } from "zod";
 import { enforceRateLimit, enforceSameOrigin } from "@/server/http/request-guards";
 import { publicThreadsError } from "@/server/integrations/threads/errors";
 import { sendReplyFromDraft } from "@/server/replies/send-service";
-import { getWorkspaceUser } from "@/server/workspace-user";
+import { requireEntitledUser } from "@/server/auth/access-gate";
 
 export const runtime = "nodejs";
 
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const input = inputSchema.safeParse(await request.json().catch(() => null));
     if (!input.success) return NextResponse.json({ error: "Data balasan tidak valid.", code: "INVALID_INPUT" }, { status: 400 });
 
-    const user = await getWorkspaceUser();
+    const user = await requireEntitledUser();
     enforceRateLimit(`threads-reply:${user.id}`, 20, 60_000);
 
     const result = await sendReplyFromDraft({

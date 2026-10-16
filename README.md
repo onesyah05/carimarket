@@ -222,6 +222,45 @@ Pengiriman email masih berupa adapter tanpa provider (`src/server/integrations/e
 jadi salinan email belum terkirim. Preferensi email tetap tersimpan per akun dan
 akan dipakai begitu provider diisi.
 
+## Pendaftaran mandiri dan gerbang langganan
+
+Pendaftaran terbuka di `/daftar`. Alurnya berurutan dan ditegakkan server:
+
+1. **Daftar** (`POST /api/auth/register`) membuat akun berstatus
+   `PENDING_VERIFICATION` dan langsung memberi sesi. Sesi itu tidak membuka
+   apa pun selain halaman "cek email" — di situlah tombol kirim ulang berada.
+2. **Verifikasi email**. Resend mengirim tautan ke alamat pendaftar; tautan
+   berlaku 24 jam dan sekali pakai. Hanya hash token yang disimpan
+   (`EmailVerificationToken`), sama seperti `Session`, dan menerbitkan token
+   baru membatalkan yang lama. Membuka `/verifikasi?token=…` menandai akun
+   `ACTIVE`, membuat sesi, lalu mengantar ke pemilihan paket.
+3. **Pilih paket** di `/mulai/paket`. Paket gratis aktif seketika
+   (`POST /api/billing/paket-gratis`); paket berbayar membuat tagihan lewat
+   alur billing yang sama dengan halaman Langganan, dan ruang kerja terbuka
+   setelah Superadmin memverifikasi pembayaran.
+4. **Onboarding** profil bisnis, lalu dashboard.
+
+Penegakannya ada di `src/server/auth/access-rules.ts` (aturan murni) dan
+`access-gate.ts` (penerapannya). Layout dashboard serta onboarding memakai
+`requireEntitledPage`, dan endpoint ruang kerja memakai `requireEntitledUser`
+sehingga gerbangnya tidak dapat dilewati dengan memanggil API langsung.
+Endpoint akun, notifikasi, dan billing sengaja tidak digerbangi: justru di
+sanalah pengguna menyelesaikan syaratnya.
+
+Akun yang dibuat **sebelum** `PAYWALL_FROM` (16 Oktober 2026) mendapat
+tenggang 14 hari: dashboard tetap terbuka dengan peringatan bertanggal sampai
+30 Oktober 2026. Akun baru terkena aturan sejak menit pertama. Akun internal
+(`ADMIN`, `SUPERADMIN`) tidak pernah digerbangi.
+
+### Email
+
+Pengiriman memakai **Resend** lewat REST API-nya (`RESEND_API_KEY`), dengan
+pengirim dari `EMAIL_FROM` (bawaan `Cari Market <noreply@carimarket.id>`).
+Domain pengirim harus terverifikasi di Resend. Tanpa `RESEND_API_KEY` adapter
+melaporkan gagal secara jujur: pendaftaran tetap tersimpan, dan halaman "cek
+email" menampilkan tombol kirim ulang. API key, alamat tujuan, dan isi pesan
+tidak pernah masuk log.
+
 ## Pendaftaran lewat Threads
 
 OAuth Threads juga berfungsi sebagai pendaftaran. Akun yang dibuat lewat jalur

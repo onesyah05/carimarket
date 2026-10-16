@@ -9,7 +9,7 @@ import { enforceRateLimit, enforceSameOrigin } from "@/server/http/request-guard
 import { assertKeywordQuota } from "@/server/usage/limits";
 import { isThreadsAvailable } from "@/server/integrations/threads/config";
 import { publicThreadsError, ThreadsIntegrationError } from "@/server/integrations/threads/errors";
-import { getWorkspaceUser } from "@/server/workspace-user";
+import { requireEntitledUser } from "@/server/auth/access-gate";
 
 export const runtime = "nodejs";
 
@@ -18,7 +18,7 @@ const inputSchema = z.object({ query: z.string().trim().min(2).max(100) });
 export async function GET() {
   try {
     if (!(await isThreadsAvailable())) throw new ThreadsIntegrationError("THREADS_NOT_CONFIGURED", "Koneksi Threads belum tersedia. Silakan hubungi administrator.", 409);
-    const user = await getWorkspaceUser();
+    const user = await requireEntitledUser();
     const [leads, suggestions] = await Promise.all([listWorkspaceLeads(user.id), listKeywordSuggestions(user.id)]);
     return NextResponse.json({ success: true, data: leads, meta: { suggestions } });
   } catch (error) {
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     const input = inputSchema.safeParse(await request.json().catch(() => null));
     if (!input.success) return NextResponse.json({ error: "Kata kunci harus terdiri dari 2 sampai 100 karakter.", code: "INVALID_INPUT" }, { status: 400 });
 
-    const user = await getWorkspaceUser();
+    const user = await requireEntitledUser();
     enforceRateLimit(`threads-search:${user.id}`, 30, 60_000);
     const normalized = input.data.query.toLocaleLowerCase("id-ID");
     await assertKeywordQuota(user.id, KeywordKind.INCLUDE, normalized);

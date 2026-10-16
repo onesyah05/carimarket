@@ -189,6 +189,7 @@ model User {
   replyDrafts        ReplyDraft[]             @relation("ReplyOwner")
   reviewedReplies    ReplyDraft[]             @relation("ReplyReviewer")
   adminPermissions   AdminPermission[]
+  emailVerifications EmailVerificationToken[]
   subscriptions      Subscription[]
   transactions       Transaction[]            @relation("TransactionPayer")
   reviewedTransactions Transaction[]          @relation("TransactionReviewer")
@@ -229,6 +230,25 @@ model Session {
   userAgent String?  @db.VarChar(255)
   createdAt DateTime @default(now()) @db.DateTime(3)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+/**
+ * Token verifikasi email untuk pendaftaran mandiri.
+ *
+ * Hanya hash yang disimpan, sama seperti Session: bocornya tabel ini tidak
+ * memberi siapa pun tautan yang bisa dipakai. Token berlaku sekali dan
+ * punya masa berlaku pendek.
+ */
+model EmailVerificationToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique @db.VarChar(191)
+  expiresAt  DateTime  @db.DateTime(3)
+  consumedAt DateTime? @db.DateTime(3)
+  createdAt  DateTime  @default(now()) @db.DateTime(3)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
 }

@@ -58,7 +58,7 @@ function PlanCard({ plan }: { plan: PublicPlan }) {
       <h3>{plan.name}</h3>
       <p className="price">{formatRupiah(plan.monthlyPrice)}{!free && <small> / bulan</small>}</p>
       <p>{plan.tagline}</p>
-      <Link className={`button ${plan.featured ? "button--primary" : "button--ghost"}`} href={free ? "/masuk" : "/masuk?next=/dashboard/langganan"}>
+      <Link className={`button ${plan.featured ? "button--primary" : "button--ghost"}`} href="/daftar">
         {free ? "Mulai gratis" : `Ambil paket ${plan.name}`}
       </Link>
       <ul className="pricing-list">

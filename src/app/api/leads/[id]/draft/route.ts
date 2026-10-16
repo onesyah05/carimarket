@@ -3,7 +3,7 @@ import { z } from "zod";
 import { enforceSameOrigin } from "@/server/http/request-guards";
 import { publicThreadsError } from "@/server/integrations/threads/errors";
 import { saveReplyDraft } from "@/server/replies/send-service";
-import { getWorkspaceUser } from "@/server/workspace-user";
+import { requireEntitledUser } from "@/server/auth/access-gate";
 
 export const runtime = "nodejs";
 
@@ -17,7 +17,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     enforceSameOrigin(request);
     const input = schema.safeParse(await request.json().catch(() => null));
     if (!input.success) return NextResponse.json({ error: "Isi draf harus 1–500 karakter." }, { status: 400 });
-    const user = await getWorkspaceUser();
+    const user = await requireEntitledUser();
     const { id: leadId } = await params;
     const draft = await saveReplyDraft({ userId: user.id, leadId, body: input.data.body, draftId: input.data.draftId });
     return NextResponse.json({ success: true, data: draft });
