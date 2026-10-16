@@ -1635,6 +1635,17 @@ html[data-theme="dark"] .app-shell--internal .internal-count { color: #bbd0ff; b
 .plan-warning { display: inline-flex; gap: 5px; align-items: flex-start; color: var(--warning); line-height: 1.45; }
 .plan-warning svg { flex: 0 0 auto; margin-top: 2px; }
 
+/* Saran kata kunci dari riwayat pencarian (lead feed pelanggan) */
+.keyword-suggest { position: relative; min-width: 0; }
+.keyword-suggest .filter-search { width: 100%; }
+.keyword-suggest__list { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; right: 0; margin: 0; padding: 6px; max-height: 320px; overflow-y: auto; list-style: none; display: grid; gap: 2px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); box-shadow: var(--shadow-md); }
+.keyword-suggest__caption { padding: 6px 10px 4px; display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .64rem; letter-spacing: .05em; text-transform: uppercase; }
+.keyword-suggest__list li > button { width: 100%; padding: 8px 10px; display: grid; gap: 2px; justify-items: start; text-align: left; border: 0; border-radius: 9px; color: var(--ink); background: transparent; cursor: pointer; }
+.keyword-suggest__list li > button:hover, .keyword-suggest__list li.is-active > button { background: var(--canvas); }
+.keyword-suggest__list li > button:focus-visible { outline: 2px solid var(--brand-strong); outline-offset: -2px; }
+.keyword-suggest__list strong { font-size: .78rem; font-weight: 600; overflow-wrap: anywhere; }
+.keyword-suggest__list span { color: var(--muted); font-size: .67rem; }
+
 /* Pencarian Threads ad hoc (Superadmin) */
 .lead-scan__bar { margin-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: stretch; }
 .lead-scan__bar .filter-search { min-width: 0; min-height: 44px; border: 1px solid var(--line); }

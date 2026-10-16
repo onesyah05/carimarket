@@ -2,6 +2,7 @@ import { KeywordKind } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { listKeywordSuggestions } from "@/server/leads/keyword-suggestions";
 import { listWorkspaceLeads } from "@/server/leads/queries";
 import { runKeywordSearch } from "@/server/leads/search-service";
 import { enforceRateLimit, enforceSameOrigin } from "@/server/http/request-guards";
@@ -18,7 +19,8 @@ export async function GET() {
   try {
     if (!(await isThreadsAvailable())) throw new ThreadsIntegrationError("THREADS_NOT_CONFIGURED", "Koneksi Threads belum tersedia. Silakan hubungi administrator.", 409);
     const user = await getWorkspaceUser();
-    return NextResponse.json({ success: true, data: await listWorkspaceLeads(user.id) });
+    const [leads, suggestions] = await Promise.all([listWorkspaceLeads(user.id), listKeywordSuggestions(user.id)]);
+    return NextResponse.json({ success: true, data: leads, meta: { suggestions } });
   } catch (error) {
     const result = publicThreadsError(error);
     return NextResponse.json(result.body, { status: result.status });
@@ -43,7 +45,10 @@ export async function POST(request: Request) {
     });
 
     const { resultCount, excludedCount } = await runKeywordSearch(keyword.id);
-    return NextResponse.json({ success: true, data: await listWorkspaceLeads(user.id), meta: { resultCount, excludedCount } });
+    // Saran ikut dikirim ulang supaya kata kunci yang baru dipakai langsung
+    // naik ke urutan teratas tanpa memuat ulang halaman.
+    const [leads, suggestions] = await Promise.all([listWorkspaceLeads(user.id), listKeywordSuggestions(user.id)]);
+    return NextResponse.json({ success: true, data: leads, meta: { resultCount, excludedCount, suggestions } });
   } catch (error) {
     const result = publicThreadsError(error);
     return NextResponse.json(result.body, { status: result.status });

@@ -3,9 +3,11 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { LoaderCircle, Search } from "lucide-react";
 import { LeadCard } from "@/components/dashboard-ui";
+import { KeywordSuggestInput } from "./keyword-suggest-input";
+import type { KeywordSuggestion } from "@/lib/keyword-suggestions";
 import type { Lead } from "@/lib/workspace-data";
 
-type SearchMeta = { resultCount: number; excludedCount?: number };
+type SearchMeta = { resultCount?: number; excludedCount?: number; suggestions?: KeywordSuggestion[] };
 type ApiResponse = { data?: Lead[]; error?: string; code?: string; meta?: SearchMeta };
 
 const engagementFilters = [
@@ -20,6 +22,7 @@ export function LeadFeed() {
   const [sort, setSort] = useState("relevansi");
   const [minEngagement, setMinEngagement] = useState(0);
   const [items, setItems] = useState<Lead[]>([]);
+  const [suggestions, setSuggestions] = useState<KeywordSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [lastSearch, setLastSearch] = useState<{ query: string; resultCount: number; excludedCount: number }>();
@@ -30,7 +33,9 @@ export function LeadFeed() {
       .then(async response => {
         const payload = await response.json() as ApiResponse;
         if (!response.ok) throw new Error(payload.error ?? "Lead belum dapat dimuat.");
-        if (active) setItems(payload.data ?? []);
+        if (!active) return;
+        setItems(payload.data ?? []);
+        setSuggestions(payload.meta?.suggestions ?? []);
       })
       .catch(cause => {
         if (active) setError(cause instanceof Error ? cause.message : "Lead belum dapat dimuat.");
@@ -41,10 +46,9 @@ export function LeadFeed() {
     return () => { active = false; };
   }, []);
 
-  async function searchThreads(event: FormEvent) {
-    event.preventDefault();
-    const searchedQuery = query.trim();
-    if (searchedQuery.length < 2) return;
+  async function searchThreads(term: string) {
+    const searchedQuery = term.trim();
+    if (searchedQuery.length < 2 || loading) return;
     setLoading(true);
     setError(undefined);
     setLastSearch(undefined);
@@ -57,6 +61,7 @@ export function LeadFeed() {
       const payload = await response.json() as ApiResponse;
       if (!response.ok) throw new Error(payload.error ?? "Pencarian Threads gagal.");
       setItems(payload.data ?? []);
+      setSuggestions(payload.meta?.suggestions ?? suggestions);
       setLastSearch({ query: searchedQuery, resultCount: payload.meta?.resultCount ?? 0, excludedCount: payload.meta?.excludedCount ?? 0 });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Pencarian Threads gagal.");
@@ -75,8 +80,14 @@ export function LeadFeed() {
       : new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()), [items, status, sort, minEngagement]);
 
   return <>
-    <form className="filter-bar threads-search-bar" onSubmit={searchThreads}>
-      <label className="filter-search"><Search size={17} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Cari kata kunci di Threads" aria-label="Cari lead di Threads" /></label>
+    <form className="filter-bar threads-search-bar" onSubmit={(event: FormEvent) => { event.preventDefault(); void searchThreads(query); }}>
+      <KeywordSuggestInput
+        value={query}
+        suggestions={suggestions}
+        disabled={loading}
+        onChange={setQuery}
+        onSearch={term => void searchThreads(term)}
+      />
       <button className="button button--primary button--small" type="submit" disabled={loading || query.trim().length < 2}>{loading ? <LoaderCircle className="spin" size={16} /> : <Search size={16} />} Cari Threads</button>
       <div className="filter-tabs" aria-label="Filter status">{["Semua", "Baru", "Tersimpan", "Dibalas"].map(item => <button type="button" className={status === item ? "active" : ""} key={item} onClick={() => setStatus(item)}>{item}</button>)}</div>
     </form>
