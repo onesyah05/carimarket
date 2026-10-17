@@ -25,7 +25,13 @@ export function enforceSameOrigin(request: Request) {
   const configuredOrigin = new URL(appUrl).origin;
   const developmentHost = process.env.NODE_ENV === "development" ? request.headers.get("host") : null;
   if (submittedOrigin !== configuredOrigin && new URL(submittedOrigin).host !== developmentHost) {
-    throw new ThreadsIntegrationError("ORIGIN_REJECTED", "Origin permintaan tidak diizinkan.", 403);
+    // Pesannya menyebut penyebab yang paling sering: halaman dibuka lewat
+    // http atau alamat lain, sehingga origin-nya berbeda dari alamat resmi.
+    throw new ThreadsIntegrationError(
+      "ORIGIN_REJECTED",
+      `Permintaan ditolak karena dikirim dari alamat yang berbeda. Buka ${configuredOrigin} lalu coba lagi.`,
+      403,
+    );
   }
 }
 

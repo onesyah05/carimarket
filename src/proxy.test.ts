@@ -35,4 +35,23 @@ describe("proxy", () => {
   it("tidak menyentuh cookie saat halaman masuk dibuka biasa", () => {
     expect(proxy(request("/masuk")).headers.get("set-cookie")).toBeNull();
   });
-});
+  it("menaikkan pengunjung http ke https sebelum memeriksa apa pun", () => {
+    const response = proxy(new NextRequest("https://carimarket.id/masuk", {
+      headers: { "x-forwarded-proto": "http" },
+    }));
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe("https://carimarket.id/masuk");
+  });
+
+  it("membiarkan permintaan https apa adanya", () => {
+    const response = proxy(new NextRequest("https://carimarket.id/masuk", {
+      headers: { "x-forwarded-proto": "https" },
+    }));
+    expect(response.status).toBe(200);
+  });
+
+  it("tidak mengganggu pengembangan lokal tanpa header skema", () => {
+    const response = proxy(new NextRequest("http://127.0.0.1:3100/masuk"));
+    expect(response.status).toBe(200);
+  });
+});

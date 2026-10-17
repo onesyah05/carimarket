@@ -7,6 +7,18 @@ export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
 
+  // Pengunjung yang datang lewat http dinaikkan ke https sebelum apa pun
+  // dikerjakan. Halaman http menghasilkan Origin http:// yang ditolak penjaga
+  // same-origin, sehingga setiap pengiriman form berakhir dengan "Origin
+  // permintaan tidak diizinkan" — kesalahan yang tidak ada hubungannya dengan
+  // apa yang diketik pengguna. Hanya berlaku bila proxy di depan benar-benar
+  // menyebut skemanya, jadi pengembangan lokal di http tidak terpengaruh.
+  if (request.headers.get("x-forwarded-proto") === "http") {
+    const secure = new URL(request.url);
+    secure.protocol = "https:";
+    return NextResponse.redirect(secure, 308);
+  }
+
   const protectedGroup = pathname.startsWith("/dashboard") || pathname.startsWith("/admin") || pathname.startsWith("/superadmin") || pathname.startsWith("/onboarding") || pathname.startsWith("/mulai") || pathname === "/verifikasi/menunggu";
   const authPage = pathname === "/masuk";
 
@@ -32,5 +44,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/superadmin/:path*", "/onboarding/:path*", "/mulai/:path*", "/verifikasi/menunggu", "/masuk"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/superadmin/:path*", "/onboarding/:path*", "/mulai/:path*", "/verifikasi/menunggu", "/masuk", "/daftar"],
 };
