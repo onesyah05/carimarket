@@ -22,9 +22,9 @@ export type KeywordSearchResult = {
 };
 
 /** Kata kunci negatif aktif milik pengguna, dipakai untuk menyaring hasil pencarian. */
-export async function loadExcludedTerms(userId: string) {
+export async function loadExcludedTerms(profileId: string) {
   const keywords = await prisma.keyword.findMany({
-    where: { userId, kind: KeywordKind.EXCLUDE, isActive: true },
+    where: { businessProfileId: profileId, kind: KeywordKind.EXCLUDE, isActive: true },
     select: { normalized: true },
   });
   return keywords.map(keyword => keyword.normalized);
@@ -34,11 +34,22 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
   const keyword = await prisma.keyword.findUnique({ where: { id: keywordId } });
   if (!keyword) throw new Error("KEYWORD_NOT_FOUND");
 
+  // Lead selalu dimiliki satu jasa; kata kunci tanpa jasa berarti data lama
+  // yang tidak terhubung ke ruang kerja mana pun.
+  const profileId = keyword.businessProfileId;
+  if (!profileId) {
+    throw new ThreadsIntegrationError(
+      "KEYWORD_WITHOUT_PROFILE",
+      "Kata kunci ini belum terhubung ke jasa mana pun. Hapus lalu tambahkan ulang dari halaman Kata kunci.",
+      409,
+    );
+  }
+
   // Kuota diperiksa sebelum SearchRun dibuat agar pemakaian yang ditolak tidak
   // tercatat sebagai percobaan pencarian.
   await assertSearchQuota(keyword.userId);
   const [excludedTerms, planIntervalHours] = await Promise.all([
-    loadExcludedTerms(keyword.userId),
+    loadExcludedTerms(profileId),
     resolveSearchIntervalHours(keyword.userId),
   ]);
 
@@ -91,14 +102,14 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
           create: { externalPostId: result.externalPostId, authorHandle: result.authorHandle, authorName: result.authorName, body: result.body, permalink: result.permalink, postedAt: result.postedAt, ...engagement, ...context },
         });
         const existing = await tx.lead.findUnique({
-          where: { userId_threadPostId: { userId: keyword.userId, threadPostId: post.id } },
+          where: { businessProfileId_threadPostId: { businessProfileId: profileId, threadPostId: post.id } },
           select: { id: true },
         });
         const score = relevanceScore(result.body, keyword.phrase);
         const lead = await tx.lead.upsert({
-          where: { userId_threadPostId: { userId: keyword.userId, threadPostId: post.id } },
+          where: { businessProfileId_threadPostId: { businessProfileId: profileId, threadPostId: post.id } },
           update: { relevanceScore: score, matchReason: `Cocok dengan kata kunci ${keyword.phrase}`, sourceMode: result.capability },
-          create: { userId: keyword.userId, threadPostId: post.id, relevanceScore: score, matchReason: `Cocok dengan kata kunci ${keyword.phrase}`, sourceMode: result.capability },
+          create: { userId: keyword.userId, businessProfileId: profileId, threadPostId: post.id, relevanceScore: score, matchReason: `Cocok dengan kata kunci ${keyword.phrase}`, sourceMode: result.capability },
         });
         await tx.leadKeywordMatch.upsert({
           where: { leadId_keywordId: { leadId: lead.id, keywordId: keyword.id } },
@@ -189,9 +200,9 @@ export type BulkSearchResult = {
  * semuanya: hasil kata kunci yang sempat berjalan tetap tersimpan dan
  * pemanggil melaporkan apa adanya.
  */
-export async function runAllActiveKeywords(userId: string): Promise<BulkSearchResult> {
+export async function runAllActiveKeywords(profileId: string): Promise<BulkSearchResult> {
   const keywords = await prisma.keyword.findMany({
-    where: { userId, kind: KeywordKind.INCLUDE, isActive: true },
+    where: { businessProfileId: profileId, kind: KeywordKind.INCLUDE, isActive: true },
     select: { id: true },
     // Yang paling lama tidak dijalankan didahulukan, supaya kuota yang terbatas
     // tidak selalu habis untuk kata kunci yang sama.

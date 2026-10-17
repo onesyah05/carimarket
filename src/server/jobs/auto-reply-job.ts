@@ -51,11 +51,11 @@ export async function processAutoReplies(limitUsers = 50) {
       where: { userId: user.id, status: LeadStatus.NEW, replyDrafts: { none: {} } },
       orderBy: { relevanceScore: "desc" },
       take: 20,
-      include: { threadPost: { select: { body: true } }, user: { include: { businessProfile: true } } },
+      include: { threadPost: { select: { body: true } }, businessProfile: true },
     });
 
     for (const lead of newLeads) {
-      const business = lead.user.businessProfile;
+      const business = lead.businessProfile;
       const generated = await deterministicReplyGenerator.generate({
         businessName: business?.name ?? "bisnis kami",
         service: business?.category ?? "kebutuhan Anda",

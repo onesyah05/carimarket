@@ -2,6 +2,7 @@ import "server-only";
 import { KeywordKind } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hasCompleteBusinessProfile } from "@/server/settings/business-profile";
+import { resolveActiveProfile } from "@/server/workspace/profiles";
 
 /**
  * Satu sumber kebenaran untuk "sudah sampai mana onboarding-nya".
@@ -29,10 +30,13 @@ export type OnboardingStep = keyof typeof ONBOARDING_STEPS;
  * dan pencarian tetap berjalan lewat sesi platform.
  */
 export async function nextOnboardingStep(userId: string): Promise<OnboardingStep | null> {
-  const profile = await prisma.businessProfile.findUnique({ where: { userId } });
+  // Tiap jasa menyelesaikan onboarding-nya sendiri, jadi yang diperiksa adalah
+  // jasa yang sedang dibuka — bukan jasa pertama akun.
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, activeProfileId: true } });
+  const profile = user ? await resolveActiveProfile(user) : null;
   if (!hasCompleteBusinessProfile(profile)) return "business";
 
-  const keywords = await prisma.keyword.count({ where: { userId, kind: KeywordKind.INCLUDE } });
+  const keywords = await prisma.keyword.count({ where: { businessProfileId: profile!.id, kind: KeywordKind.INCLUDE } });
   if (keywords === 0) return "keywords";
 
   if (!profile?.onboardingCompletedAt) return "replies";

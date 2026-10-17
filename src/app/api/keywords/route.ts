@@ -7,7 +7,7 @@ import { isKeywordLocked, keywordUnlockAt, lockRemainingLabel } from "@/lib/keyw
 import { enforceSameOrigin } from "@/server/http/request-guards";
 import { assertKeywordQuota, getQuotaSnapshot } from "@/server/usage/limits";
 import { publicThreadsError, ThreadsIntegrationError } from "@/server/integrations/threads/errors";
-import { requireEntitledUser } from "@/server/auth/access-gate";
+import { requireWorkspaceContext } from "@/server/workspace/context";
 
 export const runtime = "nodejs";
 
@@ -47,18 +47,12 @@ const rowSelect = {
   _count: { select: { leadMatches: true } },
 } as const;
 
-async function businessCategory(userId: string) {
-  const profile = await prisma.businessProfile.findUnique({ where: { userId }, select: { category: true } });
-  return profile?.category ?? "";
-}
-
 export async function GET() {
   try {
-    const user = await requireEntitledUser();
-    const [keywords, quota, category] = await Promise.all([
-      prisma.keyword.findMany({ where: { userId: user.id }, select: rowSelect, orderBy: { createdAt: "desc" } }),
+    const { user, profile } = await requireWorkspaceContext();
+    const [keywords, quota] = await Promise.all([
+      prisma.keyword.findMany({ where: { businessProfileId: profile.id }, select: rowSelect, orderBy: { createdAt: "desc" } }),
       getQuotaSnapshot(user.id),
-      businessCategory(user.id),
     ]);
     // Batas dihitung dari seluruh kata kunci, termasuk yang dijeda dan negatif.
     return NextResponse.json({
@@ -68,8 +62,9 @@ export async function GET() {
         keywordLimit: quota.keywords.limit,
         planName: quota.plan?.name ?? null,
         searchIntervalHours: quota.plan?.searchIntervalHours ?? null,
-        category,
-        suggestions: categorySuggestions(category),
+        category: profile.category,
+        profileName: profile.name,
+        suggestions: categorySuggestions(profile.category),
       },
     });
   } catch (error) {
@@ -83,24 +78,24 @@ export async function POST(request: Request) {
     enforceSameOrigin(request);
     const input = createSchema.safeParse(await request.json().catch(() => null));
     if (!input.success) return NextResponse.json({ error: "Kata kunci harus terdiri dari 2 sampai 120 karakter.", code: "INVALID_INPUT" }, { status: 400 });
-    const user = await requireEntitledUser();
+    const { user, profile } = await requireWorkspaceContext();
     const kind = input.data.negative ? KeywordKind.EXCLUDE : KeywordKind.INCLUDE;
 
     // Hanya istilah pencarian yang dinilai: kata eksklusi justru sengaja
     // berada di luar bidang usaha ("gratis", "lowongan").
     if (kind === KeywordKind.INCLUDE) {
-      const verdict = checkKeywordCategory(input.data.phrase, await businessCategory(user.id));
+      const verdict = checkKeywordCategory(input.data.phrase, profile.category);
       if (!verdict.ok) {
         throw new ThreadsIntegrationError("KEYWORD_CATEGORY_MISMATCH", verdict.message, 400);
       }
     }
 
     const normalized = input.data.phrase.toLocaleLowerCase("id-ID");
-    await assertKeywordQuota(user.id, kind, normalized);
+    await assertKeywordQuota(user.id, profile.id, kind, normalized);
     const keyword = await prisma.keyword.upsert({
-      where: { userId_normalized_kind: { userId: user.id, normalized, kind } },
+      where: { businessProfileId_normalized_kind: { businessProfileId: profile.id, normalized, kind } },
       update: { phrase: input.data.phrase, isActive: true },
-      create: { userId: user.id, phrase: input.data.phrase, normalized, kind },
+      create: { userId: user.id, businessProfileId: profile.id, phrase: input.data.phrase, normalized, kind },
       select: rowSelect,
     });
     return NextResponse.json({ success: true, data: serialize(keyword) }, { status: 201 });
@@ -115,8 +110,8 @@ export async function PATCH(request: Request) {
     enforceSameOrigin(request);
     const input = updateSchema.safeParse(await request.json().catch(() => null));
     if (!input.success) return NextResponse.json({ error: "Perubahan kata kunci tidak valid.", code: "INVALID_INPUT" }, { status: 400 });
-    const user = await requireEntitledUser();
-    const result = await prisma.keyword.updateMany({ where: { id: input.data.id, userId: user.id }, data: { isActive: input.data.active } });
+    const { profile } = await requireWorkspaceContext();
+    const result = await prisma.keyword.updateMany({ where: { id: input.data.id, businessProfileId: profile.id }, data: { isActive: input.data.active } });
     if (!result.count) throw new ThreadsIntegrationError("KEYWORD_NOT_FOUND", "Kata kunci tidak ditemukan.", 404);
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -130,10 +125,10 @@ export async function DELETE(request: Request) {
     enforceSameOrigin(request);
     const input = deleteSchema.safeParse(await request.json().catch(() => null));
     if (!input.success) return NextResponse.json({ error: "Kata kunci tidak valid.", code: "INVALID_INPUT" }, { status: 400 });
-    const user = await requireEntitledUser();
+    const { profile } = await requireWorkspaceContext();
 
     const keyword = await prisma.keyword.findFirst({
-      where: { id: input.data.id, userId: user.id },
+      where: { id: input.data.id, businessProfileId: profile.id },
       select: { id: true, phrase: true, createdAt: true },
     });
     if (!keyword) throw new ThreadsIntegrationError("KEYWORD_NOT_FOUND", "Kata kunci tidak ditemukan.", 404);

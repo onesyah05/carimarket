@@ -1,6 +1,7 @@
 import { CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { PageHeading } from "@/components/dashboard-ui";
 import { getWorkspaceUser } from "@/server/workspace-user";
+import { resolveActiveProfile } from "@/server/workspace/profiles";
 import { listReplyHistory, replyHistoryLabel, replyHistoryTone } from "@/server/replies/queries";
 
 function formatTimestamp(date: Date) {
@@ -9,7 +10,8 @@ function formatTimestamp(date: Date) {
 
 export default async function HistoryPage() {
   const user = await getWorkspaceUser();
-  const history = await listReplyHistory(user.id);
+  const profile = await resolveActiveProfile(user);
+  const history = profile ? await listReplyHistory(profile.id) : [];
 
   return <>
     <PageHeading eyebrow="Aktivitas balasan" title="Riwayat balasan" copy="Pantau status draft, jadwal, dan pengiriman balasan." />

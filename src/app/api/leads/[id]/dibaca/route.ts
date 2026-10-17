@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { enforceSameOrigin } from "@/server/http/request-guards";
 import { publicThreadsError, ThreadsIntegrationError } from "@/server/integrations/threads/errors";
-import { requireEntitledUser } from "@/server/auth/access-gate";
+import { requireWorkspaceContext } from "@/server/workspace/context";
 
 export const runtime = "nodejs";
 
@@ -15,15 +15,15 @@ export const runtime = "nodejs";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     enforceSameOrigin(request);
-    const user = await requireEntitledUser();
+    const { profile } = await requireWorkspaceContext();
     const { id } = await params;
 
     const updated = await prisma.lead.updateMany({
-      where: { id, userId: user.id, viewedAt: null },
+      where: { id, businessProfileId: profile.id, viewedAt: null },
       data: { viewedAt: new Date() },
     });
     if (updated.count === 0) {
-      const exists = await prisma.lead.findFirst({ where: { id, userId: user.id }, select: { viewedAt: true } });
+      const exists = await prisma.lead.findFirst({ where: { id, businessProfileId: profile.id }, select: { viewedAt: true } });
       if (!exists) throw new ThreadsIntegrationError("LEAD_NOT_FOUND", "Lead tidak ditemukan.", 404);
       return NextResponse.json({ success: true, data: { viewedAt: exists.viewedAt?.toISOString() ?? null } });
     }

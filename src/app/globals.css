@@ -1638,6 +1638,20 @@ html[data-theme="dark"] .app-shell--internal .internal-count { color: #bbd0ff; b
 .plan-warning { display: inline-flex; gap: 5px; align-items: flex-start; color: var(--warning); line-height: 1.45; }
 .plan-warning svg { flex: 0 0 auto; margin-top: 2px; }
 
+/* Pemilih jasa: satu akun dapat menaungi beberapa ruang kerja */
+.workspace-switch { position: relative; }
+.workspace-chip--button { width: 100%; border: 0; text-align: left; cursor: pointer; font: inherit; }
+.workspace-chip--button > svg { margin-left: auto; flex: 0 0 auto; opacity: .7; }
+.workspace-switch__menu { position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; right: 0; padding: 6px; border: 1px solid var(--line); border-radius: 13px; display: grid; gap: 2px; background: var(--surface-raised); box-shadow: var(--shadow-md); }
+.workspace-switch__caption { margin: 4px 8px 6px; display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .64rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.workspace-switch__menu > button { width: 100%; padding: 8px 10px; border: 0; border-radius: 9px; display: flex; align-items: center; gap: 8px; justify-content: space-between; color: var(--ink); background: transparent; text-align: left; cursor: pointer; }
+.workspace-switch__menu > button:hover:not(:disabled) { background: var(--canvas); }
+.workspace-switch__menu > button.is-active { background: var(--brand-soft); }
+.workspace-switch__menu strong { display: block; font-size: .78rem; }
+.workspace-switch__menu small { color: var(--muted); font-size: .66rem; }
+.workspace-switch__add { margin-top: 4px; border-top: 1px solid var(--line) !important; border-radius: 0 0 9px 9px !important; color: var(--brand-strong) !important; font-size: .76rem; font-weight: 700; }
+.workspace-switch__note { margin: 6px 9px; color: var(--muted); font-size: .68rem; line-height: 1.5; }
+
 /* Bantuan sebagai ikon melayang, menggantikan kartu permanen di sidebar */
 .help-launcher { position: fixed; right: 20px; bottom: 20px; z-index: 60; display: grid; justify-items: end; gap: 10px; }
 .help-launcher__button { width: 48px; height: 48px; border: 0; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--brand-strong); box-shadow: var(--shadow-md); cursor: pointer; transition: transform .15s ease; }

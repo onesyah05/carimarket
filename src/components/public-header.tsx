@@ -23,7 +23,7 @@ async function sessionIdentity() {
   if (!user || user.status === "SUSPENDED") return null;
 
   const profile = user.role === "USER"
-    ? await prisma.businessProfile.findUnique({ where: { userId: user.id }, select: { name: true } })
+    ? await prisma.businessProfile.findFirst({ where: { userId: user.id }, select: { name: true } })
     : null;
   return { label: profile?.name?.trim() || user.name, href: homePathForRole(user.role) };
 }

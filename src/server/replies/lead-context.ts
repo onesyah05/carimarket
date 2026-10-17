@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function getLeadReplyContext(userId: string, leadId: string) {
   const [profile, draft, connection] = await Promise.all([
-    prisma.businessProfile.findUnique({ where: { userId }, select: { name: true, category: true, serviceArea: true } }),
+    prisma.businessProfile.findFirst({ where: { userId }, select: { name: true, category: true, serviceArea: true } }),
     prisma.replyDraft.findFirst({
       where: { userId, leadId },
       orderBy: { updatedAt: "desc" },

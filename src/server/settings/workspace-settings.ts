@@ -108,8 +108,8 @@ export function serializeBusinessProfile(profile: { name: string; category: stri
   };
 }
 
-export async function getBusinessProfile(userId: string) {
-  const profile = await prisma.businessProfile.findUnique({ where: { userId } });
+export async function getBusinessProfile(profileId: string | null) {
+  const profile = profileId ? await prisma.businessProfile.findUnique({ where: { id: profileId } }) : null;
   return { exists: Boolean(profile), profile: serializeBusinessProfile(profile) };
 }
 
@@ -122,8 +122,10 @@ export async function getBusinessProfile(userId: string) {
  * lewat satu dropdown. Setelah terisi, perubahannya lewat dukungan dan
  * dikerjakan Superadmin dari konsol.
  */
-export async function updateBusinessProfile(userId: string, input: BusinessProfileInput) {
-  const existing = await prisma.businessProfile.findUnique({ where: { userId }, select: { category: true } });
+export async function updateBusinessProfile(target: { userId: string; profileId: string | null }, input: BusinessProfileInput) {
+  const existing = target.profileId
+    ? await prisma.businessProfile.findUnique({ where: { id: target.profileId }, select: { category: true } })
+    : null;
   const locked = Boolean(existing?.category?.trim());
 
   if (locked && input.category.trim() !== existing?.category) {
@@ -134,17 +136,18 @@ export async function updateBusinessProfile(userId: string, input: BusinessProfi
     );
   }
 
-  const profile = await prisma.businessProfile.upsert({
-    where: { userId },
-    update: locked ? { ...input, category: existing!.category } : input,
-    create: { userId, ...input },
-  });
+  const profile = target.profileId
+    ? await prisma.businessProfile.update({
+      where: { id: target.profileId },
+      data: locked ? { ...input, category: existing!.category } : input,
+    })
+    : await prisma.businessProfile.create({ data: { userId: target.userId, ...input } });
   return serializeBusinessProfile(profile);
 }
 
 /** Dipakai antarmuka untuk menandai kategori sebagai terkunci. */
 export async function isCategoryLocked(userId: string) {
-  const profile = await prisma.businessProfile.findUnique({ where: { userId }, select: { category: true } });
+  const profile = await prisma.businessProfile.findFirst({ where: { userId }, select: { category: true } });
   return Boolean(profile?.category?.trim());
 }
 

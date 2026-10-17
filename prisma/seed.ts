@@ -102,7 +102,7 @@ async function main() {
       role: Role.USER,
       status: AccountStatus.ACTIVE,
       emailVerifiedAt: new Date(),
-      businessProfile: {
+      businessProfiles: {
         create: {
           name: "Langit Visual",
           category: "Jasa Drone",

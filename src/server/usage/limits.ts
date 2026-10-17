@@ -20,6 +20,8 @@ export type WorkspacePlan = PlanLimits & {
   name: string;
   /** Jarak minimum antar pencarian terjadwal, dalam jam. */
   searchIntervalHours: number;
+  /** Berapa jasa yang boleh dimiliki satu akun pada paket ini. */
+  businessProfileLimit: number;
   source: "subscription" | "default";
 };
 
@@ -40,12 +42,12 @@ export async function resolveWorkspacePlan(userId: string): Promise<WorkspacePla
     include: { plan: true },
   });
   if (subscription?.plan) {
-    return { ...toLimits(subscription.plan), code: subscription.plan.code, name: subscription.plan.name, searchIntervalHours: subscription.plan.searchIntervalHours, source: "subscription" };
+    return { ...toLimits(subscription.plan), code: subscription.plan.code, name: subscription.plan.name, searchIntervalHours: subscription.plan.searchIntervalHours, businessProfileLimit: subscription.plan.businessProfileLimit, source: "subscription" };
   }
 
   const fallback = await prisma.plan.findFirst({ where: { isActive: true }, orderBy: { monthlyPrice: "asc" } });
   if (!fallback) return null;
-  return { ...toLimits(fallback), code: fallback.code, name: fallback.name, searchIntervalHours: fallback.searchIntervalHours, source: "default" };
+  return { ...toLimits(fallback), code: fallback.code, name: fallback.name, searchIntervalHours: fallback.searchIntervalHours, businessProfileLimit: fallback.businessProfileLimit, source: "default" };
 }
 
 function toLimits(plan: PlanLimits): PlanLimits {
@@ -111,10 +113,16 @@ export async function assertReplyQuota(userId: string) {
   return snapshot;
 }
 
-export async function assertKeywordQuota(userId: string, kind: KeywordKind, normalized: string) {
+/**
+ * Jatah kata kunci dihitung per akun, bukan per jasa: menambah jasa membuka
+ * ruang kerja baru, bukan jatah baru. Yang berbasis jasa hanyalah pertanyaan
+ * "apakah frasa ini sudah ada di jasa ini", karena frasa sama di dua jasa
+ * memang dua baris.
+ */
+export async function assertKeywordQuota(userId: string, profileId: string | null, kind: KeywordKind, normalized: string) {
   const [plan, existing, keywordCount] = await Promise.all([
     resolveWorkspacePlan(userId),
-    prisma.keyword.findUnique({ where: { userId_normalized_kind: { userId, normalized, kind } }, select: { id: true } }),
+    prisma.keyword.findFirst({ where: { userId, businessProfileId: profileId, normalized, kind }, select: { id: true } }),
     prisma.keyword.count({ where: { userId } }),
   ]);
   // Memperbarui kata kunci yang sudah ada tidak menambah jumlah terpakai.

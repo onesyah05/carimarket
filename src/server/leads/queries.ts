@@ -59,10 +59,11 @@ export function serializeLead(lead: StoredLead, options?: { flagged?: boolean })
   };
 }
 
-export async function listWorkspaceLeads(userId: string, take = 50) {
+/** Lead milik satu jasa. Jasa lain dalam akun yang sama punya feed sendiri. */
+export async function listWorkspaceLeads(profileId: string, take = 50) {
   const [leads, blacklistTerms] = await Promise.all([
     prisma.lead.findMany({
-      where: { userId },
+      where: { businessProfileId: profileId },
       include: leadInclude,
       orderBy: { discoveredAt: "desc" },
       take,
@@ -72,9 +73,9 @@ export async function listWorkspaceLeads(userId: string, take = 50) {
   return leads.map(lead => serializeLead(lead, { flagged: isRiskyText(lead.threadPost.body, blacklistTerms) }));
 }
 
-export async function getWorkspaceLead(userId: string, leadId: string) {
+export async function getWorkspaceLead(profileId: string, leadId: string) {
   const [lead, blacklistTerms] = await Promise.all([
-    prisma.lead.findFirst({ where: { id: leadId, userId }, include: leadInclude }),
+    prisma.lead.findFirst({ where: { id: leadId, businessProfileId: profileId }, include: leadInclude }),
     loadBlacklistTerms(),
   ]);
   return lead ? serializeLead(lead, { flagged: isRiskyText(lead.threadPost.body, blacklistTerms) }) : null;

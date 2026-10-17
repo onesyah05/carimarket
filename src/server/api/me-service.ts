@@ -9,6 +9,7 @@ import { replyHistoryLabel } from "@/server/replies/queries";
 import { runKeywordSearch } from "@/server/leads/search-service";
 import { effectiveIntervalHours } from "@/server/leads/schedule";
 import { assertKeywordQuota, getQuotaSnapshot } from "@/server/usage/limits";
+import { activeProfileId } from "@/server/workspace/profiles";
 import { ApiError } from "./handler";
 
 /**
@@ -63,7 +64,7 @@ function serializeLead(lead: StoredLead, flagged: boolean) {
 export async function getIdentity(userId: string) {
   const [user, profile, quota, connection] = await Promise.all([
     prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { id: true, name: true, email: true, emailIsPlaceholder: true, createdAt: true } }),
-    prisma.businessProfile.findUnique({ where: { userId } }),
+    prisma.businessProfile.findFirst({ where: { userId } }),
     getQuotaSnapshot(userId),
     getThreadsConnectionStatus(userId),
   ]);
@@ -142,9 +143,11 @@ export async function getSubscription(userId: string) {
 }
 
 export async function getOverview(userId: string) {
+  // Angka lead mengikuti jasa yang sedang dibuka; kuota tetap per akun.
+  const profileId = await activeProfileId(userId);
   const [quota, counts, automation, connection, unreadNotifications, pendingDrafts] = await Promise.all([
     getQuotaSnapshot(userId),
-    prisma.lead.groupBy({ by: ["status"], where: { userId }, _count: { _all: true } }),
+    prisma.lead.groupBy({ by: ["status"], where: { businessProfileId: profileId }, _count: { _all: true } }),
     prisma.replyAutomationSetting.findUnique({ where: { userId } }),
     getThreadsConnectionStatus(userId),
     prisma.notification.count({ where: { userId, readAt: null } }),
@@ -231,16 +234,25 @@ export async function setLeadSaved(userId: string, leadId: string, saved: boolea
   return { id: leadId, status: updated.status, statusLabel: LEAD_STATUS_LABEL[updated.status] };
 }
 
+/** Jasa aktif akun; API mobile menolak jelas bila profilnya belum ada. */
+async function requireProfileId(userId: string) {
+  const profileId = await activeProfileId(userId);
+  if (!profileId) throw new ApiError("PROFILE_REQUIRED", "Lengkapi profil bisnis Anda terlebih dahulu.");
+  return profileId;
+}
+
 export async function runSearch(userId: string, query: string) {
   if (!(await isThreadsAvailable())) {
     throw new ApiError("THREADS_UNAVAILABLE", "Koneksi Threads belum tersedia. Hubungi administrator workspace.");
   }
   const normalized = query.toLocaleLowerCase("id-ID");
-  await assertKeywordQuota(userId, KeywordKind.INCLUDE, normalized);
+  // API mobile belum punya pemilih jasa, jadi selalu mengikuti jasa aktif akun.
+  const profileId = await requireProfileId(userId);
+  await assertKeywordQuota(userId, profileId, KeywordKind.INCLUDE, normalized);
   const keyword = await prisma.keyword.upsert({
-    where: { userId_normalized_kind: { userId, normalized, kind: KeywordKind.INCLUDE } },
+    where: { businessProfileId_normalized_kind: { businessProfileId: profileId, normalized, kind: KeywordKind.INCLUDE } },
     update: { phrase: query, isActive: true, lastRunAt: new Date() },
-    create: { userId, phrase: query, normalized, kind: KeywordKind.INCLUDE, lastRunAt: new Date() },
+    create: { userId, businessProfileId: profileId, phrase: query, normalized, kind: KeywordKind.INCLUDE, lastRunAt: new Date() },
   });
 
   const result = await runKeywordSearch(keyword.id);
@@ -269,7 +281,7 @@ function serializeKeyword(keyword: { id: string; phrase: string; kind: KeywordKi
 
 export async function listKeywords(userId: string) {
   const [keywords, quota] = await Promise.all([
-    prisma.keyword.findMany({ where: { userId }, include: { _count: { select: { leadMatches: true } } }, orderBy: { createdAt: "desc" } }),
+    prisma.keyword.findMany({ where: { businessProfileId: await requireProfileId(userId) }, include: { _count: { select: { leadMatches: true } } }, orderBy: { createdAt: "desc" } }),
     getQuotaSnapshot(userId),
   ]);
   const planInterval = quota.plan?.searchIntervalHours ?? null;
@@ -284,11 +296,12 @@ export async function listKeywords(userId: string) {
 export async function createKeyword(userId: string, input: { phrase: string; negative: boolean }) {
   const kind = input.negative ? KeywordKind.EXCLUDE : KeywordKind.INCLUDE;
   const normalized = input.phrase.toLocaleLowerCase("id-ID");
-  await assertKeywordQuota(userId, kind, normalized);
+  const profileId = await requireProfileId(userId);
+  await assertKeywordQuota(userId, profileId, kind, normalized);
   const keyword = await prisma.keyword.upsert({
-    where: { userId_normalized_kind: { userId, normalized, kind } },
+    where: { businessProfileId_normalized_kind: { businessProfileId: profileId, normalized, kind } },
     update: { phrase: input.phrase, isActive: true },
-    create: { userId, phrase: input.phrase, normalized, kind },
+    create: { userId, businessProfileId: profileId, phrase: input.phrase, normalized, kind },
     include: { _count: { select: { leadMatches: true } } },
   });
   const quota = await getQuotaSnapshot(userId);

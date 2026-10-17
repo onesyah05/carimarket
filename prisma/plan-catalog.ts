@@ -25,6 +25,8 @@ export type PlanCatalogEntry = {
   keywordLimit: number;
   /** Jarak minimum antar pencarian terjadwal, dalam jam. */
   searchIntervalHours: number;
+  /** Berapa jasa (profil bisnis) yang boleh dinaungi satu akun. */
+  businessProfileLimit: number;
   /** Ringkasan untuk halaman harga; tidak disimpan di database. */
   tagline: string;
   highlights: string[];
@@ -40,6 +42,7 @@ export const PLAN_CATALOG: PlanCatalogEntry[] = [
     monthlyReplyLimit: 30,
     keywordLimit: 3,
     searchIntervalHours: 24,
+    businessProfileLimit: 1,
     tagline: "Untuk menguji apakah ada percakapan yang relevan dengan layanan Anda.",
     highlights: [
       "3 kata kunci termasuk kata negatif",
@@ -57,6 +60,7 @@ export const PLAN_CATALOG: PlanCatalogEntry[] = [
     monthlyReplyLimit: 300,
     keywordLimit: 10,
     searchIntervalHours: 6,
+    businessProfileLimit: 3,
     tagline: "Untuk satu bisnis yang menanggapi lead setiap hari.",
     highlights: [
       "10 kata kunci termasuk kata negatif",
@@ -76,6 +80,7 @@ export const PLAN_CATALOG: PlanCatalogEntry[] = [
     monthlyReplyLimit: 800,
     keywordLimit: 25,
     searchIntervalHours: 3,
+    businessProfileLimit: 5,
     tagline: "Untuk beberapa layanan atau area sekaligus dengan volume lebih tinggi.",
     highlights: [
       "25 kata kunci termasuk kata negatif",

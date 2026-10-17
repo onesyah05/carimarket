@@ -18,7 +18,7 @@ export async function listPlatformUsers() {
       lastLoginAt: true,
       emailVerifiedAt: true,
       emailIsPlaceholder: true,
-      businessProfile: { select: { name: true, category: true } },
+      businessProfiles: { select: { name: true, category: true }, orderBy: { createdAt: "asc" }, take: 1 },
       subscriptions: { where: { status: { in: ["TRIAL", "ACTIVE", "PAST_DUE"] } }, select: { plan: { select: { name: true } } }, take: 1, orderBy: { createdAt: "desc" } },
     },
   });

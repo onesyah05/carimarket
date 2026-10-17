@@ -1,8 +1,8 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { requirePageRole } from "@/server/auth/page-guards";
 import { hasCompleteBusinessProfile } from "@/server/settings/business-profile";
+import { resolveActiveProfile } from "@/server/workspace/profiles";
 
 /**
  * Langkah onboarding setelah profil bisnis mensyaratkan profil yang sudah
@@ -10,7 +10,7 @@ import { hasCompleteBusinessProfile } from "@/server/settings/business-profile";
  */
 export async function requireOnboardingProfile(nextPath: string) {
   const user = await requirePageRole(["USER"], nextPath);
-  const profile = await prisma.businessProfile.findUnique({ where: { userId: user.id } });
+  const profile = await resolveActiveProfile(user);
   if (!hasCompleteBusinessProfile(profile)) redirect("/onboarding/bisnis");
   return { user, profile };
 }

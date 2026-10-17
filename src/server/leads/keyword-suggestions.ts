@@ -13,9 +13,9 @@ import type { KeywordSuggestion } from "@/lib/keyword-suggestions";
  */
 const SUGGESTION_LIMIT = 50;
 
-export async function listKeywordSuggestions(userId: string): Promise<KeywordSuggestion[]> {
+export async function listKeywordSuggestions(profileId: string): Promise<KeywordSuggestion[]> {
   const keywords = await prisma.keyword.findMany({
-    where: { userId, kind: KeywordKind.INCLUDE },
+    where: { businessProfileId: profileId, kind: KeywordKind.INCLUDE },
     select: {
       phrase: true,
       isActive: true,

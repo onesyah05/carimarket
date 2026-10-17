@@ -8,6 +8,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoutButton } from "@/features/auth/components/logout-button";
 import { HelpLauncher } from "@/components/help-launcher";
+import { ProfileSwitcher, type SwitcherProfile } from "@/features/workspace/components/profile-switcher";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import { useState } from "react";
 
@@ -107,10 +108,15 @@ function isActivePath(pathname: string, href: string) {
   return exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function DashboardShell({ children, user }: { children: React.ReactNode; user: { name: string; workspace: string; role: "user" | "admin" | "superadmin" } }) {
+export function DashboardShell({ children, user, workspaces }: {
+  children: React.ReactNode;
+  user: { name: string; workspace: string; role: "user" | "admin" | "superadmin" };
+  /** Daftar jasa untuk pemilih di sidebar; kosong untuk akun internal. */
+  workspaces?: { profiles: SwitcherProfile[]; activeId: string | null; canAdd: boolean; limit: number | null };
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const { role, name, workspace } = user;
+  const { role, name } = user;
   const nav = role === "user" ? userNav : role === "admin" ? adminNav : superNav;
   const initials = name.split(" ").map(part => part[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
 
@@ -130,7 +136,9 @@ export function DashboardShell({ children, user }: { children: React.ReactNode; 
   return <div className={`app-shell ${isUser ? "app-shell--user" : "app-shell--internal"}`}>
     <aside className={`app-sidebar ${open ? "app-sidebar--open" : ""}`}>
       <div className="sidebar-brand"><BrandLogo /><button onClick={() => setOpen(false)} aria-label="Tutup menu"><X size={20} /></button></div>
-      <div className="workspace-chip"><span>{initials}</span><div><strong>{workspace}</strong><small>{role === "user" ? "Workspace bisnis" : "Workspace internal"}</small></div></div>
+      {role === "user" && workspaces
+        ? <ProfileSwitcher profiles={workspaces.profiles} activeId={workspaces.activeId} canAdd={workspaces.canAdd} limit={workspaces.limit} role={role} />
+        : <div className="workspace-chip"><span>{initials}</span><div><strong>{user.workspace}</strong><small>{role === "user" ? "Workspace bisnis" : "Workspace internal"}</small></div></div>}
       <nav className="app-nav" aria-label="Navigasi dashboard">
         {nav.map(group => <div className="app-nav__group" key={group.caption}>
           <p className="app-nav__caption">{group.caption}</p>

@@ -172,12 +172,14 @@ model User {
   status             AccountStatus           @default(PENDING_VERIFICATION)
   emailVerifiedAt    DateTime?                @db.DateTime(3)
   emailIsPlaceholder Boolean                  @default(false)
+  /// Jasa yang sedang dibuka di ruang kerja. Null berarti ambil yang pertama.
+  activeProfileId    String?                  @db.VarChar(191)
   lastLoginAt        DateTime?                @db.DateTime(3)
   suspendedAt        DateTime?                @db.DateTime(3)
   createdAt          DateTime                 @default(now()) @db.DateTime(3)
   updatedAt          DateTime                 @updatedAt @db.DateTime(3)
   deletedAt          DateTime?                @db.DateTime(3)
-  businessProfile    BusinessProfile?
+  businessProfiles   BusinessProfile[]
   notification       NotificationPreference?
   notifications      Notification[]
   replyAutomation    ReplyAutomationSetting?
@@ -269,7 +271,7 @@ model BlacklistTerm {
 
 model BusinessProfile {
   id          String   @id @default(cuid())
-  userId      String   @unique
+  userId      String
   name        String   @db.VarChar(140)
   category    String   @db.VarChar(100)
   description String   @db.Text
@@ -280,6 +282,10 @@ model BusinessProfile {
   createdAt   DateTime @default(now()) @db.DateTime(3)
   updatedAt   DateTime @updatedAt @db.DateTime(3)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keywords    Keyword[]
+  leads       Lead[]
+
+  @@index([userId, createdAt])
 }
 
 model NotificationPreference {
@@ -346,12 +352,16 @@ model Keyword {
   nextRunAt   DateTime?       @db.DateTime(3)
   createdAt   DateTime        @default(now()) @db.DateTime(3)
   updatedAt   DateTime        @updatedAt @db.DateTime(3)
+  /// Jasa pemilik kata kunci. Null hanya pada baris lama milik akun tanpa profil.
+  businessProfileId String?     @db.VarChar(191)
   user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessProfile BusinessProfile? @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
   searchRuns  SearchRun[]
   leadMatches LeadKeywordMatch[]
 
-  @@unique([userId, normalized, kind])
+  @@unique([businessProfileId, normalized, kind])
   @@index([userId, isActive, nextRunAt])
+  @@index([businessProfileId, isActive])
 }
 
 model SearchRun {
@@ -410,13 +420,17 @@ model Lead {
   /// Kapan pemiliknya membuka lead ini. Null berarti belum dibaca.
   viewedAt       DateTime?    @db.DateTime(3)
   updatedAt      DateTime     @updatedAt @db.DateTime(3)
+  /// Jasa pemilik lead. Null hanya pada baris lama milik akun tanpa profil.
+  businessProfileId String?    @db.VarChar(191)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessProfile BusinessProfile? @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
   threadPost     ThreadPost    @relation(fields: [threadPostId], references: [id], onDelete: Restrict)
   keywordMatches LeadKeywordMatch[]
   replyDrafts    ReplyDraft[]
 
-  @@unique([userId, threadPostId])
+  @@unique([businessProfileId, threadPostId])
   @@index([userId, status, discoveredAt])
+  @@index([businessProfileId, status, discoveredAt])
   @@index([relevanceScore])
 }
 
@@ -495,6 +509,8 @@ model Plan {
   /// cepat kata kunci boleh dijalankan ulang; pengguna hanya dapat memilih
   /// lebih jarang, tidak lebih sering.
   searchIntervalHours  Int            @default(24)
+  /// Berapa jasa (profil bisnis) yang boleh dimiliki satu akun pada paket ini.
+  businessProfileLimit Int            @default(1)
   isActive             Boolean        @default(true)
   createdAt            DateTime       @default(now()) @db.DateTime(3)
   updatedAt            DateTime       @updatedAt @db.DateTime(3)

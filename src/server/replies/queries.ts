@@ -51,9 +51,10 @@ const STATUS_TONE: Record<ReplyStatus, "success" | "scheduled" | "failed"> = {
   CANCELLED: "failed",
 };
 
-export async function listReplyHistory(userId: string, take = 50): Promise<ReplyHistoryEntry[]> {
+/** Riwayat balasan mengikuti jasa yang sedang dibuka, lewat lead-nya. */
+export async function listReplyHistory(profileId: string, take = 50): Promise<ReplyHistoryEntry[]> {
   const drafts = await prisma.replyDraft.findMany({
-    where: { userId },
+    where: { lead: { businessProfileId: profileId } },
     include: {
       lead: { include: { threadPost: { select: { authorName: true, authorHandle: true, body: true } }, keywordMatches: { include: { keyword: { select: { phrase: true } } }, take: 1 } } },
       attempts: { orderBy: { attemptedAt: "desc" }, take: 1 },

@@ -14,7 +14,7 @@ export async function GET() {
         email: true,
         name: true,
         createdAt: true,
-        businessProfile: { select: { name: true, category: true, description: true, location: true, serviceArea: true, brandVoice: true } },
+        businessProfiles: { select: { name: true, category: true, description: true, location: true, serviceArea: true, brandVoice: true } },
         notification: { select: { emailLead: true, emailReply: true, emailQuota: true, pushEnabled: true } },
         replyAutomation: { select: { mode: true, minimumScore: true, dailyLimit: true, delayMinutes: true, pauseOnRisk: true, quietHoursEnabled: true, quietHoursStart: true, quietHoursEnd: true } },
         keywords: { select: { phrase: true, kind: true, isActive: true, createdAt: true }, orderBy: { createdAt: "desc" } },

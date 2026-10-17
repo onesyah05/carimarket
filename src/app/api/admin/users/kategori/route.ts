@@ -35,8 +35,9 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const profile = await prisma.businessProfile.findUnique({
+    const profile = await prisma.businessProfile.findFirst({
       where: { userId: input.data.userId },
+      orderBy: { createdAt: "asc" },
       select: { id: true, category: true },
     });
     if (!profile) {

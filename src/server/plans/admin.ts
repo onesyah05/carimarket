@@ -28,6 +28,7 @@ const planFields = {
   monthlyReplyLimit: z.number().int().min(0).max(1_000_000),
   keywordLimit: z.number().int().min(0).max(1_000),
   searchIntervalHours: z.number().int().min(1, "Interval minimal 1 jam.").max(168, "Interval maksimal 168 jam."),
+  businessProfileLimit: z.number().int().min(1, "Minimal satu jasa per akun.").max(50, "Maksimal 50 jasa per akun."),
   isActive: z.boolean(),
 };
 
@@ -166,6 +167,7 @@ export type AdminPlan = {
   monthlyReplyLimit: number;
   keywordLimit: number;
   searchIntervalHours: number;
+  businessProfileLimit: number;
   isActive: boolean;
   subscriptions: number;
   projectedMonthlySearches: number;
@@ -188,6 +190,7 @@ export async function listPlansForAdmin(catalogCodes: string[]): Promise<AdminPl
     monthlyReplyLimit: plan.monthlyReplyLimit,
     keywordLimit: plan.keywordLimit,
     searchIntervalHours: plan.searchIntervalHours,
+    businessProfileLimit: plan.businessProfileLimit,
     isActive: plan.isActive,
     subscriptions: plan._count.subscriptions,
     projectedMonthlySearches: Math.round(plan.keywordLimit * runsPerDay("HOURLY", plan.searchIntervalHours) * DAYS_IN_MONTH),

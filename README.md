@@ -553,6 +553,27 @@ memastikan kunci asing dan kunci tercabut ditolak, lalu mencabut kredensial itu
 kembali. Tidak ada endpoint yang mengubah data workspace atau memakai kuota yang
 dipanggil.
 
+## Beberapa jasa dalam satu akun
+
+Satu email dapat menaungi beberapa jasa. Paket menentukan berapa banyak lewat
+`Plan.businessProfileLimit` — Starter 1, Bisnis 3, Pro 5 pada katalog bawaan.
+
+Yang terpisah per jasa: **kata kunci, lead, dan balasan**. Kata kunci dan lead
+membawa `businessProfileId`; draft balasan mengikuti lead-nya. Yang tetap satu
+untuk seluruh akun: **kuota paket** (pencarian, balasan, jumlah kata kunci),
+langganan, dan tagihan. Menambah jasa membuka ruang kerja baru, bukan jatah
+baru.
+
+Jasa yang sedang dibuka tersimpan di `User.activeProfileId` supaya bertahan
+antar perangkat, dan dipilih lewat pemilih di kepala sidebar
+(`GET/POST/PATCH /api/workspace/jasa`). Seluruh endpoint ruang kerja mengambil
+konteksnya lewat satu pintu, `requireWorkspaceContext`, sehingga tidak ada
+endpoint yang lupa menyaring per jasa. Kategori terkunci per jasa, bukan per
+akun, jadi tiap jasa punya daftar kata kunci yang sesuai bidangnya sendiri.
+
+Jasa baru langsung menjadi yang aktif dan diantar ke langkah kata kunci:
+onboarding dinilai per jasa, bukan per akun.
+
 ## Membaca feed lead
 
 Tiap lead diberi label niat — **mencari jasa**, **menawarkan jasa**, atau

@@ -27,6 +27,7 @@ export async function syncPlans(prisma: PrismaClient, options?: { force?: boolea
       monthlyReplyLimit: entry.monthlyReplyLimit,
       keywordLimit: entry.keywordLimit,
       searchIntervalHours: entry.searchIntervalHours,
+      businessProfileLimit: entry.businessProfileLimit,
       isActive: true,
     };
 
