@@ -81,7 +81,7 @@ export function RegisterForm() {
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="button button--primary" type="submit" disabled={pending}>{pending ? "Mendaftarkan…" : "Daftar"}</button>
       </form>
-      <p className="auth-note">Sudah punya akun? <Link className="text-link" href="/masuk">Masuk di sini</Link></p>
+      <p className="auth-switch">Sudah punya akun? <Link className="text-link" href="/masuk">Masuk di sini</Link></p>
     </div>
   );
 }

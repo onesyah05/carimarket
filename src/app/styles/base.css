@@ -207,19 +207,42 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .article-card__body p { color: var(--muted); font-size: .8rem; line-height: 1.7; }
 .article-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: .7rem; }
 
-/* Auth */
-.auth-page { min-height: 100dvh; display: grid; grid-template-columns: .9fr 1.1fr; background: var(--canvas); }
-.auth-aside { padding: 48px; display: flex; flex-direction: column; color: white; background: var(--brand); }
-.auth-aside .brand-logo__tile { background: transparent; padding: 0; }
-.auth-aside__content { margin: auto 0; }
-.auth-aside__content h1 { max-width: 570px; margin: 0; font-size: clamp(2.5rem, 4vw, 4.2rem); line-height: 1.02; letter-spacing: -.055em; }
-.auth-aside__content p { max-width: 500px; color: rgba(255,255,255,.84); line-height: 1.7; }
-.auth-quote { margin-top: auto; padding-top: 28px; border-top: 1px solid rgba(255,255,255,.25); color: rgba(255,255,255,.84); font-size: .83rem; }
-.auth-main { padding: 40px; display: grid; place-items: center; }
-.auth-card { width: min(430px, 100%); }
-.auth-card h2 { margin: 0; font-size: 2rem; letter-spacing: -.04em; }
-.auth-card > p { margin: 10px 0 28px; color: var(--muted); font-size: .9rem; }
-.auth-card > p a { color: var(--brand-strong); font-weight: 750; }
+/* Auth — bagian dari permukaan publik, jadi memakai token tenang `--c-*`
+   (lihat landing.css) dan bukan token ruang kerja di berkas ini. Aturan form
+   di bawahnya (.field/.input/.button) dipakai bersama dasbor, jadi penyesuaian
+   tampilan akun selalu dibatasi ke dalam `.auth`. */
+.auth { min-height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; background: var(--c-paper); color: var(--c-ink); }
+.auth__bar { padding: 22px var(--c-gutter); display: flex; justify-content: center; }
+.auth__bar a { display: inline-flex; border-radius: var(--c-radius-sm); }
+.auth__body { width: min(440px, calc(100% - 2 * var(--c-gutter))); margin-inline: auto; padding: 14px 0 56px; display: grid; align-content: start; gap: 24px; }
+.auth__intro { display: grid; gap: 10px; text-align: center; }
+.auth__intro h1 { margin: 0; font-size: clamp(1.7rem, 1.1rem + 2.2vw, 2.3rem); line-height: 1.14; letter-spacing: -.035em; font-weight: 700; }
+.auth__intro p { margin: 0; color: var(--c-ink-soft); font-size: .95rem; line-height: 1.65; }
+.auth__foot { padding: 0 var(--c-gutter) 28px; display: flex; flex-wrap: wrap; gap: 0 20px; justify-content: center; color: var(--c-ink-muted); font-size: .78rem; }
+.auth__foot a { min-height: 44px; display: inline-flex; align-items: center; }
+.auth__foot a:hover { color: var(--c-brand-ink); }
+/* Kartu diatur sebagai grid ber-gap, bukan margin per elemen: isinya berbeda di
+   tiap halaman akun (ada yang tanpa paragraf pembuka), dan dengan margin satu
+   halaman selalu berakhir rapat tanpa ada yang menyadarinya. */
+.auth-card { padding: 26px; border: 1px solid var(--c-hairline); border-radius: var(--c-radius-lg); display: grid; gap: 16px; background: var(--c-surface); box-shadow: var(--c-shadow); }
+.auth-card > * { margin: 0; }
+.auth-card h2 { font-size: 1.02rem; font-weight: 700; letter-spacing: -.01em; }
+.auth-card > p { color: var(--c-ink-soft); font-size: .88rem; line-height: 1.65; }
+.auth-card > p a { color: var(--c-brand-ink); font-weight: 700; }
+.auth .field label { color: var(--c-ink); font-size: .82rem; font-weight: 650; }
+.auth .input { height: 46px; border-radius: var(--c-radius-sm); border-color: var(--c-hairline-strong); color: var(--c-ink); background: var(--c-surface); }
+.auth .input::placeholder { color: var(--c-ink-muted); }
+.auth .input:focus { border-color: var(--c-brand-ink); outline: 3px solid color-mix(in srgb, var(--c-brand-ink) 24%, transparent); }
+.auth .password-input__toggle { color: var(--c-ink-muted); }
+.auth .password-input__toggle:hover { color: var(--c-brand-ink); background: var(--c-wash); }
+.auth .form-row { color: var(--c-ink-soft); }
+.auth .form-row a { color: var(--c-brand-ink); }
+/* Mode gelap sengaja tidak disentuh di sini: `html[data-theme="dark"]
+   .button--primary` lebih spesifik dan sudah memberi tinta gelap di atas biru
+   muda (8,9:1), yang lebih terbaca daripada putih di atas biru pucat. */
+.auth .button--primary { border-radius: var(--c-radius-sm); background: var(--c-brand-ink); box-shadow: none; }
+.auth .button--primary:hover { background: color-mix(in srgb, var(--c-brand-ink) 86%, black); }
+.auth .button:hover { transform: none; }
 .form-grid { display: grid; gap: 16px; }
 .field { display: grid; gap: 7px; }
 .field label { color: #34405c; font-size: .76rem; font-weight: 750; }
@@ -229,16 +252,15 @@ textarea.input { min-height: 120px; padding-block: 13px; resize: vertical; }
 .form-row { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: .76rem; }
 .form-row a { color: var(--brand-strong); font-weight: 700; }
 .auth-card .button { width: 100%; }
-.auth-form-section { padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 3px; }
-.auth-form-section strong { color: var(--ink); font-size: .87rem; }
-.auth-form-section span { color: var(--muted); font-size: .72rem; line-height: 1.5; }
-.auth-divider { margin: 22px 0; display: flex; align-items: center; gap: 12px; color: #8b96aa; font-size: .7rem; }
-.auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+.auth-divider { display: flex; align-items: center; gap: 12px; color: var(--c-ink-muted); font-size: .72rem; }
+.auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--c-hairline); }
 .oauth-button { width: 100%; height: 48px; border: 1px solid var(--line); border-radius: 11px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--ink); background: white; font-weight: 750; cursor: pointer; }
-.auth-note { margin-top: 22px; color: var(--muted); font-size: .68rem; line-height: 1.6; text-align: center; }
-.consent { display: flex; align-items: start; gap: 9px; color: var(--muted); font-size: .75rem; line-height: 1.55; }
-.consent input { margin-top: 3px; accent-color: var(--brand-strong); }
-.consent a { color: var(--brand-strong); font-weight: 700; }
+.auth .oauth-button { height: 46px; border-radius: var(--c-radius-sm); border-color: var(--c-hairline-strong); color: var(--c-ink); background: var(--c-surface); font-weight: 650; }
+.auth .oauth-button:hover:not(:disabled) { background: var(--c-sunken); }
+/* Catatan kaki akun juga dipakai sebagai teks isi di halaman verifikasi, jadi
+   ukurannya harus tetap terbaca dan rata kiri — bukan 0.68rem rata tengah. */
+.auth-note { color: var(--c-ink-soft); font-size: .84rem; line-height: 1.65; }
+.auth-switch { color: var(--c-ink-soft); font-size: .86rem; text-align: center; }
 .onboarding { min-height: 100dvh; background: var(--canvas); }
 .onboarding > header { min-height: 74px; padding: 0 36px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; background: white; }
 .onboarding > header a:last-child { color: var(--muted); font-size: .78rem; font-weight: 700; }
@@ -510,9 +532,6 @@ textarea.input { min-height: 120px; padding-block: 13px; resize: vertical; }
   .public-footer__grid { grid-template-columns: 2fr 1fr 1fr; }
   .public-footer__grid > div:last-child { grid-column: 2; }
   .article-grid { grid-template-columns: 1fr 1fr; }
-  .auth-page { grid-template-columns: 1fr; }
-  .auth-aside { min-height: 320px; }
-  .auth-aside__content { margin: 70px 0; }
 }
 
 @media (max-width: 640px) {
@@ -537,11 +556,8 @@ textarea.input { min-height: 120px; padding-block: 13px; resize: vertical; }
   .footer-brand { grid-column: 1 / -1; }
   .public-footer__grid > div:last-child { grid-column: auto; }
   .footer-bottom { gap: 8px; flex-direction: column; }
-  .auth-aside { min-height: 280px; padding: 28px; }
-  .auth-aside__content { margin: 46px 0; }
-  .auth-aside__content h1 { font-size: 2.4rem; }
-  .auth-quote { display: none; }
-  .auth-main { padding: 42px 22px; }
+  .auth__bar { padding: 18px var(--c-gutter); }
+  .auth-card { padding: 22px; }
 }
 
 .loading-state, .error-state { min-height: 320px; padding: 48px; border: 1px solid var(--line); display: grid; align-content: center; gap: 12px; background: var(--surface-raised); }
@@ -586,7 +602,7 @@ body { min-width: 320px; background: var(--surface); }
 .theme-toggle { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 9px; display: grid; place-items: center; color: var(--ink); background: var(--surface-raised); cursor: pointer; }
 .public-header { background: color-mix(in srgb, var(--surface) 90%, transparent); border-color: var(--line); }
 .public-nav { color: var(--text-subtle); }
-.mobile-menu nav, .preview-card, .lead-preview, .faq-list details, .panel, .lead-card, .filter-bar, .queue-card, .thread-post, .match-panel, .composer, .sent-state, .contact-form, .auth-card, .legal-panel { background: var(--surface-raised); }
+.mobile-menu nav, .preview-card, .lead-preview, .faq-list details, .panel, .lead-card, .filter-bar, .queue-card, .thread-post, .match-panel, .composer, .sent-state, .contact-form, .legal-panel { background: var(--surface-raised); }
 
 .hero--refined { padding-block: 76px 92px; background: radial-gradient(circle at 87% 18%, color-mix(in srgb, var(--brand) 24%, transparent) 0 10%, transparent 10.5%), linear-gradient(180deg, var(--canvas), var(--surface)); }
 .hero--refined .hero__grid { grid-template-columns: minmax(0, 1fr) minmax(430px, .82fr); }
@@ -879,9 +895,6 @@ html[data-theme="dark"] .field label { color: #c3cfe8; }
 .keyword-summary, .inline-add { border-radius: 16px; box-shadow: var(--shadow-sm); }
 .settings-nav button.active { border-radius: 12px; }
 .contact-info > div, .contact-form, .beta-pricing__main, .beta-pricing__note { border-radius: 22px; box-shadow: var(--shadow-sm); }
-.auth-aside { position: relative; overflow: hidden; background: linear-gradient(145deg, #2d63cf, #6599ff); }
-.auth-aside::after { content: ""; position: absolute; width: 300px; height: 300px; right: -130px; bottom: -110px; border: 70px solid var(--accent); border-radius: 50%; opacity: .95; }
-.auth-card { padding: 34px; border: 1px solid var(--line); border-radius: 24px; background: #fff; box-shadow: var(--shadow-md); }
 
 html[data-theme="dark"] {
   --surface: #081126;
@@ -901,7 +914,6 @@ html[data-theme="dark"] .inline-error { color: #ffd9d9; border-color: #6e2b2b; b
 html[data-theme="dark"] .integration-eyebrow { color: #8fb2e8; }
 html[data-theme="dark"] .app-shell { background: #081126; }
 html[data-theme="dark"] .app-topbar { background: rgba(8, 17, 38, .9); }
-html[data-theme="dark"] .auth-card { background: #101d38; }
 html[data-theme="dark"] .chart-y { color: #7b89a5; }
 html[data-theme="dark"] .bars { border-bottom-color: var(--line); background: repeating-linear-gradient(to bottom, transparent 0, transparent calc(25% - 1px), rgba(255,255,255,.06) 25%); }
 html[data-theme="dark"] .bars i { background: #2c4a86; }
@@ -1180,7 +1192,7 @@ html[data-theme="dark"] .inline-error { color: #ffb7b7; background: #311b1b; }
 .password-input__toggle:hover { color: var(--brand-deep); background: var(--brand-soft); }
 .password-input__toggle:disabled { opacity: .5; cursor: default; }
 .form-error { margin: 0; padding: 11px 13px; border: 1px solid #f0c7c7; border-radius: 11px; color: var(--danger); background: var(--danger-soft); font-size: .78rem; font-weight: 650; }
-.auth-notice { margin: 0 0 14px; padding: 11px 13px; border: 1px solid #eadb74; border-radius: 11px; color: var(--warning); background: var(--warning-soft); font-size: .78rem; font-weight: 650; }
+.auth-notice { padding: 11px 13px; border: 1px solid #e0cf6a; border-radius: var(--c-radius-sm); color: var(--warning); background: var(--c-sand); font-size: .8rem; font-weight: 650; line-height: 1.55; }
 .logout-button { width: 100%; margin-top: 10px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: transparent; font-size: .74rem; font-weight: 750; cursor: pointer; transition: color .18s ease, background .18s ease, border-color .18s ease; }
 .logout-button:hover { color: var(--danger); border-color: #f0c7c7; background: var(--danger-soft); }
 .logout-button:disabled { opacity: .6; cursor: default; }
@@ -1279,6 +1291,8 @@ html[data-theme="dark"] .modal-panel { background: #101d38; }
 html[data-theme="dark"] .checkbox-row { color: #a9b6d4; }
 html[data-theme="dark"] .form-error { border-color: #6b3030; }
 html[data-theme="dark"] .auth-notice { border-color: #6b5a23; color: #f2d99a; background: #3a2f12; }
+.auth .text-link { color: var(--c-brand-ink); }
+.auth .form-error { border-radius: var(--c-radius-sm); font-size: .8rem; }
 html[data-theme="dark"] .row-error { color: #ff9b9b; }
 html[data-theme="dark"] .button--danger { color: #ff9b9b; }
 html[data-theme="dark"] .chip--draft { color: #a9b6d4; background: #1a2745; }
@@ -1742,11 +1756,11 @@ html[data-theme="dark"] .intent-chip--menawarkan { color: #ffd79a; background: #
 }
 
 /* Pendaftaran, verifikasi email, dan pemilihan paket */
-.auth-badge { margin: 0 0 14px; display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 99px; color: var(--brand-strong); background: color-mix(in srgb, var(--brand-strong) 12%, transparent); font-size: .7rem; font-weight: 700; }
-.auth-consent { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 9px; align-items: start; color: var(--muted); font-size: .74rem; line-height: 1.55; }
-.auth-consent input { margin-top: 2px; }
-.auth-consent a { color: var(--brand-strong); font-weight: 700; }
-.auth-card .form-feedback { margin-top: 12px; display: flex; align-items: center; gap: 7px; justify-content: center; font-size: .74rem; }
+.auth-badge { justify-self: start; display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 99px; color: var(--c-brand-ink); background: var(--c-wash); font-size: .72rem; font-weight: 700; }
+.auth-consent { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 9px; align-items: start; color: var(--c-ink-soft); font-size: .8rem; line-height: 1.55; }
+.auth-consent input { margin-top: 2px; accent-color: var(--c-brand-ink); }
+.auth-consent a { color: var(--c-brand-ink); font-weight: 700; }
+.auth-card .form-feedback { display: flex; align-items: center; gap: 7px; font-size: .8rem; }
 
 .start-shell { min-height: 100dvh; background: var(--canvas); }
 .start-shell__bar { min-height: 74px; padding: 0 clamp(18px, 4vw, 36px); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--surface-raised); }

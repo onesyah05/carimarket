@@ -67,7 +67,7 @@ export function LoginForm({ nextPath, expired = false }: { nextPath?: string; ex
         <div className="auth-divider">atau</div>
         <button className="oauth-button" type="button" disabled={pending} onClick={() => router.push("/api/integrations/threads/connect")}><AtSign size={17} /> Masuk dengan Threads</button>
       </form>
-      <p className="auth-note">Belum punya akun? <Link className="text-link" href="/daftar">Daftar di sini</Link></p>
+      <p className="auth-switch">Belum punya akun? <Link className="text-link" href="/daftar">Daftar di sini</Link></p>
     </div>
   );
 }

@@ -28,7 +28,7 @@ export default async function VerificationFailedPage({ searchParams }: { searchP
       <h2>{reason.title}</h2>
       <p className="auth-note">{reason.copy}</p>
       <Link className="button button--primary" href="/masuk">Masuk ke akun</Link>
-      <p className="auth-note">Belum punya akun? <Link className="text-link" href="/daftar">Daftar di sini</Link></p>
+      <p className="auth-switch">Belum punya akun? <Link className="text-link" href="/daftar">Daftar di sini</Link></p>
     </div>
   </AuthShell>;
 }
