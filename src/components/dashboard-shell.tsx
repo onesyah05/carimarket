@@ -36,6 +36,7 @@ const userNav: NavGroup[] = [
     items: [
       { label: "Langganan", href: "/dashboard/langganan", icon: CreditCard },
       { label: "Pengaturan", href: "/dashboard/pengaturan", icon: Settings },
+      { label: "Bantuan", href: "/dashboard/bantuan", icon: CircleHelp },
     ],
   },
 ];
@@ -87,6 +88,7 @@ const superNav: NavGroup[] = [
     caption: "Konten & kepatuhan",
     items: [
       { label: "CMS", href: "/superadmin/konten", icon: BookOpen },
+      { label: "Teks halaman", href: "/superadmin/halaman-publik", icon: FileText },
       { label: "Kepatuhan", href: "/superadmin/kepatuhan", icon: FileCheck2 },
       { label: "Pesan kontak", href: "/superadmin/kontak", icon: Mail },
     ],

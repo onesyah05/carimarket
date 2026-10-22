@@ -2,118 +2,119 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { FormModal } from "@/components/form-modal";
-import { formatDateTime } from "@/lib/format";
 
-type TermRow = { id: string; term: string; reason: string | null; createdAt: string; creator: string | null };
+/**
+ * Kontrol daftar istilah terlarang.
+ *
+ * Dulu komponen ini juga merender daftarnya sendiri; daftarnya kini ditangani
+ * `BlacklistTable` bersama pencarian dan penomoran halaman, jadi yang tersisa
+ * di sini hanya dua tindakannya: menambah dan menghapus.
+ *
+ * Keduanya melapor lewat `onChanged` supaya tabel memuat ulang halaman yang
+ * sedang tampil — `router.refresh()` saja tidak cukup karena barisnya diambil
+ * lewat API, bukan dari render server.
+ */
 
-export function BlacklistManager({ terms }: { terms: TermRow[] }) {
+type ChangeHandler = { onChanged?: () => void };
+
+async function callBlacklist(method: "POST" | "DELETE", body: unknown) {
+  const response = await fetch("/api/admin/blacklist", {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(payload?.error ?? "Permintaan belum berhasil.");
+}
+
+export function BlacklistAddButton({ onChanged }: ChangeHandler) {
   const router = useRouter();
-  const [pending, setPending] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
 
   async function addTerm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    setPending("add");
+    setPending(true);
     setError(null);
     try {
-      const response = await fetch("/api/admin/blacklist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ term: data.get("term"), reason: String(data.get("reason") ?? "").trim() || undefined }),
+      await callBlacklist("POST", {
+        term: data.get("term"),
+        reason: String(data.get("reason") ?? "").trim() || undefined,
       });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        setError(payload?.error ?? "Istilah belum tersimpan.");
-        return;
-      }
       form.reset();
-      setAdding(false);
+      setOpen(false);
       router.refresh();
-    } catch {
-      setError("Tidak dapat menghubungi server.");
+      onChanged?.();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Istilah belum tersimpan.");
     } finally {
-      setPending(null);
-    }
-  }
-
-  async function removeTerm(id: string) {
-    setPending(id);
-    setError(null);
-    try {
-      const response = await fetch("/api/admin/blacklist", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        setError(payload?.error ?? "Istilah belum terhapus.");
-        return;
-      }
-      router.refresh();
-    } catch {
-      setError("Tidak dapat menghubungi server.");
-    } finally {
-      setPending(null);
+      setPending(false);
     }
   }
 
   return (
     <>
-      <div className="plans-actions">
-        <button className="button button--primary" type="button" onClick={() => { setAdding(true); setError(null); }}>
-          <Plus size={16} /> Tambah istilah
-        </button>
-        {error && !adding && <span className="form-feedback form-feedback--error" role="alert">{error}</span>}
-      </div>
+      <button className="button button--primary" type="button" onClick={() => { setOpen(true); setError(null); }}>
+        <Plus size={16} /> Tambah istilah
+      </button>
 
-      {adding && <FormModal
+      {open && <FormModal
         title="Tambah istilah terlarang"
         description="Draft balasan yang memuat istilah ini ditahan untuk ditinjau sebelum dikirim."
-        busy={pending === "add"}
-        onClose={() => { setAdding(false); setError(null); }}
+        busy={pending}
+        onClose={() => { setOpen(false); setError(null); }}
       >
-        <form className="plan-form" onSubmit={addTerm}>
+        <form className="plan-form" onSubmit={event => void addTerm(event)}>
           <div className="field">
             <label htmlFor="blacklist-term">Istilah</label>
-            <input className="input" id="blacklist-term" name="term" placeholder="Mis. dijamin" required minLength={2} maxLength={120} disabled={pending === "add"} />
+            <input className="input" id="blacklist-term" name="term" placeholder="Mis. dijamin" required minLength={2} maxLength={120} disabled={pending} />
           </div>
           <div className="field">
             <label htmlFor="blacklist-reason">Alasan (opsional)</label>
-            <input className="input" id="blacklist-reason" name="reason" placeholder="Mis. klaim berlebihan" maxLength={255} disabled={pending === "add"} />
+            <input className="input" id="blacklist-reason" name="reason" placeholder="Mis. klaim berlebihan" maxLength={255} disabled={pending} />
           </div>
           {error && <p className="form-feedback form-feedback--error plan-form__feedback" role="alert">{error}</p>}
           <div className="plan-form__actions">
-            <button className="button button--primary" type="submit" disabled={pending !== null}>{pending === "add" ? "Menyimpan…" : "Tambah istilah"}</button>
-            <button className="button button--ghost" type="button" onClick={() => { setAdding(false); setError(null); }} disabled={pending === "add"}>Batal</button>
+            <button className="button button--primary" type="submit" disabled={pending}>{pending ? "Menyimpan…" : "Tambah istilah"}</button>
+            <button className="button button--ghost" type="button" onClick={() => { setOpen(false); setError(null); }} disabled={pending}>Batal</button>
           </div>
         </form>
       </FormModal>}
-
-      <section className="panel table-panel">
-        <div className="panel-heading internal-panel-heading"><div><h2>Daftar istilah</h2><p>Istilah yang digunakan untuk menahan draft berisiko.</p></div><span className="internal-count">{terms.length.toLocaleString("id-ID")} total</span></div>
-        <div className="data-table internal-table">
-          <div className="data-row data-head data-row--4"><span>Istilah</span><span>Alasan</span><span>Ditambahkan</span><span>Aksi</span></div>
-          {terms.length === 0 && <div className="data-row table-empty-row"><span>Daftar masih kosong.</span></div>}
-          {terms.map(term => (
-            <div className="data-row data-row--4" key={term.id}>
-              <span data-label="Istilah"><strong>{term.term}</strong></span>
-              <span data-label="Alasan">{term.reason ?? "—"}</span>
-              <span data-label="Ditambahkan">{formatDateTime(term.createdAt)}{term.creator ? ` · ${term.creator}` : ""}</span>
-              <span data-label="Aksi" className="row-actions">
-                <button className="button button--small button--danger" type="button" disabled={pending !== null} onClick={() => void removeTerm(term.id)}>
-                  {pending === term.id ? "…" : "Hapus"}
-                </button>
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
     </>
+  );
+}
+
+export function BlacklistRowActions({ id, term, onChanged }: ChangeHandler & { id: string; term: string }) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function removeTerm() {
+    if (!window.confirm(`Hapus istilah "${term}"? Draft yang memuatnya tidak akan ditahan lagi.`)) return;
+    setPending(true);
+    setError(null);
+    try {
+      await callBlacklist("DELETE", { id });
+      router.refresh();
+      onChanged?.();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Istilah belum terhapus.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <span className="row-actions">
+      <button className="button button--small button--danger" type="button" disabled={pending} onClick={() => void removeTerm()}>
+        <Trash2 size={13} /> {pending ? "…" : "Hapus"}
+      </button>
+      {error && <span className="row-error" role="alert">{error}</span>}
+    </span>
   );
 }

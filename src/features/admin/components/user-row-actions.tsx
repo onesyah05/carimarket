@@ -5,12 +5,18 @@ import { useRouter } from "next/navigation";
 import { FormModal } from "@/components/form-modal";
 import { businessCategoryOptions } from "@/features/settings/lib/business-categories";
 
-export function UserRowActions({ userId, name, status, category }: {
+export function UserRowActions({ userId, name, status, category, onChanged }: {
   userId: string;
   name: string;
   status: "ACTIVE" | "SUSPENDED" | "PENDING_VERIFICATION";
   /** Kategori bisnis saat ini; kosong bila profil belum diisi. */
   category?: string | null;
+  /**
+   * Dipanggil setelah data di server berubah. Di dalam DataTable, `router.refresh`
+   * saja tidak cukup: barisnya diambil lewat API, bukan dari render server, jadi
+   * pemanggil perlu memuat ulang halaman tabelnya sendiri.
+   */
+  onChanged?: () => void;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
@@ -28,6 +34,7 @@ export function UserRowActions({ userId, name, status, category }: {
         return;
       }
       router.refresh();
+      onChanged?.();
     } catch {
       setError("Tidak dapat menghubungi server.");
     } finally {

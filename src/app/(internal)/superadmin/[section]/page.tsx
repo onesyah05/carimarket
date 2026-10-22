@@ -6,22 +6,25 @@ import { getSessionUser } from "@/server/auth/session";
 import { requirePageRole } from "@/server/auth/page-guards";
 import { getAccountOverview } from "@/server/settings/account";
 import { InternalProfile } from "@/features/account/components/internal-profile";
-import {
-  listAdmins,
-  listAuditLog,
-  listBlacklistTerms,
-  listContactSubmissions,
-  listConnections,
-  listFlaggedReplies,
-  listModerationStats,
-  listPlatformUsers,
-} from "@/server/admin/queries";
+import { listFlaggedReplies, listModerationStats } from "@/server/admin/queries";
+import { runTable, tableSearchHint } from "@/server/admin/tables/registry";
 import { listArticlesForCms } from "@/server/cms/articles";
 import { serializeCmsArticle } from "@/server/cms/serialize";
 import { getWorkerStatus } from "@/server/jobs/runtime";
 import { getUnofficialCredentialsStatus } from "@/server/integrations/threads/unofficial-credentials";
 import { getThreadsConfig, getThreadsOAuthReadiness } from "@/server/integrations/threads/config";
-import { AuditTable, ConnectionsTable, ContactSubmissionsTable, ModerationQueue, SystemStateTable, UsersTable } from "@/features/admin/components/internal-tables";
+import { ModerationQueue, SystemStateTable } from "@/features/admin/components/internal-tables";
+import { UsersTable } from "@/features/admin/components/tables/users-table";
+import {
+  AdminsTable,
+  ArticlesTable,
+  AuditTable,
+  BlacklistTable,
+  ConnectionsTable,
+  ContactTable,
+  CredentialsTable,
+  TransactionsTable,
+} from "@/features/admin/components/tables/console-tables";
 import { PlansManager } from "@/features/admin/components/plans-manager";
 import { PaymentMethodsManager } from "@/features/billing/components/payment-methods-manager";
 import { TransactionsReview } from "@/features/billing/components/transactions-review";
@@ -34,9 +37,13 @@ import { listCredentials } from "@/server/api/credentials";
 import { AddUserButton } from "@/features/admin/components/add-user-button";
 import { LeadSearchConsole } from "@/features/admin/components/lead-search-console";
 import { AdminsManager } from "@/features/admin/components/admins-manager";
-import { BlacklistManager } from "@/features/admin/components/blacklist-manager";
 import { ThreadsCredentialsManager } from "@/features/admin/components/threads-credentials-manager";
 import { ArticlesManager } from "@/features/cms/components/articles-manager";
+import { PlatformUsagePanel } from "@/features/admin/components/platform-usage-panel";
+import { SiteContentManager } from "@/features/cms/components/site-content-manager";
+import { listFaqsForCms } from "@/server/cms/faq";
+import { listStaticPagesForCms } from "@/server/cms/static-pages";
+import { platformUsageToday } from "@/server/usage/service";
 
 const HEADINGS: Record<string, { title: string; copy: string }> = {
   admin: { title: "Manajemen Admin", copy: "Promosikan akun pengguna menjadi Admin dan atur permission mereka." },
@@ -45,7 +52,7 @@ const HEADINGS: Record<string, { title: string; copy: string }> = {
   paket: { title: "Paket dan billing", copy: "Tambah dan ubah paket langganan. Harga serta kuota di sini langsung berlaku di halaman harga dan penegakan kuota." },
   pembayaran: { title: "Verifikasi pembayaran", copy: "Cocokkan nominal beserta kode uniknya dengan mutasi rekening. Menyetujui pembayaran langsung mengaktifkan paket pelanggan." },
   "metode-pembayaran": { title: "Metode pembayaran", copy: "Rekening, e-wallet, dan QRIS yang ditampilkan kepada pelanggan saat membuat tagihan upgrade." },
-  kuota: { title: "Kuota API", copy: "Status koneksi Threads dan pemakaian agregat per pengguna." },
+  kuota: { title: "Kuota API", copy: "Pemakaian harian tingkat platform terhadap batas Meta, lalu status koneksi Threads per pengguna." },
   kepatuhan: { title: "Kepatuhan", copy: "Kelola istilah terlarang dan pantau antrean moderasi lintas tim." },
   sistem: { title: "Pengaturan Sistem", copy: "Kondisi integrasi yang sebenarnya; nilai rahasia tidak pernah ditampilkan." },
   integrasi: { title: "Integrasi Threads", copy: "Periksa koneksi resmi Threads dan pencarian pratinjau sebelum App Review." },
@@ -54,6 +61,7 @@ const HEADINGS: Record<string, { title: string; copy: string }> = {
   profil: { title: "Profil akun", copy: "Kelola identitas dan kata sandi akun Superadmin Anda." },
   audit: { title: "Audit Log", copy: "Jejak aktivitas kritikal platform, terekam otomatis dari aplikasi." },
   konten: { title: "Manajemen Konten", copy: "Tulis, jadwalkan, dan terbitkan artikel blog. Admin mengajukan review, Superadmin menerbitkan." },
+  "halaman-publik": { title: "Teks halaman publik", copy: "Pertanyaan umum dan teks halaman statis. Perubahan langsung berlaku di beranda, halaman harga, dan structured data FAQPage tanpa deploy." },
 };
 
 export default async function SuperSection({ params }: { params: Promise<{ section: string }> }) {
@@ -70,10 +78,20 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
   }
 
   if (section === "admin") {
-    const admins = await listAdmins();
+    // Daftar akun internal memakai DataTable, sedangkan pengaturan permission
+    // per akun tetap di AdminsManager karena kontrolnya per baris.
+    const admins = await runTable("admins", "SUPERADMIN", {});
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
-      <AdminsManager admins={admins.map(admin => ({ id: admin.id, name: admin.name, email: admin.email, role: admin.role, status: admin.status, permissions: admin.adminPermissions.map(item => item.permission) }))} />
+      <AdminsTable initial={admins} searchHint={tableSearchHint("admins")} />
+      <AdminsManager admins={admins.rows.map(row => ({
+        id: String(row.id),
+        name: String(row.name),
+        email: String(row.email),
+        role: row.role as "ADMIN" | "SUPERADMIN",
+        status: String(row.status),
+        permissions: (row.permissions as string[]) ?? [],
+      }))} />
     </>;
   }
 
@@ -85,11 +103,15 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
   }
 
   if (section === "users") {
-    const users = await listPlatformUsers();
+    const users = await runTable("users", "SUPERADMIN", {});
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
-      <AddUserButton />
-      <UsersTable users={users} />
+      <UsersTable
+        initial={users}
+        searchHint={tableSearchHint("users")}
+        detailBase="/superadmin/users"
+        action={<AddUserButton />}
+      />
     </>;
   }
 
@@ -102,7 +124,11 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
   }
 
   if (section === "pembayaran") {
-    const [methods, transactions] = await Promise.all([listPaymentMethodsForAdmin(), listTransactionsForAdmin()]);
+    const [methods, transactions, transactionRows] = await Promise.all([
+      listPaymentMethodsForAdmin(),
+      listTransactionsForAdmin(),
+      runTable("transactions", "SUPERADMIN", {}),
+    ]);
     const activeMethods = methods.filter(method => method.isActive).length;
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} action={<Link className="button button--ghost" href="/superadmin/metode-pembayaran">Metode pembayaran</Link>} />
@@ -111,6 +137,7 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
         <p>Belum ada metode pembayaran aktif, jadi pelanggan belum dapat membuat tagihan. Tambahkan rekening atau e-wallet di <Link href="/superadmin/metode-pembayaran">Metode pembayaran</Link>.</p>
       </div>}
       <TransactionsReview initial={transactions} />
+      <TransactionsTable initial={transactionRows} searchHint={tableSearchHint("transactions")} />
     </>;
   }
 
@@ -123,15 +150,20 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
   }
 
   if (section === "kuota") {
-    const connections = await listConnections();
+    const [connections, usage] = await Promise.all([runTable("connections", "SUPERADMIN", {}), platformUsageToday()]);
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
-      <ConnectionsTable connections={connections} />
+      <PlatformUsagePanel usage={usage} />
+      <ConnectionsTable initial={connections} searchHint={tableSearchHint("connections")} />
     </>;
   }
 
   if (section === "kepatuhan") {
-    const [stats, terms, flagged] = await Promise.all([listModerationStats(), listBlacklistTerms(), listFlaggedReplies()]);
+    const [stats, terms, flagged] = await Promise.all([
+      listModerationStats(),
+      runTable("blacklist", "SUPERADMIN", {}),
+      listFlaggedReplies(),
+    ]);
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
       <section className="stat-grid">
@@ -139,7 +171,7 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
         <article className="stat-card"><span>Penandaan selesai</span><strong>{stats.resolvedFlags}</strong><p>Keputusan tercatat di audit log</p></article>
         <article className="stat-card"><span>Istilah terlarang aktif</span><strong>{stats.activeTerms}</strong><p>Dipakai untuk menahan draft berisiko</p></article>
       </section>
-      <BlacklistManager terms={terms.map(term => ({ id: term.id, term: term.term, reason: term.reason, createdAt: term.createdAt.toISOString(), creator: term.createdBy?.name ?? null }))} />
+      <BlacklistTable initial={terms} searchHint={tableSearchHint("blacklist")} />
       {flagged.length > 0 && <>
         <h2 className="section-subtitle">Draft tertanda terbaru</h2>
         <ModerationQueue drafts={flagged} />
@@ -172,34 +204,47 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
   }
 
   if (section === "api") {
-    const credentials = await listCredentials();
+    const [credentials, credentialRows] = await Promise.all([listCredentials(), runTable("credentials", "SUPERADMIN", {})]);
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} action={<a className="button button--ghost" href="/api/admin/api-docs" download>Unduh OpenAPI</a>} />
+      <CredentialsTable initial={credentialRows} searchHint={tableSearchHint("credentials")} />
       <ApiDocs baseUrl={baseUrl} credentials={credentials} />
     </>;
   }
 
   if (section === "kontak") {
-    const submissions = await listContactSubmissions();
+    const submissions = await runTable("contact", "SUPERADMIN", {});
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
-      <ContactSubmissionsTable submissions={submissions} />
+      <ContactTable initial={submissions} searchHint={tableSearchHint("contact")} />
     </>;
   }
 
   if (section === "audit") {
-    const entries = await listAuditLog();
+    const entries = await runTable("audit", "SUPERADMIN", {});
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
-      <AuditTable entries={entries} />
+      <AuditTable initial={entries} searchHint={tableSearchHint("audit")} />
     </>;
   }
 
-  const user = await getSessionUser();
-  const articles = await listArticlesForCms();
+  if (section === "halaman-publik") {
+    const [faqs, pages] = await Promise.all([listFaqsForCms(), listStaticPagesForCms()]);
+    return <>
+      <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
+      <SiteContentManager faqs={faqs} pages={pages} />
+    </>;
+  }
+
+  const [user, articles, articleRows] = await Promise.all([
+    getSessionUser(),
+    listArticlesForCms(),
+    runTable("articles", "SUPERADMIN", {}),
+  ]);
   return <>
     <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
+    <ArticlesTable initial={articleRows} searchHint={tableSearchHint("articles")} />
     <ArticlesManager role="SUPERADMIN" userId={user?.id ?? ""} articles={articles.map(serializeCmsArticle)} />
   </>;
 }

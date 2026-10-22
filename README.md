@@ -186,6 +186,7 @@ pm2 restart carimarket
 - **Worker latar**: berjalan di dalam proses Next.js (`instrumentation.ts`), jadi `pm2 restart` juga me-restart worker. Untuk beban banyak pengguna, pisahkan ke proses cron/worker terpisah yang memanggil fungsi di `src/server/jobs/`.
 - **Backup**: aktifkan **Cron** di aaPanel untuk backup database MySQL berkala (`/backup` aaPanel).
 - **Keamanan**: tutup port 3306 dan 3000 di **Security** panel; hanya buka 80/443/22.
+- **Ganti kata sandi**: mengganti kata sandi dari Pengaturan menghapus seluruh sesi web dan mencabut token aplikasi mobile milik akun itu, jadi perangkat yang hilang ikut kehilangan akses. Kunci API terbitan Superadmin tidak ikut dicabut: itu integrasi internal yang tidak terkait kata sandi pemilik workspace.
 - **Ganti kata sandi dev**: semua akun seed memakai `carimarket123`. Setelah login, ganti kata sandi setiap akun di Pengaturan → Keamanan, atau hapus akun seed untuk produksi.
 - **Firewall aplikasi**: tambahkan WAF (ModSecurity) dari App Store aaPanel bila perlu.
 
@@ -316,12 +317,151 @@ pembatasan origin dan rate limit. Pesan dapat dibaca di Admin → Tiket dukungan
 dan Superadmin → Pesan kontak. Notifikasi email ke tim menyusul bersama adapter
 email.
 
+## Konsol internal: tabel dan detail pengguna
+
+Seluruh tabel di konsol Admin dan Superadmin memakai satu komponen,
+`DataTable`, dengan penomoran halaman dan pencarian yang **berjalan di
+server**. Ini pokok perbedaannya dari tabel sebelumnya: dulu halaman memuat
+30–100 baris pertama lalu berhenti, sehingga pencarian menjawab "tidak
+ditemukan" untuk data yang jelas-jelas ada.
+
+- Definisi tiap tabel ada di `src/server/admin/tables/registry.ts`, lengkap
+  dengan peran yang boleh membacanya. Otorisasi hidup bersama definisi datanya,
+  jadi menambah tabel baru tidak bisa lupa menyebut siapa yang berhak.
+- Satu endpoint melayani semuanya: `GET /api/admin/tables/<resource>` dengan
+  `q`, `page`, dan `pageSize`. Halaman pertama tetap dirender di server, jadi
+  tabel sudah terisi sebelum JavaScript berjalan.
+- Ukuran halaman dibatasi pada pilihan yang memang tampil di antarmuka
+  (10/20/50/100); nilai lain dari klien dikembalikan ke bawaan.
+- Nomor halaman yang melewati batas dikoreksi otomatis. Mengetik pencarian
+  sering memangkas jumlah halaman, dan tanpa koreksi ini tabel tampak kosong
+  padahal hasilnya ada di halaman pertama.
+- Di layar sempit tabel berubah menjadi kartu: label kolom ikut setiap sel,
+  jadi barisnya tetap terbaca tanpa kepala tabel.
+
+Tabel yang sudah memakainya: pengguna, akun internal, audit, pesan kontak,
+istilah terlarang, arsip transaksi, arsip artikel, koneksi Threads, dan token
+aplikasi mobile.
+
+### Detail pengguna
+
+Nama pengguna di tabel membuka halaman detail:
+
+- `/superadmin/users/<id>` — lengkap dengan tindakan akun (tangguhkan,
+  reset koneksi, pindah kategori).
+- `/admin/pengguna/<id>` — isi yang sama, **hanya baca**. Dukungan perlu
+  melihat keadaan akun seutuhnya untuk menjawab tiket, tetapi menangguhkan akun
+  dan mencabut koneksi tetap milik Superadmin — sama seperti yang ditolak
+  API-nya untuk peran Admin.
+
+Halaman ini memuat kuota bulan berjalan, mode balasan beserta pagarnya, profil
+bisnis per jasa, status koneksi Threads, langganan, transaksi terakhir,
+perangkat aktif, dan jejak audit. Yang tidak pernah ikut: ciphertext token,
+hash kata sandi, dan nilai kunci API.
+
+## Batas harian platform
+
+Kuota paket menjaga pemakaian per pelanggan, tetapi batas Meta berlaku **per
+akun Threads yang terhubung** — dan pada jalur pra-App-Review seluruh pencarian
+pelanggan memakai satu sesi web yang sama. Karena itu ada penghitung kedua di
+tingkat platform (`PlatformDailyUsage`, per hari UTC):
+
+- Bawaan `PLATFORM_DAILY_SEARCH_LIMIT=2000` dan `PLATFORM_DAILY_REPLY_LIMIT=900`,
+  keduanya di bawah batas Meta (2.200 dan ~1.000) agar ada sisa untuk uji
+  koneksi, konsol pencarian Superadmin, dan percobaan ulang.
+- Saat batas tercapai, permintaan ditolak dengan kode `PLATFORM_DAILY_LIMIT_REACHED`
+  dan **kuota paket pelanggan tidak terpakai**; pekerja latar berhenti lebih awal
+  alih-alih mencatat kegagalan berulang.
+- Pemakaian hari ini tampil di **Superadmin → Kuota API**.
+
+Jatah dipesan lewat satu `UPDATE` bersyarat sebelum aksi dijalankan, bukan
+dicatat sesudahnya, sehingga dua permintaan bersamaan tidak dapat sama-sama
+lolos batas. Aksi yang gagal mengembalikan jatahnya — pencarian yang error dan
+balasan yang tidak sampai tidak memakan kuota.
+
+## Pemulihan kata sandi
+
+`/lupa-kata-sandi` mengirim tautan berumur 60 menit, sekali pakai, lewat
+adapter email yang sama dengan verifikasi pendaftaran. Hal-hal yang disengaja:
+
+- Jawaban API selalu sama, terdaftar atau tidak, agar endpoint ini tidak dapat
+  dipakai memeriksa siapa yang punya akun. Batasnya 3 permintaan per alamat
+  email dan 10 per IP setiap 15 menit.
+- Akun yang lahir dari OAuth Threads punya email placeholder dan dilewati tanpa
+  suara; jalan masuknya tetap tombol **Masuk dengan Threads**.
+- Mengatur ulang kata sandi menghapus seluruh sesi web **dan** mencabut token
+  aplikasi mobile — sama seperti mengganti kata sandi dari Pengaturan. Alasan
+  orang mengatur ulang biasanya kehilangan perangkat, jadi perangkat lama tidak
+  boleh tetap terbuka.
+- Tanpa `RESEND_API_KEY`, halaman menolak permintaan dengan pesan agar
+  menghubungi dukungan, bukan berpura-pura mengirim.
+
+## Tiket dukungan
+
+Pengguna membuka tiket di **Dashboard → Bantuan** (maksimal 5 tiket berjalan per
+akun); staf menjawabnya di **Admin → Tiket**. Admin dan Superadmin sama-sama
+boleh menjawab. Dua jenis kiriman:
+
+- **Balasan** terlihat pengguna, memicu notifikasi, dan memindahkan status ke
+  "menunggu pengguna".
+- **Catatan internal** hanya terlihat tim, tidak memicu notifikasi, dan disaring
+  di level query — bukan hanya disembunyikan di tampilan.
+
+Halaman Bantuan berada di luar gerbang onboarding, jadi pengguna yang tersangkut
+di tengah penyiapan tetap dapat bertanya. Formulir `/kontak` tetap untuk calon
+pelanggan yang belum punya akun.
+
+## Menutup akun sendiri
+
+**Pengaturan → Keamanan dan data** kini memuat penutupan akun mandiri, bukan
+hanya instruksi mengirim email. Konfirmasinya dua langkah: kata sandi saat ini
+(bila akun punya) plus frasa `TUTUP AKUN SAYA` yang harus diketik.
+
+- **Dihapus**: profil bisnis, kata kunci, lead, draft, notifikasi, preferensi,
+  koneksi Threads beserta ciphertext tokennya, seluruh sesi, dan semua token
+  aplikasi mobile.
+- **Dipertahankan dengan identitas diminimalkan**: baris `User` ditandai
+  `deletedAt` dengan nama dan email dianonimkan, lalu transaksi, langganan, dan
+  `AuditLog` tetap utuh sesuai kewajiban finansial dan audit.
+
+Penjaga sesi menolak akun ber-`deletedAt`, jadi cookie yang masih tertinggal di
+perangkat lain langsung berhenti berlaku. Akun internal tidak dapat ditutup dari
+halaman ini.
+
+## Teks halaman publik (CMS)
+
+**Superadmin → Teks halaman** mengelola pertanyaan umum dan teks halaman statis
+tanpa deploy. Keduanya punya salinan bawaan di kode, jadi instalasi baru tampil
+benar meski tabelnya masih kosong; tombol "Isi dari salinan bawaan" memindahkan
+salinan itu ke database agar dapat disunting.
+
+FAQ sekaligus menjadi sumber structured data `FAQPage` di beranda dan halaman
+harga, sehingga jawaban yang dikoreksi di CMS ikut mengubah apa yang dibaca
+mesin pencari. Isi halaman statis memakai format minimal — baris kosong
+memisahkan paragraf, awalan `## ` membuat subjudul — dan HTML tidak diproses,
+jadi teks dari CMS tidak pernah menjadi skrip di halaman publik.
+
 ## Batas rate limit
 
 `enforceRateLimit` menyimpan hitungan di memori proses: tidak dibagi antar
 instance dan hilang saat restart. Entri kedaluwarsa dibersihkan berkala dan
 jumlah kunci dibatasi. Untuk beberapa instance di belakang load balancer,
 pindahkan hitungan ini ke penyimpanan bersama.
+
+Pengalihan http → https di `src/proxy.ts` mengecualikan host pengembangan
+lokal (`localhost`, `127.0.0.1`, `::1`, `*.localhost`, `*.test`). Server Next
+mengisi sendiri `x-forwarded-proto` dari skema koneksi — bukan hanya proxy di
+depan — sehingga tanpa pengecualian ini `npm run dev` di http memantulkan
+**setiap** halaman terlindungi ke https yang tidak dilayani, dan dashboard
+maupun konsol internal sama sekali tidak dapat dibuka secara lokal.
+
+`enforceSameOrigin` adalah satu-satunya pertahanan lintas-situs untuk endpoint
+yang memakai cookie sesi, jadi di produksi ia **gagal tertutup**: `Origin`
+diperiksa lebih dulu, lalu `Sec-Fetch-Site` sebagai cadangan, dan permintaan
+tanpa keduanya ditolak dengan `ORIGIN_UNVERIFIABLE`. `NEXT_PUBLIC_APP_URL` yang
+kosong di produksi juga menolak permintaan alih-alih melewatkan pemeriksaan.
+Di luar produksi ketiga keadaan itu dibiarkan lolos agar pengujian manual dan
+klien seperti `curl` tetap praktis.
 
 ## Mode integrasi
 
@@ -336,6 +476,8 @@ Aplikasi menjalankan pekerjaan terjadwal di dalam proses server (via `instrument
 - **Draft & kirim otomatis**: lead baru mendapat draft AI; mode `Tinjau dulu` menghasilkan `PENDING_APPROVAL`, mode `Balas otomatis` menjadwalkan kirim dengan ambang skor, batas harian, jeda, quiet hours, kuota paket, dan penahanan draft berisiko (blacklist → `FLAGGED` + antrean moderasi).
 - **Publikasi artikel terjadwal**: artikel berstatus `SCHEDULED` yang jadwalnya lewat diterbitkan otomatis dan tercatat di audit log sebagai `ARTICLE_AUTO_PUBLISHED`.
 - Pemicu manual & status: `GET|POST /api/admin/jobs` (Superadmin untuk POST), tampilan di `/superadmin/sistem` dan `/admin/monitoring`.
+- **Pembersihan retensi**: sesi kedaluwarsa, token verifikasi/pengaturan ulang yang sudah terpakai, kode pemasangan basi, kunci job yatim, `UsageEvent` di atas 180 hari, `PlatformDailyUsage` di atas 120 hari, notifikasi terbaca di atas 90 hari, dan `ThreadPost` tanpa lead di atas 30 hari. `AuditLog`, transaksi, langganan, lead, dan draft tidak pernah disentuh.
+- **Kunci siklus**: setiap siklus mengambil baris `JobLock` bernama `worker-cycle` (masa berlaku 10 menit). Instance kedua melewati siklus itu tanpa menunggu, jadi `pm2` boleh dijalankan lebih dari satu proses tanpa menggandakan pencarian terjadwal. Jumlah siklus yang dilewati tampil sebagai `skippedByLock` di `/api/admin/jobs`.
 - Konfigurasi: `WORKER_ENABLED="false"` untuk mematikan, `WORKER_INTERVAL_MS` untuk interval siklus (minimum 15 detik; default 60 detik).
 - Untuk produksi dengan banyak pengguna, pindahkan ke worker/cron terpisah yang memanggil fungsi `src/server/jobs/` yang sama.
 

@@ -89,25 +89,6 @@ export async function listModerationStats() {
   return { openFlags, resolvedFlags, activeTerms };
 }
 
-export async function listBlacklistTerms() {
-  return prisma.blacklistTerm.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: { createdBy: { select: { name: true } } },
-  });
-}
-
-export async function listSupportTickets() {
-  return prisma.supportTicket.findMany({
-    orderBy: { updatedAt: "desc" },
-    take: RECENT_LIMIT,
-    include: {
-      requester: { select: { name: true, email: true } },
-      assignee: { select: { name: true } },
-    },
-  });
-}
-
 export async function listContactSubmissions() {
   return prisma.contactSubmission.findMany({
     orderBy: { createdAt: "desc" },

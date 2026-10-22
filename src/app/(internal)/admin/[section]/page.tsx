@@ -7,15 +7,20 @@ import { InternalProfile } from "@/features/account/components/internal-profile"
 import { isThreadsConfigured } from "@/server/integrations/threads/config";
 import { listArticlesForCms } from "@/server/cms/articles";
 import { serializeCmsArticle } from "@/server/cms/serialize";
-import { listContactSubmissions, listFlaggedReplies, listMonitoringSnapshot, listPlatformUsers, listSupportTickets } from "@/server/admin/queries";
+import { listFlaggedReplies, listMonitoringSnapshot } from "@/server/admin/queries";
+import { runTable, tableSearchHint } from "@/server/admin/tables/registry";
+import { listTicketsForInternal } from "@/server/support/tickets";
 import { getWorkerStatus } from "@/server/jobs/runtime";
-import { ContactSubmissionsTable, MonitoringPanels, ModerationQueue, TicketsTable, UsersTable } from "@/features/admin/components/internal-tables";
+import { MonitoringPanels, ModerationQueue } from "@/features/admin/components/internal-tables";
+import { UsersTable } from "@/features/admin/components/tables/users-table";
+import { ContactTable } from "@/features/admin/components/tables/console-tables";
+import { StaffTicketConsole } from "@/features/support/components/staff-ticket-console";
 import { AddUserButton } from "@/features/admin/components/add-user-button";
 import { ArticlesManager } from "@/features/cms/components/articles-manager";
 
 const HEADINGS: Record<string, { title: string; copy: string }> = {
   pengguna: { title: "Pengguna", copy: "Daftarkan pelanggan baru dan lihat akun yang sudah ada. Menangguhkan akun dan mencabut koneksi tetap di tangan Superadmin." },
-  tiket: { title: "Tiket dukungan", copy: "Tanggapi pertanyaan pengguna dan pesan dari formulir kontak tanpa membuka data sensitif." },
+  tiket: { title: "Tiket dukungan", copy: "Jawab tiket pengguna, catat konteks penanganan secara internal, dan tinjau pesan dari formulir kontak. Billing dan kredensial tetap di luar jangkauan." },
   moderasi: { title: "Moderasi balasan", copy: "Setujui draft yang lolos aturan atau tolak draft berisiko. Keputusan tercatat di audit log." },
   monitoring: { title: "Monitoring integrasi", copy: "Kesehatan integrasi 24 jam terakhir, read-only." },
   konten: { title: "Draft konten", copy: "Tulis dan edit draft artikel. Terbit memerlukan persetujuan Superadmin." },
@@ -36,20 +41,25 @@ export default async function AdminSection({ params }: { params: Promise<{ secti
   }
 
   if (section === "pengguna") {
-    const users = await listPlatformUsers();
+    const users = await runTable("users", "ADMIN", {});
     return <>
       <PageHeading eyebrow="Admin" title={heading.title} copy={heading.copy} />
-      <AddUserButton />
-      <UsersTable users={users} canModerate={false} />
+      <UsersTable
+        initial={users}
+        searchHint={tableSearchHint("users")}
+        canModerate={false}
+        detailBase="/admin/pengguna"
+        action={<AddUserButton />}
+      />
     </>;
   }
 
   if (section === "tiket") {
-    const [tickets, submissions] = await Promise.all([listSupportTickets(), listContactSubmissions()]);
+    const [tickets, submissions] = await Promise.all([listTicketsForInternal(), runTable("contact", "ADMIN", {})]);
     return <>
       <PageHeading eyebrow="Admin" title={heading.title} copy={heading.copy} />
-      <TicketsTable tickets={tickets} />
-      <ContactSubmissionsTable submissions={submissions} />
+      <StaffTicketConsole tickets={tickets} />
+      <ContactTable initial={submissions} searchHint={tableSearchHint("contact")} />
     </>;
   }
 
