@@ -49,6 +49,8 @@ export function LeadFeed() {
   const [intent, setIntent] = useState<LeadIntent | "semua">("semua");
   const [sort, setSort] = useState("relevansi");
   const [minEngagement, setMinEngagement] = useState(0);
+  // Menyaring feed ke satu kata kunci. `null` berarti semua kata kunci.
+  const [keywordFilter, setKeywordFilter] = useState<string | null>(null);
   const [items, setItems] = useState<Lead[]>([]);
   const [keywords, setKeywords] = useState<KeywordSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,7 +110,15 @@ export function LeadFeed() {
     const response = await fetch("/api/leads/dibaca", { method: "POST" });
     if (!response.ok) setError("Penandaan baca belum tersimpan. Muat ulang halaman untuk melihat status terbaru.");
   }
+  /** Jumlah lead per kata kunci, supaya chip dapat menyebut hasilnya sendiri. */
+  const countByKeyword = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const lead of items) counts.set(lead.keyword, (counts.get(lead.keyword) ?? 0) + 1);
+    return counts;
+  }, [items]);
+
   const filtered = useMemo(() => items
+    .filter(lead => keywordFilter === null || lead.keyword === keywordFilter)
     .filter(lead => status === "Semua" || lead.status === status)
     .filter(lead => intent === "semua" || lead.intent === intent)
     // Lead tanpa metrik tidak dapat dibandingkan, jadi hanya disaring saat
@@ -116,7 +126,7 @@ export function LeadFeed() {
     .filter(lead => minEngagement === 0 || (lead.likes ?? 0) + (lead.replies ?? 0) >= minEngagement)
     .sort((a, b) => sort === "relevansi"
       ? b.score - a.score
-      : new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()), [items, status, intent, sort, minEngagement]);
+      : new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()), [items, keywordFilter, status, intent, sort, minEngagement]);
 
   return <>
     <section className="panel lead-search">
@@ -136,8 +146,28 @@ export function LeadFeed() {
       <div className="lead-search__keywords">
         <span className="lead-search__label"><Tags size={14} /> Kata kunci yang dijalankan</span>
         {active.length > 0
-          ? <ul>{active.map(keyword => <li key={keyword.phrase}><strong>{keyword.phrase}</strong><small>{suggestionMeta(keyword)}</small></li>)}</ul>
+          ? <ul>{active.map(keyword => {
+            const count = countByKeyword.get(keyword.phrase) ?? 0;
+            const selected = keywordFilter === keyword.phrase;
+            return <li key={keyword.phrase}>
+              {/* Mengklik lagi melepas saringannya: chip ini satu-satunya cara
+                  memasangnya, jadi harus pula menjadi cara melepasnya. */}
+              <button
+                type="button"
+                className={selected ? "lead-keyword lead-keyword--on" : "lead-keyword"}
+                aria-pressed={selected}
+                onClick={() => setKeywordFilter(selected ? null : keyword.phrase)}
+              >
+                <strong>{keyword.phrase}</strong>
+                <small>{suggestionMeta(keyword)} · {count} lead</small>
+              </button>
+            </li>;
+          })}</ul>
           : <p className="lead-search__empty">Belum ada kata kunci aktif.</p>}
+        {keywordFilter !== null && <p className="lead-search__filtered" role="status">
+          Menampilkan lead untuk “{keywordFilter}”.{" "}
+          <button type="button" onClick={() => setKeywordFilter(null)}>Tampilkan semua kata kunci</button>
+        </p>}
         <Link className="text-link" href="/dashboard/kata-kunci">Kelola kata kunci</Link>
       </div>
 
@@ -147,14 +177,17 @@ export function LeadFeed() {
         {(lastRun.excludedCount ?? 0) > 0 ? ` · ${lastRun.excludedCount} disaring kata eksklusi` : ""}
       </p>}
       {lastRun?.stopped && <p className="form-feedback form-feedback--error" role="alert">{lastRun.stopped}</p>}
+
+      {/* Saringan tinggal di kartu yang sama dengan kata kuncinya: keduanya
+          mempersempit feed yang sama, dan memisahkannya menjadi kartu kedua
+          yang menempel hanya menambah garis tanpa menambah arti. */}
+      <div className="lead-search__filters">
+        <div className="filter-tabs" aria-label="Filter niat postingan">{intentFilters.map(item => <button type="button" className={intent === item.value ? "active" : ""} key={item.value} onClick={() => setIntent(item.value)}>{item.label}</button>)}</div>
+        <div className="filter-tabs" aria-label="Filter status">{["Semua", "Baru", "Tersimpan", "Dibalas"].map(item => <button type="button" className={status === item ? "active" : ""} key={item} onClick={() => setStatus(item)}>{item}</button>)}</div>
+      </div>
     </section>
 
     {error && <div className="inline-error" role="alert"><strong>Pencarian belum dapat dijalankan.</strong><span>{error}</span></div>}
-
-    <div className="filter-bar lead-filters">
-      <div className="filter-tabs" aria-label="Filter niat postingan">{intentFilters.map(item => <button type="button" className={intent === item.value ? "active" : ""} key={item.value} onClick={() => setIntent(item.value)}>{item.label}</button>)}</div>
-      <div className="filter-tabs" aria-label="Filter status">{["Semua", "Baru", "Tersimpan", "Dibalas"].map(item => <button type="button" className={status === item ? "active" : ""} key={item} onClick={() => setStatus(item)}>{item}</button>)}</div>
-    </div>
 
     <div className="result-summary">
       <span><strong>{filtered.length}</strong> lead ditemukan{unread > 0 ? ` · ${unread} belum dibaca` : ""}</span>

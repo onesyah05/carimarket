@@ -1779,9 +1779,18 @@ html[data-theme="dark"] .intent-chip--menawarkan { color: #ffd79a; background: #
 .lead-search__keywords { padding-top: 14px; border-top: 1px solid var(--c-hairline); display: grid; gap: 10px; }
 .lead-search__label { display: inline-flex; align-items: center; gap: 6px; color: var(--c-ink-muted); font-size: .7rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
 .lead-search__keywords ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
-.lead-search__keywords li { padding: 9px 13px; border: 1px solid var(--c-hairline); border-radius: var(--c-radius-sm); display: grid; gap: 3px; background: var(--c-sunken); }
-.lead-search__keywords li strong { color: var(--c-ink); font-size: .78rem; line-height: 1.35; }
-.lead-search__keywords li small { color: var(--c-ink-muted); font-size: .68rem; line-height: 1.35; }
+.lead-search__keywords li { display: grid; }
+.lead-keyword { width: 100%; padding: 9px 13px; border: 1px solid var(--c-hairline); border-radius: var(--c-radius-sm); display: grid; gap: 3px; justify-items: start; text-align: left; background: var(--c-sunken); cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+.lead-keyword:hover { border-color: var(--c-brand-ink); background: var(--c-wash); }
+.lead-keyword--on { border-color: var(--c-brand-ink); background: var(--c-wash-deep); }
+.lead-keyword--on strong { color: var(--c-brand-ink); }
+.lead-search__filtered { margin: 0; color: var(--c-ink-soft); font-size: .78rem; }
+.lead-search__filtered button { padding: 0; border: 0; background: none; color: var(--c-brand-ink); font-size: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+/* Satu kartu, dua bagian: saringan dipisahkan oleh garis rambut, bukan oleh
+   kartu kedua yang menempel ke kartu pertama. */
+.lead-search__filters { margin-top: 2px; padding-top: 16px; border-top: 1px solid var(--c-hairline); display: flex; flex-wrap: wrap; gap: 10px; }
+.lead-keyword strong { color: var(--c-ink); font-size: .78rem; line-height: 1.35; }
+.lead-keyword small { color: var(--c-ink-muted); font-size: .68rem; line-height: 1.35; }
 .lead-search__empty { margin: 0; color: var(--c-ink-soft); font-size: .78rem; }
 .lead-search__summary { margin: 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: .76rem; }
 
