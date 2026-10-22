@@ -186,7 +186,6 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .cta-band { margin: 0 auto 90px; padding: 54px; border-radius: 26px; display: flex; align-items: center; justify-content: space-between; gap: 34px; color: white; background: var(--brand-strong); overflow: hidden; }
 .cta-band h2 { max-width: 650px; margin: 0; font-size: clamp(2rem, 4vw, 3.1rem); line-height: 1.08; letter-spacing: -.045em; }
 .cta-band p { margin: 14px 0 0; color: rgba(255,255,255,.78); }
-.public-footer { padding: 58px 0 22px; color: white; background: var(--ink); }
 .public-footer .brand-logo__tile { background: transparent; padding: 0; }
 .public-footer__grid { display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 42px; }
 .footer-brand p { max-width: 300px; color: #acb6cc; font-size: .85rem; line-height: 1.65; }
@@ -633,7 +632,6 @@ body { min-width: 320px; background: var(--surface); }
 .hero__note { margin-top: 22px !important; display: flex; align-items: center; gap: 8px; font-size: .9rem !important; }
 .hero__visual::before { inset: 8% -5% -7% 8%; border-radius: 20px; transform: rotate(2deg); }
 .lead-preview { border-radius: 18px; box-shadow: 0 22px 50px rgba(11, 23, 57, .14); }
-.preview-card--focus { border-left: 4px solid var(--brand-strong); }
 .preview-card p, .lead-card > p, .thread-post > p, .composer textarea { color: var(--ink); }
 .preview-draft { margin-top: 12px; padding: 14px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 10px; color: var(--brand-strong); }
 .preview-draft div { display: grid; gap: 2px; }
@@ -672,7 +670,7 @@ body { min-width: 320px; background: var(--surface); }
 .usecase-rows h3 { margin: 0 0 6px; font-size: 1rem; }
 .usecase-rows p { margin: 0; color: var(--muted); font-size: .88rem; line-height: 1.6; }
 .beta-access { padding-block: 72px; }
-.beta-access__inner { padding: 44px; border: 1px solid var(--line); border-left: 6px solid var(--brand-strong); display: grid; grid-template-columns: 1fr auto; gap: 42px; align-items: center; background: var(--surface-raised); }
+.beta-access__inner { padding: 44px; border: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 42px; align-items: center; background: var(--surface-raised); }
 .beta-access__inner p:last-child { max-width: 680px; color: var(--muted); line-height: 1.7; }
 .beta-access__inner > div:last-child { display: grid; gap: 8px; }
 .faq-layout .faq-list { margin: 0; }
@@ -885,7 +883,6 @@ body { background: var(--surface); }
 .cta-band { position: relative; border-radius: 30px; background: linear-gradient(135deg, #2d63cf, #6599ff); box-shadow: 0 26px 60px rgba(45, 99, 207, .24); }
 .cta-band::after { content: ""; position: absolute; width: 130px; height: 130px; right: 5%; top: -65px; border: 30px solid rgba(244, 242, 11, .9); border-radius: 50%; }
 .cta-band > * { position: relative; z-index: 1; }
-.public-footer { border-top: 8px solid var(--accent); background: #08132f; }
 /* Ruang kerja pengguna, diselaraskan dengan permukaan publik.
    Sebelumnya sidebar adalah slab gradien gelap dengan butir nav aktif dan
    avatar berwarna kuning murni. Itu sisa sistem "radar command center" yang
@@ -1731,7 +1728,12 @@ html[data-theme="dark"] .app-shell--internal .internal-count { color: #bbd0ff; b
 .intent-chip--tidak-jelas { color: var(--muted); background: var(--canvas); }
 html[data-theme="dark"] .intent-chip--mencari { color: #92e5b8; background: #10301f; }
 html[data-theme="dark"] .intent-chip--menawarkan { color: #ffd79a; background: #3a2a0d; }
-.lead-card--unread { border-left: 3px solid var(--brand-strong); }
+/* Batang 3px di satu sisi tidak mengikuti lengkung sudut kartu, jadi ia
+   terbaca sebagai serpihan yang tidak menempel, dan ia menambah lebar garis
+   kiri saja sehingga isi kartu bergeser 3px dibanding kartu yang sudah
+   dibaca. Penandanya kini garis penuh yang mengikuti bentuk kartu — lencana
+   "Belum dibaca" di kepalanya tetap menjadi keterangan yang eksplisit. */
+.lead-card--unread { border-color: var(--c-brand-ink); }
 .lead-unread { margin-left: auto; padding: 3px 9px; border-radius: 99px; color: var(--brand-deep); background: var(--brand-soft); font-size: .64rem; font-weight: 800; white-space: nowrap; }
 .lead-card__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .lead-filters { display: grid; gap: 10px; justify-items: start; }
