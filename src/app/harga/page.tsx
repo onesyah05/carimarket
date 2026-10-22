@@ -5,6 +5,10 @@ import { PublicHeader } from "@/components/public-header";
 import { PublicFooter } from "@/components/public-footer";
 import { formatRupiah } from "@/lib/format";
 import { listPublicPlans, type PublicPlan } from "@/server/plans/queries";
+import { JsonLd } from "@/components/json-ld";
+import { faqPageSchema, pricingSchema } from "@/lib/seo";
+import { listPublicFaqs } from "@/server/cms/faq";
+import { readStaticPage } from "@/server/cms/static-pages";
 import { PLAN_CATALOG } from "../../../prisma/plan-catalog";
 
 /**
@@ -23,30 +27,35 @@ export const metadata: Metadata = {
   description: `Paket Cari Market: gratis untuk mencoba, lalu ${paidPlans} per bulan. Kuota pencarian dan balasan jelas sejak awal.`,
 };
 
-const FAQ = [
+/**
+ * Cadangan bila CMS belum terisi. Pertanyaan khas halaman harga disimpan di
+ * sini, bukan di modul FAQ beranda, karena jawabannya memuat angka paket yang
+ * memang berubah bersama katalog.
+ */
+const FALLBACK_FAQ = [
   {
-    q: "Bagaimana cara membayar?",
-    a: "Tagihan dibuat dari dashboard dan memuat nominal dengan kode unik tiga digit, mis. Rp 98.417. Transfer tepat sampai tiga angka terakhir agar pembayaran Anda dikenali pada mutasi, lalu tekan tombol konfirmasi. Tagihan yang belum dibayar dalam 24 jam otomatis kedaluwarsa dan dapat dibuat ulang.",
+    question: "Bagaimana cara membayar?",
+    answer: "Tagihan dibuat dari dashboard dan memuat nominal dengan kode unik tiga digit, mis. Rp 98.417. Transfer tepat sampai tiga angka terakhir agar pembayaran Anda dikenali pada mutasi, lalu tekan tombol konfirmasi. Tagihan yang belum dibayar dalam 24 jam otomatis kedaluwarsa dan dapat dibuat ulang.",
   },
   {
-    q: "Bagaimana kuota dihitung?",
-    a: "Satu pencarian dihitung setiap kali sebuah kata kunci dijalankan, baik manual maupun terjadwal. Satu balasan dihitung saat balasan benar-benar terkirim ke Threads. Kuota berjalan per bulan kalender dan direset setiap awal bulan.",
+    question: "Bagaimana kuota dihitung?",
+    answer: "Satu pencarian dihitung setiap kali sebuah kata kunci dijalankan, baik manual maupun terjadwal. Satu balasan dihitung saat balasan benar-benar terkirim ke Threads; balasan yang gagal terkirim tidak memakan kuota. Kuota berjalan per bulan kalender dan direset setiap awal bulan.",
   },
   {
-    q: "Seberapa sering kata kunci dicari ulang?",
-    a: "Jaraknya ditentukan paket: Starter sekali sehari, Bisnis tiap 6 jam, dan Pro tiap 3 jam. Jadwal ini dipilih agar kuota bulanan benar-benar cukup untuk seluruh kata kunci pada paket tersebut. Pencarian manual dari halaman Lead tetap dapat dijalankan kapan saja dan ikut memakai kuota.",
+    question: "Seberapa sering kata kunci dicari ulang?",
+    answer: "Jaraknya ditentukan paket: Starter sekali sehari, Bisnis tiap 6 jam, dan Pro tiap 3 jam. Jadwal ini dipilih agar kuota bulanan benar-benar cukup untuk seluruh kata kunci pada paket tersebut. Pencarian manual dari halaman Lead tetap dapat dijalankan kapan saja dan ikut memakai kuota.",
   },
   {
-    q: "Apa yang terjadi jika kuota habis?",
-    a: "Pencarian dan pengiriman balasan baru ditolak sampai periode berikutnya, sedangkan data lead dan draft yang sudah ada tetap dapat dibuka. Peringatan muncul saat pemakaian mencapai 80 persen.",
+    question: "Apa yang terjadi jika kuota habis?",
+    answer: "Pencarian dan pengiriman balasan baru ditolak sampai periode berikutnya, sedangkan data lead dan draft yang sudah ada tetap dapat dibuka. Peringatan muncul saat pemakaian mencapai 80 persen.",
   },
   {
-    q: "Apakah batas ini terkait batas Meta?",
-    a: "Ya. Meta membatasi 2.200 permintaan pencarian kata kunci per 24 jam dan sekitar 1.000 balasan per 24 jam untuk setiap akun Threads yang terhubung. Kuota paket dipilih agar tetap berada di bawah batas tersebut.",
+    question: "Apakah batas ini terkait batas Meta?",
+    answer: "Ya. Meta membatasi 2.200 permintaan pencarian kata kunci per 24 jam dan sekitar 1.000 balasan per 24 jam untuk setiap akun Threads yang terhubung. Kuota paket dipilih agar tetap di bawah batas tersebut, dan platform juga punya batas harian sendiri di bawah batas Meta. Bila batas platform tercapai, permintaan ditolak tanpa mengurangi kuota paket Anda.",
   },
   {
-    q: "Bisakah berpindah paket?",
-    a: "Bisa, langsung dari menu Langganan di dashboard. Pilih paket dan durasi, lalu bayar ke metode yang tersedia. Pembayaran untuk paket yang sama menambah masa aktif sehingga sisa periode tidak hangus, sedangkan pindah paket membuat kuota paket baru berlaku sejak pembayaran disetujui.",
+    question: "Bisakah berpindah paket?",
+    answer: "Bisa, langsung dari menu Langganan di dashboard. Pilih paket dan durasi, lalu bayar ke metode yang tersedia. Pembayaran untuk paket yang sama menambah masa aktif sehingga sisa periode tidak hangus, sedangkan pindah paket membuat kuota paket baru berlaku sejak pembayaran disetujui.",
   },
 ];
 
@@ -70,9 +79,20 @@ function PlanCard({ plan }: { plan: PublicPlan }) {
 
 export default async function PricingPage() {
   // Halaman publik tidak boleh gagal hanya karena database belum siap.
-  const plans = await listPublicPlans().catch(() => [] as PublicPlan[]);
+  const [plans, cmsFaqs, note] = await Promise.all([
+    listPublicPlans().catch(() => [] as PublicPlan[]),
+    listPublicFaqs().catch(() => []),
+    readStaticPage("harga-catatan").catch(() => null),
+  ]);
 
-  return <>
+  // FAQ khusus harga diambil dari CMS bila ada entri berkategori HARGA;
+  // kalau belum, daftar bawaan di berkas ini yang tampil.
+  const pricingFaqs = cmsFaqs.filter(faq => faq.category === "HARGA");
+  const faqs = pricingFaqs.length > 0
+    ? pricingFaqs.map(faq => ({ question: faq.question, answer: faq.answer }))
+    : FALLBACK_FAQ;
+
+  return <div className="site">
     <PublicHeader />
     <main>
       <section className="page-hero">
@@ -89,17 +109,21 @@ export default async function PricingPage() {
             ? <p className="section-copy">Daftar paket belum dapat dimuat. Silakan muat ulang halaman atau <Link className="text-link" href="/kontak">hubungi tim</Link>.</p>
             : <div className="pricing-grid">{plans.map(plan => <PlanCard key={plan.code} plan={plan} />)}</div>}
 
-          <div className="pricing-note">
+          {note && <div className="pricing-note">
             <ShieldCheck size={18} />
-            <p><strong>Pembayaran diverifikasi manual.</strong> Upgrade dibuat sendiri dari dashboard: pilih paket dan durasi, bayar lewat transfer bank, e-wallet, atau QRIS sesuai nominal berkode unik, lalu tandai sudah membayar. Tim memverifikasi mutasi, biasanya dalam 1x24 jam kerja, dan kuota baru berlaku begitu pembayaran disetujui. Mode tinjau dulu tetap menjadi bawaan di semua paket.</p>
-          </div>
+            <p><strong>{note.title}.</strong> {note.body}</p>
+          </div>}
 
           <div className="faq-list">
-            {FAQ.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
+            {faqs.map(item => <details key={item.question}><summary>{item.question}</summary><p>{item.answer}</p></details>)}
           </div>
         </div>
       </section>
     </main>
     <PublicFooter />
-  </>;
+
+    {/* Paket dibaca mesin pencari sebagai satu produk dengan beberapa Offer. */}
+    {plans.length > 0 && <JsonLd data={pricingSchema(plans)} />}
+    <JsonLd data={faqPageSchema(faqs)} />
+  </div>;
 }

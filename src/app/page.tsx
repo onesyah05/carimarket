@@ -1,92 +1,149 @@
 import Link from "next/link";
-import { Bot, Check, Gauge, MapPin, MessageSquareText, Search, ShieldCheck, UserCheck } from "lucide-react";
+import { ArrowRight, CalendarClock, CreditCard, Eye, ShieldCheck } from "lucide-react";
 import { PublicHeader } from "@/components/public-header";
 import { PublicFooter } from "@/components/public-footer";
+import { JsonLd } from "@/components/json-ld";
+import { ScrollReveal } from "@/components/scroll-reveal";
+import { HeroPreview } from "@/features/landing/hero-preview";
+import { HowItWorks } from "@/features/landing/how-it-works";
+import { FeatureGrid } from "@/features/landing/feature-grid";
+import { ModeCards } from "@/features/landing/mode-cards";
+import { PlanPreview } from "@/features/landing/plan-preview";
+import { InteractiveFaq } from "@/features/landing/interactive-faq";
+import { listPublicFaqs } from "@/server/cms/faq";
+import { listPublicPlans, type PublicPlan } from "@/server/plans/queries";
+import { faqPageSchema } from "@/lib/seo";
 
-const workflow = [
-  ["01", "Jelaskan bisnis Anda", "Isi layanan, area, dan gaya komunikasi agar hasil punya konteks."],
-  ["02", "Atur kata kunci", "Gabungkan istilah kebutuhan, lokasi, dan kata yang ingin dikecualikan."],
-  ["03", "Tinjau percakapan", "Baca sumber asli dan nilai apakah orang tersebut benar-benar membutuhkan bantuan."],
-  ["04", "Pilih cara membalas", "Tinjau setiap draft atau siapkan pengiriman otomatis dengan batas dan aturan yang Anda tentukan."],
-];
+/**
+ * Beranda.
+ *
+ * Arah visualnya tenang: kertas lapang, tipografi besar tanpa gradien neon,
+ * dan gerak yang nyaris tidak ada. Seksi yang bersifat jualan — tabel "kami
+ * vs mereka" dan kalkulator potensi pendapatan — sengaja dihapus; keduanya
+ * menuntut kepercayaan sebelum memberi alasan, dan itulah yang membuat halaman
+ * terasa bising.
+ *
+ * Isi paket dan FAQ dibaca dari database, jadi beranda tidak pernah
+ * menampilkan harga atau jawaban yang sudah usang. Cache lima menit mengikuti
+ * halaman publik lainnya.
+ */
+export const revalidate = 300;
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [faqs, plans] = await Promise.all([
+    listPublicFaqs().catch(() => []),
+    listPublicPlans().catch(() => [] as PublicPlan[]),
+  ]);
+
   return (
-    <>
+    <div className="site">
+      {/* Satu pengamat untuk seluruh elemen ber-data-reveal di halaman ini. */}
+      <ScrollReveal />
       <PublicHeader />
+
       <main>
-        <section className="hero hero--refined">
-          <div className="container hero__grid">
+        <section className="hero">
+          <div className="container hero__inner">
             <div className="hero__copy">
-              <p className="eyebrow">Pencarian lead dari percakapan Threads</p>
-              <h1>Temukan orang yang sedang mencari <span>layanan Anda.</span></h1>
-              <p>Cari Market menemukan postingan yang cocok, menyiapkan draft, lalu memprosesnya sesuai pilihan Anda: tinjau terlebih dahulu atau balas otomatis dengan aturan yang terkontrol. Pengiriman otomatis baru berjalan setelah integrasi resmi Meta tersedia; selama itu, draft siap dikirim manual.</p>
-              <div className="hero__actions"><Link className="button button--primary" href="/daftar">Mulai sekarang</Link><Link className="text-link" href="/#cara-kerja">Pelajari alurnya</Link></div>
-              <p className="hero__note"><ShieldCheck size={17} /> Anda menentukan kapan balasan perlu ditinjau dan kapan boleh berjalan otomatis.</p>
+              <p className="site-eyebrow">Radar percakapan Threads</p>
+
+              <h1 className="site-display">
+                Temukan pelanggan saat mereka sedang bertanya.
+              </h1>
+
+              <p className="site-lead">
+                Cari Market memantau percakapan publik di Threads yang cocok dengan kata kunci bisnis Anda, memberinya
+                skor relevansi, lalu menyiapkan draft balasan. Tidak ada yang terkirim sebelum Anda menyetujuinya.
+              </p>
+
+              <div className="hero__actions">
+                <Link className="btn btn--primary btn--lg" href="/daftar">
+                  Coba gratis <ArrowRight size={17} aria-hidden="true" />
+                </Link>
+                <Link className="btn btn--secondary btn--lg" href="/#cara-kerja">
+                  Lihat cara kerjanya
+                </Link>
+              </div>
+
+              <ul className="hero__assurances">
+                <li><Eye size={15} aria-hidden="true" /> Mode tinjau dulu sejak awal</li>
+                <li><CreditCard size={15} aria-hidden="true" /> Tanpa kartu kredit</li>
+                <li><CalendarClock size={15} aria-hidden="true" /> Paket Starter gratis tanpa batas waktu</li>
+              </ul>
             </div>
-            <div className="hero__visual" aria-label="Pratinjau tampilan lead Cari Market">
-              <div className="lead-preview">
-                <div className="preview-top"><strong>Alur balasan</strong></div>
-                <div className="preview-search"><Search size={14} /> jasa drone + BSD</div>
-                <div className="preview-card preview-card--focus">
-                  <div className="preview-person"><span className="preview-avatar">LV</span><div><strong>Langit Visual</strong><span>@langitvisual · 12 menit</span></div></div>
-                  <p>Ada rekomendasi jasa drone untuk dokumentasi progres proyek di daerah BSD? Butuh minggu ini.</p>
-                  <div className="preview-meta"><span className="match-chip">96% relevan</span><span className="status-chip">Otomatis dalam 15 menit</span></div>
+
+            <div className="hero__visual">
+              <HeroPreview />
+            </div>
+          </div>
+        </section>
+
+        {/* Keterangan yang dapat diperiksa, bukan angka pengguna yang dikarang. */}
+        <section className="site-section site-section--tight site-section--attached" aria-label="Ringkasan cara kerja">
+          <div className="container">
+            <dl className="facts">
+              <div className="facts__item" data-reveal>
+                <dt>Jadwal pencarian</dt>
+                <dd>Tiap 3 jam</dd>
+                <p>Interval tercepat pada paket Pro. Pencarian manual kapan saja.</p>
+              </div>
+              <div className="facts__item" data-reveal>
+                <dt>Skor relevansi</dt>
+                <dd>0–100</dd>
+                <p>Dihitung dari kecocokan kata kunci dan konteks postingan.</p>
+              </div>
+              <div className="facts__item" data-reveal>
+                <dt>Pengaman bawaan</dt>
+                <dd>5 lapis</dd>
+                <p>Ambang skor, jeda kirim, batas harian, jam tenang, kata terlarang.</p>
+              </div>
+              <div className="facts__item" data-reveal>
+                <dt>Kategori bisnis</dt>
+                <dd>10 bidang</dd>
+                <p>Dari jasa kreatif dan drone sampai properti, kuliner, dan teknologi.</p>
+              </div>
+            </dl>
+          </div>
+        </section>
+
+        <HowItWorks />
+        <FeatureGrid />
+        <ModeCards />
+
+        <PlanPreview plans={plans} />
+
+        {faqs.length > 0 && <>
+          <InteractiveFaq items={faqs} />
+          {/* Pertanyaan yang sama dibaca mesin pencari sebagai FAQPage. */}
+          <JsonLd data={faqPageSchema(faqs.map(faq => ({ question: faq.question, answer: faq.answer })))} />
+        </>}
+
+        <section className="site-section site-section--tight">
+          <div className="container">
+            <div className="closing" data-reveal>
+              <div className="closing__body">
+                <h2>Percakapannya sudah berlangsung. Tinggal ikut menjawab.</h2>
+                <p>
+                  Susun kata kunci pertama Anda dalam beberapa menit, lalu lihat percakapan apa yang sebenarnya cocok
+                  dengan layanan Anda sebelum memutuskan apa pun.
+                </p>
+                <div className="closing__actions">
+                  <Link className="btn btn--light btn--lg" href="/daftar">
+                    Buat akun gratis <ArrowRight size={17} aria-hidden="true" />
+                  </Link>
+                  <Link className="btn btn--on-deep btn--lg" href="/harga">Lihat paket</Link>
                 </div>
-                <div className="preview-draft"><Bot size={17} /><div><strong>Mode otomatis terkontrol</strong><span>Aktif setelah integrasi resmi; untuk sementara draft dikirim manual.</span></div></div>
+                <ul className="closing__fineprint">
+                  <li><ShieldCheck size={14} aria-hidden="true" /> Mode tinjau dulu aktif sejak awal</li>
+                  <li>Data Anda dapat diunduh dan akun dapat ditutup kapan saja</li>
+                </ul>
               </div>
             </div>
           </div>
         </section>
-
-        <section className="section product-status">
-          <div className="container product-status__grid">
-            <div><p className="eyebrow">Kondisi produk saat ini</p><h2 className="section-title">Jelas mana yang bisa dipakai sekarang.</h2></div>
-            <div className="status-list">
-              <div><Check size={18} /><p><strong>Siap dikonfigurasi</strong><span>Profil bisnis, kata kunci, feed lead, serta pilihan tinjau dulu atau balas otomatis.</span></p></div>
-              <div><Search size={18} /><p><strong>Pencarian aktif</strong><span>Pencarian postingan publik di Threads sudah berjalan untuk kata kunci yang Anda atur.</span></p></div>            </div>
-          </div>
-        </section>
-
-        <section className="section section--soft" id="cara-kerja">
-          <div className="container workflow-layout">
-            <div className="section-heading section-heading--stacked"><p className="eyebrow">Alur kerja</p><h2 className="section-title">Dari pencarian hingga balasan, sesuai cara kerja Anda.</h2><p className="section-copy">Gunakan pemeriksaan manual saat ingin mengontrol setiap kata, lalu beralih ke otomatisasi ketika aturan dan batasnya sudah siap.</p></div>
-            <ol className="workflow-list">{workflow.map(([number, title, copy]) => <li key={number}><span>{number}</span><div><h3>{title}</h3><p>{copy}</p></div></li>)}</ol>
-          </div>
-        </section>
-
-        <section className="section" id="fitur">
-          <div className="container feature-story">
-            <div className="feature-story__copy">
-              <p className="eyebrow">Mode yang dapat diatur</p><h2 className="section-title">Tetap pegang kendali, tanpa harus selalu hadir.</h2><p>Pilih mode yang sesuai dengan kematangan alur bisnis. Pengaturan dapat diubah kapan saja tanpa mengubah kata kunci atau profil Anda.</p>
-              <ul className="plain-checks"><li><UserCheck size={17} /> Tinjau dulu untuk memeriksa setiap draft</li><li><Bot size={17} /> Balas otomatis untuk lead yang lolos aturan</li><li><ShieldCheck size={17} /> Draft berisiko selalu dapat dialihkan ke review</li></ul>
-              <p className="section-copy">Saat ini pencarian sudah aktif, sedangkan pengiriman balasan otomatis baru berjalan setelah integrasi resmi Meta tersedia. Selama itu, draft tetap dibuat dan siap Anda kirim secara manual.</p>
-            </div>
-            <div className="approval-preview automation-preview">
-              <div className="approval-preview__header"><span>Mode balasan workspace</span><span className="context-label">Dapat diubah</span></div>
-              <div className="landing-mode-option"><UserCheck /><div><strong>Tinjau dulu</strong><span>Setiap draft menunggu persetujuan Anda.</span></div></div>
-              <div className="landing-mode-option active"><Bot /><div><strong>Balas otomatis</strong><span>Untuk lead yang memenuhi seluruh aturan; aktif setelah integrasi resmi.</span></div><Check size={17} /></div>
-              <div className="landing-safety-list"><span><Gauge size={15} /> Maksimal 10 balasan per hari</span><span><ShieldCheck size={15} /> Relevansi minimal 90%</span><span><MessageSquareText size={15} /> Jeda pengiriman 15 menit</span></div>
-              <Link className="button button--primary" href="/daftar">Atur mode balasan</Link>
-            </div>
-          </div>
-        </section>
-
-        <section className="section section--soft">
-          <div className="container usecase-layout">
-            <div><p className="eyebrow">Kapan produk ini berguna</p><h2 className="section-title">Saat calon pelanggan sudah menjelaskan kebutuhannya.</h2></div>
-            <div className="usecase-rows"><article><MapPin /><div><h3>Layanan berbasis lokasi</h3><p>Menemukan permintaan yang menyebut kota, area, atau venue tertentu.</p></div></article><article><Search /><div><h3>Layanan yang jarang dicari lewat iklan</h3><p>Memantau bahasa sehari-hari yang tidak selalu cocok dengan kata kunci iklan.</p></div></article><article><MessageSquareText /><div><h3>Penjualan yang butuh konteks</h3><p>Membaca percakapan lebih dulu sebelum menawarkan bantuan yang relevan.</p></div></article></div>
-          </div>
-        </section>
-
-
-        <section className="section"><div className="container faq-layout"><div><p className="eyebrow">Pertanyaan sebelum mencoba</p><h2 className="section-title">Batas produknya kami jelaskan sejak awal.</h2></div><div className="faq-list"><Faq q="Apakah balasan harus diperiksa satu per satu?" a="Mode Tinjau dulu memeriksa setiap draft satu per satu. Mode Balas otomatis memproses draft yang lolos ambang relevansi dan aturan keamanan workspace, dan baru berjalan setelah integrasi resmi Meta tersedia. Selama itu, seluruh draft siap Anda kirim manual." /><Faq q="Apa yang terjadi jika draft otomatis berisiko?" a="Draft dapat ditahan dan dialihkan ke antrian tinjauan. Anda juga dapat mengatur batas harian serta jeda sebelum pengiriman." /><Faq q="Apakah pencarian postingan publik sudah aktif?" a="Ya. Pencarian berjalan di seluruh Threads untuk kata kunci yang Anda atur, dan hasilnya masuk ke feed lead untuk ditinjau atau dibalas." /></div></div></section>
-
-        <section className="container cta-band"><div><h2>Mulai manual, otomatis saat Anda siap.</h2><p>Buat akun untuk atur kata kunci, lalu pilih cara balasan diproses.</p></div><Link className="button button--accent" href="/daftar">Buat akun</Link></section>
       </main>
+
       <PublicFooter />
-    </>
+    </div>
   );
 }
-
-function Faq({ q, a }: { q: string; a: string }) { return <details><summary>{q}</summary><p>{a}</p></details>; }

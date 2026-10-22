@@ -1,0 +1,205 @@
+/**
+ * Panel dashboard yang ditambahkan setelah redesign publik.
+ *
+ * Pusat bantuan, konsol tiket staf, dan panel pemakaian platform.
+ * Dipisah agar tambahan dashboard tidak lagi menumpuk di berkas yang
+ * sama dengan gaya halaman publik.
+ */
+/* ── Pusat bantuan (tiket dukungan) ───────────────────────────────────────── */
+
+.support-center { display: grid; gap: 18px; }
+.support-notice,
+.support-empty,
+.support-hint {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-muted);
+}
+.support-notice {
+  padding: 12px 14px; border: 1px solid var(--border);
+  border-radius: 12px; background: var(--surface-muted);
+}
+.support-ticket-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.support-ticket-row {
+  width: 100%; display: grid; gap: 4px 12px; align-items: center;
+  grid-template-columns: 1fr auto; text-align: left; cursor: pointer;
+  padding: 12px 14px; border: 1px solid var(--border);
+  border-radius: 12px; background: transparent; color: inherit;
+  font: inherit; transition: border-color .15s ease, background .15s ease;
+}
+.support-ticket-row:hover:not(:disabled) { border-color: var(--accent); }
+.support-ticket-row.is-active { border-color: var(--accent); background: var(--surface-muted); }
+.support-ticket-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.support-ticket-subject { font-weight: 600; }
+.support-ticket-meta { grid-column: 1 / -1; font-size: 12px; color: var(--text-muted); }
+.support-badge {
+  padding: 2px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; letter-spacing: .02em; white-space: nowrap;
+}
+.support-badge--open { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.support-badge--done { background: var(--surface-muted); color: var(--text-muted); }
+.support-messages { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 14px; }
+.support-messages > li { padding: 12px 14px; border-radius: 12px; background: var(--surface-muted); }
+.support-messages > li.is-staff { border-left: 3px solid var(--accent); }
+.support-message-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 0 0 6px; font-size: 12px; color: var(--text-muted);
+}
+.support-message-body { margin: 0; font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
+.support-reply { margin-top: 4px; }
+
+@media (max-width: 640px) {
+  .support-ticket-row { grid-template-columns: 1fr; }
+  .support-badge { justify-self: start; }
+}
+
+/* Konsol tiket staf: menandai antrean dan membedakan catatan internal. */
+.support-ticket-row.is-waiting { border-left: 3px solid var(--accent); }
+.support-messages > li.is-internal {
+  background: color-mix(in srgb, var(--warning, #b45309) 10%, var(--surface-muted));
+  border-left: 3px dashed color-mix(in srgb, var(--warning, #b45309) 60%, transparent);
+}
+.support-badge--internal {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: color-mix(in srgb, var(--warning, #b45309) 18%, transparent);
+  color: color-mix(in srgb, var(--warning, #b45309) 85%, var(--text));
+}
+.support-reply-mode { display: flex; flex-wrap: wrap; gap: 8px; }
+.support-reply-controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+.support-reply-controls .field { margin: 0; min-width: 180px; }
+
+/* Panel pemakaian platform (Superadmin → Kuota API). */
+.platform-usage-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.platform-usage-card { padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-muted); }
+.platform-usage-label { margin: 0 0 6px; font-size: 13px; color: var(--text-muted); }
+.platform-usage-value { margin: 0 0 10px; font-size: 15px; }
+.platform-usage-value strong { font-size: 26px; letter-spacing: -.01em; }
+.platform-usage-value span { color: var(--text-muted); }
+.platform-usage-bar { height: 8px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.platform-usage-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+.platform-usage-bar > span.is-near { background: var(--warning, #b45309); }
+.platform-usage-note { margin: 10px 0 0; font-size: 12px; line-height: 1.6; color: var(--text-muted); }
+.platform-usage-warning {
+  display: flex; align-items: flex-start; gap: 6px; margin: 10px 0 0;
+  font-size: 12px; line-height: 1.6; color: color-mix(in srgb, var(--warning, #b45309) 85%, var(--text));
+}
+
+/* Label contoh pada demo hero: harus terbaca, bukan hanya untuk pembaca layar. */
+.hero-demo-label {
+  margin: 0 0 10px; padding: 5px 10px;
+  display: inline-block; border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, currentColor 35%, transparent);
+  font-size: 11px; letter-spacing: .02em; opacity: .75;
+}
+.proof-icon-box {
+  display: grid; place-items: center;
+  width: 42px; height: 42px; flex: 0 0 auto;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+/* CMS teks halaman publik: FAQ dan halaman statis. */
+.cms-content-manager { display: grid; gap: 18px; }
+.cms-head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.cms-faq-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.cms-faq-list > li {
+  display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between;
+  padding: 14px; border: 1px solid var(--line); border-radius: 12px;
+}
+.cms-faq-list > li.is-hidden { opacity: .6; border-style: dashed; }
+.cms-faq-main { flex: 1 1 320px; min-width: 0; }
+.cms-faq-main strong { display: block; margin-bottom: 4px; }
+.cms-faq-main p { margin: 0 0 6px; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.cms-faq-meta { font-size: 12px; color: var(--muted); }
+.cms-faq-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.cms-faq-form { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+/* ── Grafik pertumbuhan (Superadmin) ──────────────────────────────────────────
+   Warna seri hasil validasi terhadap permukaan tiap mode: light #ffffff dengan
+   #245bc7/#b45309, dark #101d38 dengan #5b8ded/#c8822f. Mode gelap memakai
+   langkah warnanya sendiri, bukan pembalikan otomatis dari mode terang. */
+
+.chart-panel { display: grid; gap: 22px; }
+.chart-figure { margin: 0; display: grid; gap: 10px; }
+.chart-figure figcaption { font-size: 14px; font-weight: 600; color: var(--ink); }
+.chart-plot { position: relative; }
+.chart-svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+/* Grid dan sumbu harus mundur di belakang data, bukan bersaing dengannya. */
+.chart-grid line { stroke: var(--line); stroke-width: 1; }
+.chart-grid text,
+.chart-xaxis text { fill: var(--muted); font-size: 11px; }
+
+.chart-bar { fill: #245bc7; transition: opacity .12s ease; }
+.chart-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chart-line.is-searches { stroke: #245bc7; }
+.chart-line.is-replies { stroke: #b45309; }
+/* Cincin sewarna permukaan memisahkan penanda yang bertumpuk. */
+.chart-marker { stroke: var(--surface); stroke-width: 2; }
+.chart-marker.is-searches { fill: #245bc7; }
+.chart-marker.is-replies { fill: #b45309; }
+.chart-crosshair { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 3; }
+
+.chart-legend {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 14px;
+  font-size: 12px; color: var(--muted);
+}
+.chart-legend li { display: flex; align-items: center; gap: 6px; }
+.chart-swatch {
+  display: inline-block; width: 10px; height: 10px;
+  border-radius: 3px; flex: 0 0 auto;
+}
+.chart-swatch.is-searches { background: #245bc7; }
+.chart-swatch.is-replies { background: #b45309; }
+
+.chart-tooltip {
+  position: absolute; transform: translate(-50%, calc(-100% - 10px));
+  display: grid; gap: 2px; min-width: 132px;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface); color: var(--ink);
+  font-size: 12px; line-height: 1.5; pointer-events: none;
+  box-shadow: 0 8px 24px rgb(11 23 57 / 12%);
+}
+.chart-tooltip span { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+
+.chart-table-wrap { overflow-x: auto; }
+.chart-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.chart-table caption { margin-bottom: 8px; font-size: 12px; color: var(--muted); text-align: left; }
+.chart-table th, .chart-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; }
+.chart-table thead th, .chart-table tbody th { text-align: left; color: var(--muted); font-weight: 600; }
+
+html[data-theme="dark"] .chart-bar { fill: #5b8ded; }
+html[data-theme="dark"] .chart-line.is-searches,
+html[data-theme="dark"] .chart-marker.is-searches { stroke: #5b8ded; }
+html[data-theme="dark"] .chart-marker.is-searches { fill: #5b8ded; }
+html[data-theme="dark"] .chart-line.is-replies,
+html[data-theme="dark"] .chart-marker.is-replies { stroke: #c8822f; }
+html[data-theme="dark"] .chart-marker.is-replies { fill: #c8822f; }
+html[data-theme="dark"] .chart-marker { stroke: #101d38; }
+html[data-theme="dark"] .chart-swatch.is-searches { background: #5b8ded; }
+html[data-theme="dark"] .chart-swatch.is-replies { background: #c8822f; }
+html[data-theme="dark"] .chart-tooltip { background: #101d38; }
+
+/* Buta warna berat, cetak, dan forced-colors: bentuk garis ikut membedakan. */
+@media (prefers-contrast: more), (forced-colors: active) {
+  .chart-line.is-replies { stroke-dasharray: 7 4; }
+}
+
+/* Penutupan akun: zona merah, dipisah jelas dari unduh data di atasnya. */
+.security-settings__danger {
+  margin-top: 18px; padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.close-account h3 { margin: 0 0 6px; color: var(--danger); }
+.close-account p { margin: 0 0 10px; font-size: 13px; line-height: 1.65; color: var(--muted); }
+.close-account__warning {
+  display: flex; align-items: flex-start; gap: 8px; margin: 0;
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--danger-soft); color: var(--danger);
+  font-size: 13px; line-height: 1.6;
+}
+.close-account code {
+  padding: 1px 6px; border-radius: 5px;
+  background: var(--brand-soft); font-size: 12px; letter-spacing: .02em;
+}

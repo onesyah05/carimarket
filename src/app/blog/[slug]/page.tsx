@@ -42,7 +42,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     author: { "@type": "Organization", name: "Cari Market" },
   };
   return (
-    <>
+    <div className="site">
       <PublicHeader />
       <main>
         <article>
@@ -63,6 +63,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       </main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <PublicFooter />
-    </>
+    </div>
   );
 }

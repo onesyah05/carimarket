@@ -1,0 +1,650 @@
+/**
+ * Konsol internal (Admin & Superadmin) — arah "tenang".
+ *
+ * Memakai token `--c-*` yang sama dengan permukaan publik, jadi dua bagian
+ * produk ini tidak lagi terasa seperti dua aplikasi berbeda. Yang berbeda
+ * hanya kepadatannya: konsol internal adalah tempat kerja, jadi jaraknya lebih
+ * rapat dan tabelnya mendapat ruang terbesar.
+ *
+ * Dilingkup ke `.app-shell--internal` supaya dashboard pelanggan tetap memakai
+ * sistem lama sampai gilirannya dikerjakan — satu berkas yang mengubah
+ * keduanya sekaligus akan menyentuh jauh lebih banyak halaman daripada yang
+ * diminta.
+ */
+
+.app-shell--internal {
+  background: var(--c-paper);
+  color: var(--c-ink-soft);
+}
+
+/* ── Sidebar ──────────────────────────────────────────────────────────────── */
+
+.app-shell--internal .app-sidebar {
+  border-right: 1px solid var(--c-hairline);
+  background: var(--c-surface);
+}
+
+.app-shell--internal .sidebar-brand { border-bottom: 1px solid var(--c-hairline); }
+
+.app-shell--internal .app-nav a {
+  border-radius: var(--c-radius-sm);
+  color: var(--c-ink-soft);
+  font-weight: 500;
+  transition: background-color .18s var(--c-ease), color .18s var(--c-ease);
+}
+
+.app-shell--internal .app-nav a:hover { background: var(--c-wash); color: var(--c-ink); }
+
+.app-shell--internal .app-nav a.active {
+  background: var(--c-wash);
+  color: var(--c-brand-ink);
+  box-shadow: inset 2px 0 0 var(--c-brand-ink);
+  font-weight: 600;
+}
+
+.app-shell--internal .app-nav a em {
+  background: var(--c-brand-ink);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.app-shell--internal .nav-caption {
+  color: var(--c-ink-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+/* ── Bar atas dan kepala halaman ──────────────────────────────────────────── */
+
+.app-shell--internal .app-topbar {
+  border-bottom: 1px solid var(--c-hairline);
+  background: color-mix(in srgb, var(--c-paper) 88%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.app-shell--internal .page-heading { margin-bottom: 22px; }
+
+.app-shell--internal .page-heading .eyebrow {
+  color: var(--c-ink-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.app-shell--internal .page-heading h1 {
+  margin: 6px 0 8px;
+  color: var(--c-ink);
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -0.021em;
+}
+
+.app-shell--internal .page-heading p {
+  margin: 0;
+  max-width: 76ch;
+  color: var(--c-ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.72;
+}
+
+/* ── Panel ────────────────────────────────────────────────────────────────── */
+
+.app-shell--internal .panel {
+  margin-bottom: 18px;
+  padding: 22px;
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--c-radius);
+  background: var(--c-surface);
+  box-shadow: none;
+}
+
+.app-shell--internal .panel-heading,
+.app-shell--internal .panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 0;
+  border: 0;
+}
+
+.app-shell--internal .panel h2,
+.app-shell--internal .panel-heading h2 {
+  margin: 0 0 4px;
+  color: var(--c-ink);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+
+.app-shell--internal .panel-heading p,
+.app-shell--internal .panel-head p {
+  margin: 0;
+  max-width: 72ch;
+  color: var(--c-ink-muted);
+  font-size: 0.875rem;
+  line-height: 1.68;
+}
+
+/* ── Kartu metrik ─────────────────────────────────────────────────────────── */
+
+.app-shell--internal .metric-grid { gap: 14px; margin-bottom: 18px; }
+
+.app-shell--internal .metric-card {
+  padding: 20px;
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--c-radius);
+  background: var(--c-surface);
+  box-shadow: none;
+}
+
+.app-shell--internal .metric-card span { color: var(--c-ink-muted); font-size: 0.8rem; font-weight: 500; }
+.app-shell--internal .metric-card strong {
+  color: var(--c-ink);
+  font-size: 1.7rem;
+  font-weight: 500;
+  letter-spacing: -0.024em;
+}
+.app-shell--internal .metric-card small { color: var(--c-ink-muted); font-size: 0.8rem; }
+
+.app-shell--internal .metric-card__icon,
+.app-shell--internal .metric-icon {
+  border-radius: 11px;
+  background: var(--c-wash);
+  color: var(--c-brand-ink);
+}
+
+/* ── Tombol dan kolom isian ───────────────────────────────────────────────── */
+
+.app-shell--internal .button {
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.app-shell--internal .button--primary { background: var(--c-brand-ink); color: #ffffff; }
+.app-shell--internal .button--primary:hover { background: color-mix(in srgb, var(--c-brand-ink) 86%, #000); }
+
+.app-shell--internal .button--ghost {
+  background: var(--c-surface);
+  border-color: var(--c-hairline-strong);
+  color: var(--c-ink);
+}
+
+.app-shell--internal .button--ghost:hover { border-color: var(--c-brand); color: var(--c-brand-ink); }
+.app-shell--internal .button--small { min-height: 34px; padding: 0 13px; font-size: 0.82rem; }
+
+.app-shell--internal .input,
+.app-shell--internal textarea,
+.app-shell--internal select {
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: var(--c-radius-sm);
+  background: var(--c-surface);
+  color: var(--c-ink);
+}
+
+.app-shell--internal .input:focus-visible,
+.app-shell--internal textarea:focus-visible,
+.app-shell--internal select:focus-visible {
+  outline: 2px solid var(--c-brand-ink);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.app-shell--internal label,
+.app-shell--internal .field > label { color: var(--c-ink); font-size: 0.85rem; font-weight: 600; }
+
+/* ── DataTable ────────────────────────────────────────────────────────────── */
+
+.dt { display: grid; gap: 14px; }
+
+.dt__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.dt__title h2 { margin: 0 0 4px; color: var(--c-ink); font-size: 1.05rem; font-weight: 600; }
+.dt__title p { margin: 0; max-width: 70ch; color: var(--c-ink-muted); font-size: 0.875rem; line-height: 1.68; }
+.dt__action { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.dt__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.dt__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1 1 280px;
+  min-width: 0;
+  padding: 0 12px;
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: 999px;
+  background: var(--c-surface);
+}
+
+.dt__search:focus-within { border-color: var(--c-brand); box-shadow: 0 0 0 3px var(--c-wash); }
+.dt__search > svg:first-child { flex: 0 0 auto; color: var(--c-ink-muted); }
+
+.dt__search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--c-ink);
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+.dt__search input:focus { outline: none; }
+.dt__search input::-webkit-search-cancel-button { display: none; }
+
+.dt__search button {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 50%;
+  background: var(--c-sunken);
+  color: var(--c-ink-muted);
+  cursor: pointer;
+}
+
+.dt__search button:hover { color: var(--c-ink); }
+
+.dt__spinner { flex: 0 0 auto; color: var(--c-brand-ink); animation: dt-spin 1s linear infinite; }
+
+@keyframes dt-spin { to { rotate: 360deg; } }
+
+.dt__pagesize { display: inline-flex; align-items: center; gap: 8px; }
+.dt__pagesize span { color: var(--c-ink-muted); font-size: 0.82rem; font-weight: 500; }
+
+.dt__pagesize select {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: var(--c-radius-sm);
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.dt__status { margin: 0; color: var(--c-ink-muted); font-size: 0.84rem; line-height: 1.6; }
+.dt__status strong { color: var(--c-ink); font-weight: 600; }
+
+.dt__table {
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--c-radius);
+  overflow: hidden;
+  transition: opacity .2s var(--c-ease);
+}
+
+/* Saat memuat, tabel diredupkan alih-alih dikosongkan: isi lama tetap terbaca
+   sehingga halaman tidak melompat-lompat. */
+.dt__table.is-pending { opacity: .55; }
+
+.dt__row {
+  display: grid;
+  grid-template-columns: var(--dt-cols, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 13px 16px;
+  border-top: 1px solid var(--c-hairline);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.dt__row:first-child { border-top: 0; }
+.dt__row:not(.dt__row--head):hover { background: var(--c-sunken); }
+
+.dt__row--head {
+  background: var(--c-sunken);
+  color: var(--c-ink-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.dt__row > span { min-width: 0; overflow-wrap: anywhere; }
+.dt__row > span.is-numeric { text-align: right; font-variant-numeric: tabular-nums; }
+
+.dt__empty {
+  margin: 0;
+  padding: 34px 16px;
+  border-top: 1px solid var(--c-hairline);
+  color: var(--c-ink-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.dt__muted { color: var(--c-ink-muted); }
+
+.dt__pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dt__pagebtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: 999px;
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.dt__pagebtn:hover:not(:disabled) { border-color: var(--c-brand); color: var(--c-brand-ink); }
+.dt__pagebtn:disabled { opacity: .45; cursor: not-allowed; }
+.dt__pageinfo { color: var(--c-ink-muted); font-size: 0.85rem; }
+.dt__pageinfo strong { color: var(--c-ink); }
+
+/* Sel bertingkat: baris utama tebal, keterangan di bawahnya redup. */
+.dt-primary { display: grid; gap: 2px; }
+.dt-primary > strong { color: var(--c-ink); font-weight: 600; }
+.dt-primary > span { color: var(--c-ink-muted); font-size: 0.8rem; }
+
+.dt-link { color: var(--c-brand-ink); font-weight: 600; text-decoration: none; }
+.dt-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Lencana status. Warnanya tidak pernah satu-satunya penanda — tulisannya
+   menyebut keadaannya. */
+.dt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--c-sunken);
+  color: var(--c-ink-soft);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dt-badge--ok { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
+.dt-badge--warn { background: color-mix(in srgb, var(--warning) 16%, transparent); color: var(--warning); }
+.dt-badge--risk { background: color-mix(in srgb, var(--danger) 13%, transparent); color: var(--danger); }
+.dt-badge--brand { background: var(--c-wash); color: var(--c-brand-ink); }
+
+.dt-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+
+/* ── Detail pengguna ──────────────────────────────────────────────────────── */
+
+.detail-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  margin-bottom: 18px;
+}
+
+.detail-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 20px;
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--c-radius);
+  background: var(--c-surface);
+}
+
+.detail-card h3 {
+  margin: 0;
+  color: var(--c-ink-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.detail-list { display: grid; gap: 9px; margin: 0; }
+.detail-list > div { display: grid; grid-template-columns: minmax(0, 11ch) 1fr; gap: 12px; font-size: 0.89rem; }
+.detail-list dt { color: var(--c-ink-muted); }
+.detail-list dd { margin: 0; color: var(--c-ink); overflow-wrap: anywhere; }
+
+.detail-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.detail-avatar {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--c-wash-deep);
+  color: var(--c-brand-ink);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.detail-identity { display: grid; gap: 3px; min-width: 0; }
+.detail-identity strong { color: var(--c-ink); font-size: 1.2rem; font-weight: 600; letter-spacing: -0.014em; }
+.detail-identity span { color: var(--c-ink-muted); font-size: 0.88rem; }
+.detail-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+
+.detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  color: var(--c-ink-muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.detail-back:hover { color: var(--c-brand-ink); }
+
+.detail-timeline { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+
+.detail-timeline > li {
+  display: grid;
+  gap: 3px;
+  padding-left: 16px;
+  border-left: 2px solid var(--c-hairline);
+  font-size: 0.88rem;
+}
+
+.detail-timeline strong { color: var(--c-ink); font-weight: 600; }
+.detail-timeline span { color: var(--c-ink-muted); font-size: 0.8rem; }
+
+/* ── Layar sempit: tabel berubah menjadi kartu ────────────────────────────── */
+
+@media (max-width: 920px) {
+  .dt__row--head { display: none; }
+
+  .dt__row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 16px;
+  }
+
+  /* Label kolom ikut setiap sel supaya baris tetap terbaca tanpa kepala tabel. */
+  .dt__row > span::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    color: var(--c-ink-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  .dt__row > span.is-numeric { text-align: left; }
+  .dt-actions { justify-content: flex-start; }
+  .detail-badges { margin-left: 0; }
+}
+
+/* ── Memperbaiki sisa sistem gelap di kerangka internal ───────────────────────
+   Sidebar dulu berlatar navy, jadi base.css membuat petak logo transparan agar
+   wordmark putihnya menyatu. Sidebar sekarang putih, sehingga aturan itu
+   membuat logonya hilang sama sekali — yang tersisa hanya titik kuningnya. */
+
+.app-shell--internal .sidebar-brand .brand-logo__tile {
+  width: 138px;
+  height: 38px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: var(--c-brand);
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .app-shell--internal .sidebar-brand .brand-logo__tile { background: var(--c-brand-ink); }
+
+/* Inisial akun tidak perlu kuning penuh: itu warna tanda, bukan warna bidang. */
+.app-shell--internal .workspace-chip > span,
+.app-shell--internal .sidebar-profile > span {
+  border-radius: 10px;
+  background: var(--c-wash-deep);
+  color: var(--c-brand-ink);
+  font-weight: 600;
+}
+
+.app-shell--internal .workspace-chip,
+.app-shell--internal .sidebar-profile {
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--c-radius-sm);
+  background: var(--c-sunken);
+}
+
+.app-shell--internal .workspace-chip strong,
+.app-shell--internal .sidebar-profile strong { color: var(--c-ink); }
+.app-shell--internal .workspace-chip small,
+.app-shell--internal .sidebar-profile small { color: var(--c-ink-muted); }
+
+/* Tombol keluar dan pintasan bar atas mengikuti bentuk tombol yang sama. */
+.app-shell--internal .logout-button {
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: 999px;
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font-weight: 500;
+}
+
+.app-shell--internal .logout-button:hover { border-color: var(--danger); color: var(--danger); }
+
+.app-shell--internal .top-search,
+.app-shell--internal .quick-link {
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: 999px;
+  background: var(--c-surface);
+  color: var(--c-ink-soft);
+}
+
+.app-shell--internal .top-search kbd {
+  border-radius: 6px;
+  background: var(--c-sunken);
+  color: var(--c-ink-muted);
+}
+
+/* Kartu statistik kepatuhan dan panel peringatan. */
+.app-shell--internal .stat-card,
+.app-shell--internal .quota-panel,
+.app-shell--internal .activity-panel {
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--c-radius);
+  background: var(--c-surface);
+  box-shadow: none;
+}
+
+.app-shell--internal .stat-card strong {
+  color: var(--c-ink);
+  font-weight: 500;
+  letter-spacing: -0.024em;
+}
+
+.app-shell--internal .internal-warning {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--warning) 32%, transparent);
+  border-radius: var(--c-radius);
+  background: color-mix(in srgb, var(--warning) 9%, var(--c-surface));
+  color: var(--c-ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.68;
+}
+
+.app-shell--internal .internal-warning svg { color: var(--warning); }
+
+.app-shell--internal .section-subtitle {
+  margin: 26px 0 12px;
+  color: var(--c-ink);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Tindakan baris di dalam DataTable: tombol kecil yang membungkus rapi, bukan
+   menumpuk keluar dari kolomnya. */
+.dt .row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.dt .row-actions .button {
+  min-height: 30px;
+  padding: 0 11px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dt .row-error {
+  flex-basis: 100%;
+  color: var(--danger);
+  font-size: 0.76rem;
+  text-align: right;
+}
+
+@media (max-width: 920px) {
+  .dt .row-actions,
+  .dt .row-error { justify-content: flex-start; text-align: left; }
+}
+
+/* Ikon pada judul kartu detail harus sebaris dengan labelnya, bukan menumpuk
+   di atasnya seperti blok tersendiri. */
+.detail-card h3 { display: flex; align-items: center; gap: 7px; }
+.detail-card h3 svg { flex: 0 0 auto; color: var(--c-brand-ink); }
+.detail-list dt { display: flex; align-items: center; gap: 6px; }
+.detail-list dt svg { flex: 0 0 auto; }

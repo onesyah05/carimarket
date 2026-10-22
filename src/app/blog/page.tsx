@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Blog", description: "Panduan social 
 
 export default async function BlogPage() {
   const articles = await listPublicArticles();
-  return <><PublicHeader /><main><section className="page-hero"><div className="container"><p className="eyebrow">Wawasan & panduan</p><h1>Panduan untuk membaca sinyal permintaan.</h1><p>Pelajari cara menemukan lead yang relevan dan membangun percakapan yang tetap manusiawi.</p></div></section><section className="content-page"><div className="container article-grid">{articles.map(article => (
+  return <div className="site"><PublicHeader /><main><section className="page-hero"><div className="container"><p className="eyebrow">Wawasan & panduan</p><h1>Panduan untuk membaca sinyal permintaan.</h1><p>Pelajari cara menemukan lead yang relevan dan membangun percakapan yang tetap manusiawi.</p></div></section><section className="content-page"><div className="container article-grid">{articles.map(article => (
     <article className="article-card" key={article.slug}>
       <div className="article-card__visual"><span>{article.category?.name ?? "Artikel"}</span></div>
       <div className="article-card__body">
@@ -20,5 +20,5 @@ export default async function BlogPage() {
         <div className="article-meta"><span>{formatDate(article.publishedAt)} · {estimateReadMinutes(article.content)} menit baca</span><Link className="text-link" href={`/blog/${article.slug}`}>Baca artikel</Link></div>
       </div>
     </article>
-  ))}{articles.length === 0 && <div className="blog-empty"><h2>Artikel sedang disiapkan.</h2><p>Tim kami sedang menulis panduan pertama. Kunjungi lagi sebentar lagi, atau mulai dari halaman <Link href="/harga">paket</Link>.</p></div>}</div></section></main><PublicFooter /></>;
+  ))}{articles.length === 0 && <div className="blog-empty"><h2>Artikel sedang disiapkan.</h2><p>Tim kami sedang menulis panduan pertama. Kunjungi lagi sebentar lagi, atau mulai dari halaman <Link href="/harga">paket</Link>.</p></div>}</div></section></main><PublicFooter /></div>;
 }
