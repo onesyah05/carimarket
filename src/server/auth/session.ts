@@ -44,6 +44,14 @@ export async function hasSessionCookie(): Promise<boolean> {
   return Boolean(jar.get(SESSION_COOKIE)?.value);
 }
 
+/**
+ * Akun pemilik sesi, atau null bila sesinya tidak lagi sah.
+ *
+ * Akun yang sudah ditutup (`deletedAt`) diperlakukan seperti sesi yang habis.
+ * Tanpa pemeriksaan ini, penutupan akun hanya menghilangkan baris dari daftar
+ * internal sementara cookie yang sudah ada tetap membuka dashboard sampai
+ * masa berlakunya lewat — dan jalur API mobile sudah lebih ketat dari itu.
+ */
 export async function getSessionUser(): Promise<User | null> {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
@@ -53,6 +61,12 @@ export async function getSessionUser(): Promise<User | null> {
     include: { user: true },
   });
   if (!session || session.expiresAt <= new Date()) return null;
+  if (session.user.deletedAt) {
+    // Baris sesinya ikut dibuang supaya cookie basi tidak terus memukul
+    // database pada setiap permintaan.
+    await prisma.session.deleteMany({ where: { id: session.id } }).catch(() => undefined);
+    return null;
+  }
   return session.user;
 }
 

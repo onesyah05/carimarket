@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/server/audit";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
+import { revokeDeviceTokens } from "@/server/auth/credential-revocation";
 import { createSession } from "@/server/auth/session";
 import { statusLabel } from "@/lib/format";
 import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
@@ -117,10 +118,14 @@ export async function updateAccountIdentity(user: User, input: IdentityInput) {
 }
 
 /**
- * Mengganti kata sandi dan mengeluarkan sesi lain.
+ * Mengganti kata sandi, mengeluarkan sesi lain, dan mencabut token perangkat.
  *
  * Pembaruan memakai syarat hash lama agar dua permintaan bersamaan tidak
  * saling menimpa, lalu sesi baru dibuat untuk perangkat yang sedang dipakai.
+ *
+ * Token aplikasi mobile ikut dicabut karena alasan orang mengganti kata sandi
+ * biasanya justru kehilangan perangkat: sesi web yang bersih tidak ada artinya
+ * bila token berumur 90 hari di ponsel yang hilang masih membuka API.
  */
 export async function changeAccountPassword(user: User, input: PasswordInput, userAgent?: string) {
   if (user.passwordHash) {
@@ -133,7 +138,7 @@ export async function changeAccountPassword(user: User, input: PasswordInput, us
   }
 
   const passwordHash = await hashPassword(input.newPassword);
-  await prisma.$transaction(async transaction => {
+  const revokedDevices = await prisma.$transaction(async transaction => {
     const updated = await transaction.user.updateMany({
       where: { id: user.id, passwordHash: user.passwordHash },
       data: { passwordHash },
@@ -142,9 +147,20 @@ export async function changeAccountPassword(user: User, input: PasswordInput, us
       throw new ThreadsIntegrationError("PASSWORD_CHANGED", "Kata sandi berubah. Muat ulang halaman lalu coba lagi.", 409);
     }
     await transaction.session.deleteMany({ where: { userId: user.id } });
+    await transaction.passwordResetToken.updateMany({
+      where: { userId: user.id, consumedAt: null },
+      data: { consumedAt: new Date() },
+    });
+    return revokeDeviceTokens(transaction, user.id);
   });
 
   await createSession(user.id, { userAgent });
-  await recordAudit({ actorId: user.id, action: "ACCOUNT_PASSWORD_CHANGED", entityType: "User", entityId: user.id });
-  return { hasPassword: true };
+  await recordAudit({
+    actorId: user.id,
+    action: "ACCOUNT_PASSWORD_CHANGED",
+    entityType: "User",
+    entityId: user.id,
+    metadata: { revokedDevices },
+  });
+  return { hasPassword: true, revokedDevices };
 }

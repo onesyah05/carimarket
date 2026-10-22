@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Download } from "lucide-react";
 import { AccountForms, type Account } from "@/features/account/components/account-forms";
 import { MobileDevices } from "@/features/settings/components/mobile-devices";
+import { CloseAccount } from "@/features/settings/components/close-account";
 
 /**
  * Keamanan dan data workspace pengguna.
@@ -24,6 +25,10 @@ export function SecuritySettings({ account }: { account?: Account }) {
         <p>Unduh profil bisnis, kata kunci, lead, dan riwayat draft Anda dalam format JSON. Token integrasi dan kata sandi tidak disertakan.</p>
         <a className="button button--ghost" href="/api/settings/data-export" download><Download size={17} /> Unduh data saya</a>
         <Link className="text-link" href="/penghapusan-data">Baca prosedur penghapusan data</Link>
+      </div>
+
+      <div className="security-settings__danger">
+        <CloseAccount hasPassword={account?.hasPassword ?? true} />
       </div>
     </div>
   </>;

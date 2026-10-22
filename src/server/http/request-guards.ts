@@ -17,22 +17,72 @@ const SWEEP_INTERVAL_MS = 60_000;
 const windows = new Map<string, Window>();
 let lastSweepAt = 0;
 
+/**
+ * Menolak permintaan yang datang dari halaman lain.
+ *
+ * Satu-satunya pertahanan lintas-situs untuk endpoint yang memakai cookie
+ * sesi, jadi di produksi pemeriksaannya tidak boleh bisa hilang tanpa suara.
+ * Dulu fungsi ini langsung lolos bila `Origin` kosong atau
+ * `NEXT_PUBLIC_APP_URL` belum diisi; satu salah konfigurasi karena itu cukup
+ * untuk mematikan proteksi seluruh aplikasi.
+ *
+ * Urutannya sekarang: `Origin` bila ada, lalu `Sec-Fetch-Site` sebagai
+ * cadangan untuk permintaan yang memang tidak mengirim origin (mis. submit
+ * form biasa di sebagian browser), dan gagal tertutup di produksi bila
+ * keduanya tidak memberi keterangan apa pun.
+ */
 export function enforceSameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!origin || !appUrl) return;
-  const submittedOrigin = new URL(origin).origin;
-  const configuredOrigin = new URL(appUrl).origin;
-  const developmentHost = process.env.NODE_ENV === "development" ? request.headers.get("host") : null;
-  if (submittedOrigin !== configuredOrigin && new URL(submittedOrigin).host !== developmentHost) {
-    // Pesannya menyebut penyebab yang paling sering: halaman dibuka lewat
-    // http atau alamat lain, sehingga origin-nya berbeda dari alamat resmi.
+  const isProduction = process.env.NODE_ENV === "production";
+
+  if (!appUrl) {
+    // Di pengembangan ini hanya berarti .env belum lengkap; di produksi ini
+    // berarti aplikasi berjalan tanpa pertahanan lintas-situs.
+    if (!isProduction) return;
     throw new ThreadsIntegrationError(
-      "ORIGIN_REJECTED",
-      `Permintaan ditolak karena dikirim dari alamat yang berbeda. Buka ${configuredOrigin} lalu coba lagi.`,
+      "ORIGIN_UNVERIFIABLE",
+      "Permintaan tidak dapat diverifikasi karena alamat aplikasi belum dikonfigurasi. Hubungi administrator.",
       403,
+      "NEXT_PUBLIC_APP_URL kosong di produksi",
     );
   }
+
+  const configuredOrigin = new URL(appUrl).origin;
+  const rejected = () => new ThreadsIntegrationError(
+    "ORIGIN_REJECTED",
+    // Pesannya menyebut penyebab yang paling sering: halaman dibuka lewat
+    // http atau alamat lain, sehingga origin-nya berbeda dari alamat resmi.
+    `Permintaan ditolak karena dikirim dari alamat yang berbeda. Buka ${configuredOrigin} lalu coba lagi.`,
+    403,
+  );
+
+  const origin = request.headers.get("origin");
+  if (origin && origin !== "null") {
+    const submittedOrigin = new URL(origin).origin;
+    if (submittedOrigin === configuredOrigin) return;
+    // Di pengembangan alamat yang dipakai browser sering berbeda dari yang
+    // tertulis di .env (localhost vs alamat LAN vs https lokal).
+    const developmentHost = isProduction ? null : request.headers.get("host");
+    if (developmentHost && new URL(submittedOrigin).host === developmentHost) return;
+    throw rejected();
+  }
+
+  // Tanpa Origin, browser modern masih menyebutkan asal permintaan di sini.
+  const fetchSite = request.headers.get("sec-fetch-site");
+  if (fetchSite === "same-origin" || fetchSite === "none") return;
+  if (fetchSite) throw rejected();
+
+  // Tidak ada keterangan sama sekali: klien non-browser (mis. curl, skrip
+  // pemantauan) atau browser lama. Jalur ini dibiarkan di pengembangan agar
+  // pengujian manual tetap praktis, tetapi ditutup di produksi karena endpoint
+  // yang memakai cookie sesi tidak punya pertahanan lain.
+  if (!isProduction) return;
+  throw new ThreadsIntegrationError(
+    "ORIGIN_UNVERIFIABLE",
+    "Permintaan ditolak karena asalnya tidak dapat diverifikasi. Kirim permintaan dari aplikasi Cari Market.",
+    403,
+    "header Origin dan Sec-Fetch-Site tidak ada",
+  );
 }
 
 export function enforceRateLimit(key: string, limit: number, windowMs: number) {
