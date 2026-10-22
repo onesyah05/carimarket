@@ -5,6 +5,7 @@ import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 import { DEFAULT_PLAN_INTERVAL_HOURS } from "@/server/leads/schedule";
 import { createNotificationOnce } from "@/server/notifications/service";
 import { currentPeriodStart, evaluateQuota, type PlanLimits, type QuotaCheck } from "./quota";
+import { platformUsageToday, releaseUsage, reserveUsage } from "./service";
 
 /**
  * Penegakan batas kuota paket.
@@ -87,20 +88,59 @@ async function warnWhenNearLimit(userId: string, check: QuotaCheck, label: strin
   }).catch(() => undefined);
 }
 
-export async function assertSearchQuota(userId: string) {
+/**
+ * Memesan satu pencarian atau menolaknya.
+ *
+ * Pemesanan menggantikan pola "periksa lalu catat": databaselah yang
+ * menaikkan penghitung di bawah syarat batas, jadi dua permintaan bersamaan
+ * tidak lagi sama-sama lolos. Pemanggil wajib memanggil `releaseSearchQuota`
+ * bila aksinya akhirnya gagal.
+ *
+ * Penolakan membedakan dua sebab, karena tindakan penggunanya berbeda: kuota
+ * paket habis berarti menaikkan paket atau menunggu bulan depan, sedangkan
+ * batas platform berarti menunggu beberapa jam tanpa ada yang perlu dibeli.
+ */
+export async function reserveSearchQuota(userId: string) {
   const snapshot = await getQuotaSnapshot(userId);
-  if (!snapshot.search.allowed) {
-    throw new ThreadsIntegrationError(
-      "SEARCH_QUOTA_EXCEEDED",
-      `Kuota pencarian paket ${snapshot.plan?.name ?? "Anda"} bulan ini sudah terpakai (${snapshot.search.used}/${snapshot.search.limit}). Tunggu periode berikutnya atau naikkan paket.`,
-      429,
-    );
+  const reservation = await reserveUsage(userId, "SEARCH", snapshot.search.limit);
+  if (!reservation.ok) {
+    throw reservation.scope === "platform"
+      ? platformLimitError("pencarian")
+      : new ThreadsIntegrationError(
+        "SEARCH_QUOTA_EXCEEDED",
+        `Kuota pencarian paket ${snapshot.plan?.name ?? "Anda"} bulan ini sudah terpakai (${snapshot.search.used}/${snapshot.search.limit}). Tunggu periode berikutnya atau naikkan paket.`,
+        429,
+      );
   }
   await warnWhenNearLimit(userId, snapshot.search, "pencarian", snapshot.periodStart);
   return snapshot;
 }
 
-export async function assertReplyQuota(userId: string) {
+export async function reserveReplyQuota(userId: string) {
+  const snapshot = await getQuotaSnapshot(userId);
+  const reservation = await reserveUsage(userId, "REPLY", snapshot.reply.limit);
+  if (!reservation.ok) {
+    throw reservation.scope === "platform"
+      ? platformLimitError("balasan")
+      : new ThreadsIntegrationError(
+        "REPLY_QUOTA_EXCEEDED",
+        `Kuota balasan paket ${snapshot.plan?.name ?? "Anda"} bulan ini sudah terpakai (${snapshot.reply.used}/${snapshot.reply.limit}). Tunggu periode berikutnya atau naikkan paket.`,
+        429,
+      );
+  }
+  await warnWhenNearLimit(userId, snapshot.reply, "balasan", snapshot.periodStart);
+  return snapshot;
+}
+
+/**
+ * Pemeriksaan baca-saja sebelum draft disetujui.
+ *
+ * Jatah sesungguhnya dipesan di titik pengiriman, karena di sanalah permintaan
+ * ke Threads benar-benar terjadi. Pemeriksaan ini hanya supaya pengguna
+ * mendapat pesan yang jelas sebelum drafnya ditandai disetujui, bukan setelah.
+ */
+export async function assertReplyAvailable(userId: string) {
+  if (!(await hasPlatformQuota("REPLY"))) throw platformLimitError("balasan");
   const snapshot = await getQuotaSnapshot(userId);
   if (!snapshot.reply.allowed) {
     throw new ThreadsIntegrationError(
@@ -109,8 +149,30 @@ export async function assertReplyQuota(userId: string) {
       429,
     );
   }
-  await warnWhenNearLimit(userId, snapshot.reply, "balasan", snapshot.periodStart);
   return snapshot;
+}
+
+export function releaseSearchQuota(userId: string) {
+  return releaseUsage(userId, "SEARCH");
+}
+
+export function releaseReplyQuota(userId: string) {
+  return releaseUsage(userId, "REPLY");
+}
+
+function platformLimitError(label: string) {
+  return new ThreadsIntegrationError(
+    "PLATFORM_DAILY_LIMIT_REACHED",
+    `Batas ${label} harian platform sudah tercapai. Ini batas dari Meta yang berlaku untuk akun Threads yang dipakai bersama, bukan kuota paket Anda. Coba lagi beberapa jam lagi — kuota paket Anda tidak terpakai.`,
+    429,
+  );
+}
+
+/** Sisa jatah platform hari ini, dipakai pekerja latar untuk berhenti lebih awal. */
+export async function hasPlatformQuota(type: "SEARCH" | "REPLY") {
+  const usage = await platformUsageToday();
+  const bucket = type === "SEARCH" ? usage.search : usage.reply;
+  return bucket.used < bucket.limit;
 }
 
 /**
@@ -148,9 +210,11 @@ export async function resolveSearchIntervalHours(userId: string): Promise<number
 
 /** Dipakai worker: melewati pengguna yang kuotanya sudah habis tanpa melempar error. */
 export async function hasSearchQuota(userId: string) {
+  if (!(await hasPlatformQuota("SEARCH"))) return false;
   return (await getQuotaSnapshot(userId)).search.allowed;
 }
 
 export async function hasReplyQuota(userId: string) {
+  if (!(await hasPlatformQuota("REPLY"))) return false;
   return (await getQuotaSnapshot(userId)).reply.allowed;
 }

@@ -2,7 +2,7 @@ import "server-only";
 import { ReplyMode, ReplyStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
-import { assertReplyQuota } from "@/server/usage/limits";
+import { assertReplyAvailable } from "@/server/usage/limits";
 import { deliverReplyForDraft } from "./delivery-service";
 
 /**
@@ -62,8 +62,9 @@ export type SentReply = { draftId: string; status: ReplyStatus; externalReplyId:
 /**
  * Menyetujui draft lalu mengirimnya ke Threads.
  *
- * Kuota paket diperiksa sebelum pengiriman. Bila `postId` disertakan, nilainya
- * harus cocok dengan postingan lead agar klien tidak membalas postingan lain.
+ * Kuota diperiksa sebelum draft disetujui agar pesannya jelas, lalu dipesan
+ * sungguh-sungguh di titik pengiriman. Bila `postId` disertakan, nilainya harus
+ * cocok dengan postingan lead agar klien tidak membalas postingan lain.
  */
 export async function sendReplyFromDraft(input: {
   userId: string;
@@ -78,7 +79,7 @@ export async function sendReplyFromDraft(input: {
     throw new ThreadsIntegrationError("LEAD_NOT_FOUND", "Lead Threads tidak ditemukan.", 404);
   }
 
-  await assertReplyQuota(input.userId);
+  await assertReplyAvailable(input.userId);
   const existing = await requireEditableDraft(input.userId, input.leadId, input.draftId);
 
   const draft = existing

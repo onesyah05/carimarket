@@ -2,11 +2,15 @@ import "server-only";
 import { runDueSearches } from "./search-job";
 import { processAutoReplies } from "./auto-reply-job";
 import { publishScheduledArticles } from "./article-job";
+import { pruneExpiredRecords } from "./retention-job";
+import { CYCLE_LOCK, withJobLock } from "./lock";
 import { expireDueTransactions } from "@/server/billing/transactions";
 
 export type WorkerStatus = {
   enabled: boolean;
   running: boolean;
+  /** Siklus yang dilewati karena instance lain sedang memegang kunci. */
+  skippedByLock: number;
   cycleCount: number;
   lastCycleAt: string | null;
   lastDurationMs: number | null;
@@ -18,6 +22,7 @@ type WorkerState = {
   enabled: boolean;
   timer: ReturnType<typeof setInterval> | null;
   running: boolean;
+  skippedByLock: number;
   cycleCount: number;
   lastCycleAt: Date | null;
   lastDurationMs: number | null;
@@ -33,6 +38,7 @@ function state(): WorkerState {
       enabled: false,
       timer: null,
       running: false,
+      skippedByLock: 0,
       cycleCount: 0,
       lastCycleAt: null,
       lastDurationMs: null,
@@ -43,22 +49,49 @@ function state(): WorkerState {
   return globalForWorker.carimarketWorker;
 }
 
+/**
+ * Masa berlaku kunci siklus.
+ *
+ * Harus lebih panjang dari siklus terlama yang masuk akal, tetapi tetap
+ * terbatas: proses yang mati di tengah siklus tidak sempat melepas kuncinya,
+ * dan kunci tanpa kedaluwarsa akan menghentikan pekerjaan latar selamanya.
+ */
+const CYCLE_LOCK_TTL_MS = 10 * 60_000;
+
+/**
+ * Satu siklus pekerjaan latar.
+ *
+ * Dijaga dua lapis. `worker.running` mencegah siklus menumpuk di dalam satu
+ * proses, sedangkan kunci database mencegah dua instance mengerjakan hal yang
+ * sama — tanpa itu, menjalankan lebih dari satu proses berarti setiap
+ * pencarian terjadwal dikerjakan dua kali dan kuota Meta terpakai dua kali.
+ */
 export async function runCycle() {
   const worker = state();
-  if (worker.running) return { skipped: true, summary: worker.lastSummary };
+  if (worker.running) return { skipped: true, reason: "running" as const, summary: worker.lastSummary };
   worker.running = true;
   const startedAt = Date.now();
   try {
-    const searchSummary = await runDueSearches();
-    const replySummary = await processAutoReplies();
-    const articleSummary = await publishScheduledArticles();
-    const billingSummary = await expireDueTransactions();
-    worker.lastSummary = { ...searchSummary, ...replySummary, ...articleSummary, ...billingSummary };
+    const locked = await withJobLock(CYCLE_LOCK, CYCLE_LOCK_TTL_MS, async () => {
+      const searchSummary = await runDueSearches();
+      const replySummary = await processAutoReplies();
+      const articleSummary = await publishScheduledArticles();
+      const billingSummary = await expireDueTransactions();
+      const retentionSummary = await pruneExpiredRecords();
+      return { ...searchSummary, ...replySummary, ...articleSummary, ...billingSummary, ...retentionSummary };
+    });
+
+    if (!locked.acquired) {
+      worker.skippedByLock += 1;
+      return { skipped: true, reason: "locked" as const, summary: worker.lastSummary };
+    }
+
+    worker.lastSummary = locked.value;
     worker.lastError = null;
-    return { skipped: false, summary: worker.lastSummary };
+    return { skipped: false, reason: null, summary: worker.lastSummary };
   } catch (error) {
     worker.lastError = error instanceof Error ? error.message.slice(0, 200) : "WORKER_CYCLE_FAILED";
-    return { skipped: false, summary: worker.lastSummary };
+    return { skipped: false, reason: null, summary: worker.lastSummary };
   } finally {
     worker.running = false;
     worker.cycleCount += 1;
@@ -86,6 +119,7 @@ export function getWorkerStatus(): WorkerStatus {
   return {
     enabled: worker.enabled,
     running: worker.running,
+    skippedByLock: worker.skippedByLock,
     cycleCount: worker.cycleCount,
     lastCycleAt: worker.lastCycleAt ? worker.lastCycleAt.toISOString() : null,
     lastDurationMs: worker.lastDurationMs,

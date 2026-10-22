@@ -5,8 +5,8 @@ import { getThreadsAdapter } from "@/server/integrations/threads";
 import { isThreadsAvailable } from "@/server/integrations/threads/config";
 import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 import { createNotification } from "@/server/notifications/service";
-import { assertSearchQuota, hasSearchQuota, resolveSearchIntervalHours } from "@/server/usage/limits";
-import { recordUsage } from "@/server/usage/service";
+import { hasSearchQuota, releaseSearchQuota, reserveSearchQuota, resolveSearchIntervalHours } from "@/server/usage/limits";
+import { logUsageEvent } from "@/server/usage/service";
 import { matchedExcludedTerm, relevanceScore } from "./matching";
 import { nextRunAt } from "./schedule";
 
@@ -45,9 +45,10 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
     );
   }
 
-  // Kuota diperiksa sebelum SearchRun dibuat agar pemakaian yang ditolak tidak
-  // tercatat sebagai percobaan pencarian.
-  await assertSearchQuota(keyword.userId);
+  // Jatah dipesan sebelum SearchRun dibuat agar pemakaian yang ditolak tidak
+  // tercatat sebagai percobaan pencarian, dan agar dua pencarian bersamaan
+  // tidak sama-sama lolos batas.
+  await reserveSearchQuota(keyword.userId);
   const [excludedTerms, planIntervalHours] = await Promise.all([
     loadExcludedTerms(profileId),
     resolveSearchIntervalHours(keyword.userId),
@@ -125,7 +126,7 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
       prisma.searchRun.update({ where: { id: run.id }, data: { status: SearchRunStatus.COMPLETED, resultCount: results.length, completedAt: new Date() } }),
       prisma.keyword.update({ where: { id: keyword.id }, data: { lastRunAt: new Date(), nextRunAt: nextRunAt(keyword.frequency, planIntervalHours) } }),
     ]);
-    await recordUsage(keyword.userId, "SEARCH", 1, run.id);
+    await logUsageEvent(keyword.userId, "SEARCH", 1, run.id);
 
     if (createdCount > 0) {
       await createNotification({
@@ -139,6 +140,9 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
 
     return { resultCount: results.length, excludedCount, createdCount };
   } catch (error) {
+    // Pencarian yang gagal tidak boleh memakan kuota: jatah yang sudah dipesan
+    // dikembalikan sebelum kegagalannya diteruskan.
+    await releaseSearchQuota(keyword.userId);
     const code = error instanceof Error && "code" in error ? String(error.code).slice(0, 100) : "SEARCH_FAILED";
     await prisma.$transaction([
       prisma.searchRun.update({ where: { id: run.id }, data: { status: SearchRunStatus.FAILED, errorCode: code, completedAt: new Date() } }),
@@ -186,7 +190,22 @@ export type BulkSearchResult = {
   createdCount: number;
   /** Terisi bila penelusuran berhenti sebelum semua kata kunci dijalankan. */
   stopped: string | null;
+  /** Kata kunci yang dialihkan ke pekerja latar karena permintaan sudah terlalu lama. */
+  deferred: number;
 };
+
+/**
+ * Anggaran satu permintaan.
+ *
+ * Setiap kata kunci berarti satu perjalanan ke Threads yang dapat memakan
+ * beberapa detik. Paket Pro mengizinkan 25 kata kunci, jadi menjalankan
+ * semuanya berurutan di dalam satu permintaan hampir pasti melampaui batas
+ * waktu reverse proxy — dan pengguna melihat kegagalan padahal pencariannya
+ * berjalan. Sisanya dialihkan ke pekerja latar dengan menjadikan jadwalnya
+ * jatuh tempo sekarang.
+ */
+const MAX_KEYWORDS_PER_REQUEST = 5;
+const REQUEST_TIME_BUDGET_MS = 25_000;
 
 /**
  * Menjalankan seluruh kata kunci pencarian yang aktif sekaligus.
@@ -217,8 +236,17 @@ export async function runAllActiveKeywords(profileId: string): Promise<BulkSearc
     );
   }
 
-  const totals: BulkSearchResult = { ran: 0, total: keywords.length, resultCount: 0, excludedCount: 0, createdCount: 0, stopped: null };
-  for (const keyword of keywords) {
+  const totals: BulkSearchResult = { ran: 0, total: keywords.length, resultCount: 0, excludedCount: 0, createdCount: 0, stopped: null, deferred: 0 };
+  const deadline = Date.now() + REQUEST_TIME_BUDGET_MS;
+  const pending: string[] = [];
+
+  for (const [index, keyword] of keywords.entries()) {
+    // Anggaran diperiksa sebelum perjalanan berikutnya dimulai, bukan sesudah:
+    // yang perlu dihindari adalah memulai pekerjaan yang pasti tidak selesai.
+    if (index >= MAX_KEYWORDS_PER_REQUEST || Date.now() >= deadline) {
+      pending.push(...keywords.slice(index).map(row => row.id));
+      break;
+    }
     try {
       const result = await runKeywordSearch(keyword.id);
       totals.ran += 1;
@@ -237,7 +265,17 @@ export async function runAllActiveKeywords(profileId: string): Promise<BulkSearc
       // mengulang kegagalan yang sama. Kegagalan lain bisa kebetulan mengenai
       // satu kata kunci saja, dan sisanya tetap layak dicoba.
       if (error instanceof ThreadsIntegrationError && error.code === "SEARCH_QUOTA_EXCEEDED") break;
+      if (error instanceof ThreadsIntegrationError && error.code === "PLATFORM_DAILY_LIMIT_REACHED") break;
     }
   }
+
+  if (pending.length > 0) {
+    // Jadwalnya dijatuhkan ke sekarang supaya siklus worker berikutnya
+    // mengambilnya; pengguna tidak perlu menekan tombolnya berulang kali.
+    await prisma.keyword.updateMany({ where: { id: { in: pending } }, data: { nextRunAt: new Date() } }).catch(() => undefined);
+    totals.deferred = pending.length;
+    totals.stopped ??= `${totals.ran} dari ${totals.total} kata kunci selesai dicari. ${pending.length} sisanya dijalankan otomatis oleh sistem dalam beberapa menit.`;
+  }
+
   return totals;
 }

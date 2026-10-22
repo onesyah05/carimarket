@@ -3,7 +3,8 @@ import { LeadStatus, ReplyStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getThreadsAdapter } from "@/server/integrations/threads";
 import { createNotification } from "@/server/notifications/service";
-import { recordUsage } from "@/server/usage/service";
+import { releaseReplyQuota, reserveReplyQuota } from "@/server/usage/limits";
+import { logUsageEvent } from "@/server/usage/service";
 
 export type DeliveryOutcome = {
   status: ReplyStatus;
@@ -31,6 +32,12 @@ export async function deliverReplyForDraft(draftId: string, idempotencyKey: stri
   });
   await prisma.replyDraft.update({ where: { id: draft.id }, data: { status: ReplyStatus.SENDING } });
 
+  // Jatah dipesan tepat sebelum permintaan keluar, karena di sinilah kuota
+  // Meta benar-benar terpakai. Pemanggil mana pun — dashboard, API mobile,
+  // maupun pekerja latar — melewati titik yang sama, jadi tidak ada jalur yang
+  // mengirim balasan tanpa terhitung.
+  await reserveReplyQuota(draft.userId);
+
   try {
     const adapter = await getThreadsAdapter(draft.userId);
     const result = await adapter.publishReply({
@@ -44,7 +51,7 @@ export async function deliverReplyForDraft(draftId: string, idempotencyKey: stri
       prisma.replyDraft.update({ where: { id: draft.id }, data: { status: finalStatus, sentAt: new Date() } }),
       prisma.lead.update({ where: { id: draft.leadId }, data: { status: LeadStatus.REPLIED } }),
     ]);
-    await recordUsage(draft.userId, "REPLY", 1, draft.id);
+    await logUsageEvent(draft.userId, "REPLY", 1, draft.id);
     await createNotification({
       userId: draft.userId,
       type: "REPLY_SENT",
@@ -54,6 +61,9 @@ export async function deliverReplyForDraft(draftId: string, idempotencyKey: stri
     });
     return { status: finalStatus, externalReplyId: result.externalReplyId };
   } catch (error) {
+    // Balasan yang tidak sampai tidak boleh memakan kuota pengguna maupun
+    // jatah harian platform.
+    await releaseReplyQuota(draft.userId);
     const code = error instanceof Error && "code" in error ? String(error.code).slice(0, 100) : "REPLY_FAILED";
     await prisma.$transaction([
       prisma.replyDeliveryAttempt.update({ where: { id: attempt.id }, data: { status: ReplyStatus.FAILED, errorCode: code } }),
