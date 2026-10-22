@@ -20,7 +20,20 @@ type ThreadsStatus = {
   } | null;
 };
 
-export function DashboardDataPanels() {
+/**
+ * Ringkasan ruang kerja.
+ *
+ * Halaman ini sebelumnya bernama "Ringkasan" tetapi tidak meringkas apa pun:
+ * isinya tiga lead teratas dan dua kartu status. Angka yang menentukan apakah
+ * hari ini perlu ditindaklanjuti — berapa lead masuk, berapa yang benar-benar
+ * cocok, berapa yang belum dibaca — hanya dapat diketahui dengan membuka
+ * halaman Lead dan menghitung sendiri.
+ *
+ * Panel sisi dikirim sebagai `children` supaya seluruh halaman cukup satu
+ * pengambilan data: memisahkan baris angka menjadi komponennya sendiri akan
+ * membuat endpoint yang sama diambil dua kali.
+ */
+export function DashboardOverview({ children }: { children: React.ReactNode }) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,11 +47,29 @@ export function DashboardDataPanels() {
   }, []);
 
   const pending = leads.filter(lead => lead.status === "Baru");
-  const preview = [...pending].sort((a, b) => b.score - a.score).slice(0, 3);
-  return <div className="panel panel--leads">
-      <div className="panel-heading"><div><h2>Lead prioritas</h2><p>{loading ? "Memuat lead..." : pending.length > 0 ? `${preview.length} dari ${pending.length} lead baru dengan skor tertinggi.` : "Belum ada lead baru."}</p></div><Link href="/dashboard/leads">Lihat semua lead</Link></div>
-      <div className="compact-leads">{preview.map(lead => <LeadCard key={lead.id} lead={lead} compact />)}{!loading && pending.length === 0 && <div className="empty-state empty-state--compact"><h2>Belum ada lead tersimpan</h2><p>Cari percakapan publik dari halaman Lead.</p></div>}</div>
-    </div>;
+  const matched = leads.filter(lead => lead.matched !== false);
+  const unread = leads.filter(lead => lead.viewedAt === null);
+  // Yang cocok didahulukan: lead berskor tinggi yang dinilai tidak cocok tidak
+  // pantas menempati tiga baris teratas halaman ini.
+  const preview = [...pending]
+    .sort((a, b) => Number(b.matched !== false) - Number(a.matched !== false) || b.score - a.score)
+    .slice(0, 3);
+
+  return <>
+    <section className="stat-grid" aria-label="Ringkasan angka">
+      <div className="stat-card"><span>Lead baru</span><strong>{loading ? "—" : pending.length}</strong><p>Belum ditindaklanjuti</p></div>
+      <div className="stat-card"><span>Cocok dengan bisnis</span><strong>{loading ? "—" : matched.length}</strong><p>Dari {leads.length} lead terkumpul</p></div>
+      <div className="stat-card"><span>Belum dibaca</span><strong>{loading ? "—" : unread.length}</strong><p>Menunggu dibuka</p></div>
+      <div className="stat-card"><span>Sudah dibalas</span><strong>{loading ? "—" : leads.filter(lead => lead.status === "Dibalas").length}</strong><p>Balasan terkirim</p></div>
+    </section>
+    <section className="dashboard-priority-grid">
+      <div className="panel panel--leads">
+        <div className="panel-heading"><div><h2>Lead prioritas</h2><p>{loading ? "Memuat lead..." : pending.length > 0 ? `${preview.length} dari ${pending.length} lead baru, yang cocok lebih dulu.` : "Belum ada lead baru."}</p></div><Link href="/dashboard/leads">Lihat semua lead</Link></div>
+        <div className="compact-leads">{preview.map(lead => <LeadCard key={lead.id} lead={lead} compact />)}{!loading && pending.length === 0 && <div className="empty-state empty-state--compact"><h2>Belum ada lead tersimpan</h2><p>Cari percakapan publik dari halaman Lead.</p></div>}</div>
+      </div>
+      <aside className="dashboard-rail">{children}</aside>
+    </section>
+  </>;
 }
 
 export function ThreadsStatusCard() {

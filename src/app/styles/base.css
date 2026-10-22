@@ -1249,11 +1249,11 @@ html[data-theme="dark"] .inline-error { color: #ffb7b7; background: #311b1b; }
 .pay-cell__buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .pay-cell small { color: var(--muted); line-height: 1.45; }
 .row-error { color: var(--danger); font-size: .66rem; font-weight: 650; }
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 18px; }
-.stat-card { padding: 18px 20px; border: 1px solid var(--line); border-radius: 16px; background: white; box-shadow: var(--shadow-sm); }
-.stat-card span { color: var(--muted); font-size: .68rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
-.stat-card strong { display: block; margin: 6px 0 4px; font-size: 1.7rem; }
-.stat-card p { margin: 0; color: var(--muted); font-size: .7rem; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 16px; }
+.stat-card { padding: 18px 20px; border: 1px solid var(--c-hairline); border-radius: var(--c-radius); background: var(--c-surface); box-shadow: var(--c-shadow); }
+.stat-card span { color: var(--c-ink-muted); font-size: .66rem; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; }
+.stat-card strong { display: block; margin: 8px 0 4px; color: var(--c-ink); font-size: 1.85rem; letter-spacing: -.035em; line-height: 1.1; }
+.stat-card p { margin: 0; color: var(--c-ink-soft); font-size: .72rem; }
 .mini-form-panel { margin-bottom: 18px; display: grid; gap: 10px; }
 .mini-form-panel > strong { font-size: .95rem; }
 .mini-form-panel > p { margin: 0; color: var(--muted); font-size: .74rem; }
