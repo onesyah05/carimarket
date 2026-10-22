@@ -8,6 +8,31 @@
 /* ── Pusat bantuan (tiket dukungan) ───────────────────────────────────────── */
 
 .support-center { display: grid; gap: 18px; }
+
+/* `.panel` hanya menggambar kotaknya; jarak dalamnya selama ini datang dari
+   `.panel-heading`. Pusat bantuan memakai `.panel-head`, dan kelas itu
+   ternyata hanya didefinisikan di dalam `.app-shell--internal` — jadi di ruang
+   kerja pengguna judul dan formulirnya menempel langsung ke garis kartu, dan
+   label kolom pertama duduk tepat di atas garis itu. */
+.app-shell--user .support-list,
+.app-shell--user .support-compose,
+.app-shell--user .support-thread { padding: 22px 24px; display: grid; gap: 16px; }
+
+.app-shell--user .support-list .panel-head,
+.app-shell--user .support-thread .panel-head {
+  display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between;
+  gap: 12px 16px;
+}
+.app-shell--user .support-list .panel-head > div,
+.app-shell--user .support-thread .panel-head > div { min-width: 0; }
+.app-shell--user .support-list .panel-head h2,
+.app-shell--user .support-thread .panel-head h2,
+.app-shell--user .support-compose > h2 { margin: 0; font-size: 1.05rem; letter-spacing: -.01em; }
+.app-shell--user .support-list .panel-head p,
+.app-shell--user .support-thread .panel-head p { margin: 5px 0 0; color: var(--c-ink-muted); font-size: .8rem; line-height: 1.55; }
+/* Tombol di kepala kartu tidak boleh ikut melar mengisi baris flex-nya. */
+.app-shell--user .support-list .panel-head .button,
+.app-shell--user .support-thread .panel-head .button { flex: 0 0 auto; }
 .support-notice,
 .support-empty,
 .support-hint {
@@ -49,6 +74,11 @@ html[data-theme="dark"] .support-badge--open { background: #3a2f12; color: #f2d9
 }
 .support-message-body { margin: 0; font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
 .support-reply { margin-top: 4px; }
+/* `.form-grid` meregangkan setiap anaknya selebar kolom, yang benar untuk
+   kolom isian tetapi membuat tombol kirim membentang penuh selebar kartu.
+   Di kartu selebar ini tombol itu terbaca seperti bilah, bukan tombol. */
+.support-compose .form-grid > .button,
+.support-reply .form-grid > .button { justify-self: start; min-width: 180px; }
 
 @media (max-width: 640px) {
   .support-ticket-row { grid-template-columns: 1fr; }
