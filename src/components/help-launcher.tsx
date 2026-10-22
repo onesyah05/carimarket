@@ -21,7 +21,7 @@ export function HelpLauncher() {
         <div className="help-launcher__panel" role="dialog" aria-label="Bantuan">
           <strong>Butuh bantuan?</strong>
           <p>Tim kami siap membantu setup pencarian pertama Anda.</p>
-          <Link href="/kontak" onClick={() => setOpen(false)}>Hubungi dukungan</Link>
+          <Link href="/dashboard/bantuan" onClick={() => setOpen(false)}>Buka tiket dukungan</Link>
         </div>
       )}
       <button

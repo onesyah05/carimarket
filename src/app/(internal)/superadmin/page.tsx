@@ -3,16 +3,22 @@ import { MetricCard, PageHeading, QuotaMeter } from "@/components/dashboard-ui";
 import { getSuperadminOverview } from "@/server/admin/queries";
 import { getWorkerStatus } from "@/server/jobs/runtime";
 import { getThreadsOAuthReadiness } from "@/server/integrations/threads/config";
+import { GrowthCharts } from "@/features/admin/components/growth-charts";
+import { loadGrowthSeries } from "@/server/admin/growth";
+import { META_DAILY_REPLY_LIMIT, META_DAILY_SEARCH_LIMIT } from "@/server/usage/platform-limits";
 
-const API_SEARCH_QUOTA = 2200;
-const API_REPLY_QUOTA = 2200;
+// Batas balasan Meta kurang lebih seperempat dari batas pencarian; memakai
+// angka yang sama untuk keduanya membuat meter balasan tampak longgar padahal
+// hampir penuh.
+const API_SEARCH_QUOTA = META_DAILY_SEARCH_LIMIT;
+const API_REPLY_QUOTA = META_DAILY_REPLY_LIMIT;
 
 function formatNumber(value: number) {
   return value.toLocaleString("id-ID");
 }
 
 export default async function SuperadminPage() {
-  const [overview, worker, threadsOAuthStatus] = await Promise.all([getSuperadminOverview(), Promise.resolve(getWorkerStatus()), getThreadsOAuthReadiness()]);
+  const [overview, worker, threadsOAuthStatus, growth] = await Promise.all([getSuperadminOverview(), Promise.resolve(getWorkerStatus()), getThreadsOAuthReadiness(), loadGrowthSeries()]);
   const threadsReady = threadsOAuthStatus === "valid";
   const maxRuns = Math.max(...overview.runsByDay.map(bucket => bucket.count), 1);
   const totalRuns = overview.runsByDay.reduce((sum, bucket) => sum + bucket.count, 0);
@@ -44,5 +50,9 @@ export default async function SuperadminPage() {
         <p className="billing-note">{threadsReady ? (searchQuotaPct >= 80 ? "Pemakaian mendekati batas jendela 24 jam." : `Kapasitas aman. ${overview.connectionsActive} koneksi terhubung, ${overview.openFlags} penandaan moderasi terbuka.`) : threadsOAuthStatus === "invalid" ? "Threads App Secret ditolak Meta. Perbarui dari menu Integrasi Threads." : "Koneksi resmi Threads belum siap. Periksa menu Integrasi Threads."}</p>
       </aside>
     </section>
+
+    {/* Panel harian di atas menjawab "apa yang terjadi hari ini"; yang ini
+        menjawab "apakah keadaannya membaik", dan itu pertanyaan berbeda. */}
+    <GrowthCharts series={growth} />
   </>;
 }
