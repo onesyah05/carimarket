@@ -14,9 +14,13 @@ import { resolveActiveProfile } from "@/server/workspace/profiles";
  * dashboard tanpa satu pun kata kunci. Semua pemanggil kini bertanya ke sini.
  */
 
+/**
+ * Koneksi Threads tidak ada di sini: ia tidak pernah menjadi syarat, dan
+ * mencantumkannya membuat `OnboardingStep` mengizinkan nilai yang tidak pernah
+ * dikembalikan. Halamannya masih ada dan dapat dibuka dari Pengaturan.
+ */
 export const ONBOARDING_STEPS = {
   business: "/onboarding/bisnis",
-  threads: "/onboarding/threads",
   keywords: "/onboarding/kata-kunci",
   replies: "/onboarding/balasan",
 } as const;

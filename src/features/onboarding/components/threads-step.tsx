@@ -20,7 +20,7 @@ export function ThreadsOnboardingStep() {
   }, []);
 
   const connected = status?.connected === true;
-  return <OnboardingShell step={2} title="Hubungkan akun Threads." copy="Hubungkan akun agar Cari Market dapat mengirim balasan melalui integrasi resmi Threads.">
+  return <OnboardingShell title="Hubungkan akun Threads." copy="Hubungkan akun agar Cari Market dapat mengirim balasan melalui integrasi resmi Threads. Langkah ini tidak wajib — Anda dapat melakukannya kapan saja dari Pengaturan.">
     <div className="connect-card">
       <span className="connect-icon"><AtSign /></span>
       <div>
@@ -40,6 +40,6 @@ export function ThreadsOnboardingStep() {
     {connected && <div className="security-note"><ShieldCheck size={18} /><p>Kredensial akun hanya diproses melalui alur otorisasi resmi Threads. Pencarian publik bergantung pada status App Review.</p></div>}
     {!connected && status?.searchPreviewAvailable && <div className="security-note"><ShieldCheck size={18} /><p>Pencarian publik tersedia dalam mode pratinjau sebelum App Review selesai. Akun Anda tetap belum terhubung dan balasan belum dapat dikirim melalui akun Anda.</p></div>}
     {!connected && status && !status.configured && <div className="security-note"><ShieldCheck size={18} /><p>{status.credentialsInvalid ? "Konfigurasi Threads ditolak Meta. Administrator perlu memperbarui Threads App Secret sebelum akun dapat dihubungkan." : status.requiresHttps ? "Buka Cari Market melalui alamat HTTPS untuk menghubungkan akun Threads." : "Koneksi akun Threads belum tersedia. Anda dapat melanjutkan pengaturan dan menghubungkannya setelah administrator mengaktifkan integrasi resmi."}</p></div>}
-    <Link className="text-link" href="/onboarding/kata-kunci">{connected ? "Lanjutkan" : "Lewati untuk sekarang"}</Link>
+    <Link className="text-link" href="/onboarding/kata-kunci">{connected ? "Lanjutkan" : "Lanjutkan tanpa menghubungkan"}</Link>
   </OnboardingShell>;
 }

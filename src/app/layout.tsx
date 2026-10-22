@@ -33,10 +33,24 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Tema dipasang sebelum cat pertama.
+ *
+ * Sebelumnya `data-theme` hanya disetel oleh efek di dalam ThemeToggle, jadi
+ * halaman yang tidak memuat tombol itu — seluruh onboarding dan halaman akun —
+ * selalu tampil terang meski pengguna memilih gelap, dan halaman yang
+ * memuatnya berkedip terang dulu sebelum berganti. Skrip ini berjalan sinkron
+ * di dalam <head> sehingga atributnya sudah benar saat elemen pertama digambar.
+ */
+const themeScript = `(function(){try{var t=localStorage.getItem("carimarket-theme");document.documentElement.dataset.theme=t==="dark"?"dark":"light"}catch(e){document.documentElement.dataset.theme="light"}})()`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="id"><body suppressHydrationWarning className={jakarta.variable}>
+  return <html lang="id" suppressHydrationWarning>
+    <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
+    <body suppressHydrationWarning className={jakarta.variable}>
     {children}
     {/* Satu Organization untuk seluruh situs; halaman lain merujuk @id ini. */}
     <JsonLd data={organizationSchema()} />
   </body></html>;
 }
+

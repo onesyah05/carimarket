@@ -29,7 +29,11 @@ export function BusinessStep({ initialProfile }: { initialProfile: Profile }) {
       });
       const payload = await response.json() as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "Profil bisnis belum dapat disimpan.");
-      router.push("/onboarding/threads");
+      // Koneksi Threads dilewati sampai App Review selesai: sebelum itu langkah
+      // ini hanya dapat berakhir dengan "lewati", dan menaruhnya di tengah alur
+      // membuat pengaturan terasa gagal sebelum dimulai. Menghubungkan akun
+      // tetap tersedia kapan saja di Pengaturan.
+      router.push("/onboarding/kata-kunci");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Profil bisnis belum dapat disimpan.");
       setSaving(false);
