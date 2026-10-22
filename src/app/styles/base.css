@@ -385,6 +385,15 @@ textarea.input { min-height: 120px; padding-block: 13px; resize: vertical; }
 .lead-tags { display: flex; flex-wrap: wrap; gap: 7px; }
 .score-chip, .keyword-chip, .lead-status, .flag-chip { padding: 5px 8px; border-radius: 99px; font-size: .61rem; font-weight: 800; }
 .score-chip { color: var(--success); background: var(--success-soft); }
+/* Vonis kecocokan. Tiga keadaan dibedakan warna karena tindakannya berbeda:
+   yang cocok layak dibalas, yang tidak cocok layak dilewati, dan yang belum
+   pasti layak dibaca dulu. */
+.match-chip { padding: 5px 9px; border-radius: 99px; font-size: .61rem; font-weight: 800; }
+.match-chip--yes { color: var(--success); background: var(--success-soft); }
+.match-chip--no { color: var(--c-ink-muted); background: var(--c-sunken); }
+.match-chip--maybe { color: #7a5c00; background: var(--c-sand); }
+html[data-theme="dark"] .match-chip--yes { color: #86e0a6; background: #13331f; }
+html[data-theme="dark"] .match-chip--maybe { color: #f2d99a; background: #3a2f12; }
 .keyword-chip { color: var(--brand-deep); background: var(--brand-soft); }
 .lead-status { color: #5d6676; background: #eef1f5; }
 .lead-status--baru { color: var(--brand-deep); background: var(--brand-soft); }

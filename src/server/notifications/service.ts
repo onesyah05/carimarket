@@ -17,6 +17,8 @@ export type NotificationInput = {
   title: string;
   body: string;
   href?: string;
+  /** Versi HTML opsional; dipakai ringkasan lead yang isinya berupa daftar. */
+  html?: string;
 };
 
 export type SerializedNotification = {
@@ -97,7 +99,7 @@ async function sendEmailCopy(input: NotificationInput) {
   const preference = user.notification;
   if (preferenceKey && preference && preference[preferenceKey] === false) return;
 
-  await mailer.send({ to: user.email, subject: input.title, body: input.body });
+  await mailer.send({ to: user.email, subject: input.title, body: input.body, ...(input.html ? { html: input.html } : {}) });
 }
 
 export async function listNotifications(userId: string, take = 20) {

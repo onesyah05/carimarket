@@ -2,6 +2,7 @@ import "server-only";
 import { LeadStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { classifyLeadIntent } from "@/lib/lead-intent";
+import { isMatch, type AiVerdict } from "./ai-matching";
 import { isRiskyText, loadBlacklistTerms } from "@/server/replies/blacklist";
 
 const leadInclude = {
@@ -54,6 +55,12 @@ export function serializeLead(lead: StoredLead, options?: { flagged?: boolean })
     viewedAt: lead.viewedAt?.toISOString() ?? null,
     status: displayStatus(lead.status),
     matchReason: lead.matchReason,
+    // Vonis AI dikirim apa adanya; `matched` adalah jawaban yang sudah
+    // menggabungkan vonis dan ambang angka, supaya feed dan email memakai
+    // aturan yang sama persis.
+    aiVerdict: (lead.aiVerdict ?? null) as "MATCH" | "NO_MATCH" | "UNSURE" | null,
+    aiReason: lead.aiReason,
+    matched: isMatch((lead.aiVerdict ?? "UNKNOWN") as AiVerdict, lead.aiScore ?? Number(lead.relevanceScore)),
     sourceMode: lead.sourceMode,
     flagged: options?.flagged ?? false,
   };

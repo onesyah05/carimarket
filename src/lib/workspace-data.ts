@@ -26,6 +26,12 @@ export type Lead = {
   threadSize: number | null;
   /** Kapan pemiliknya membuka lead ini; null berarti belum dibaca. */
   viewedAt: string | null;
+  /** Vonis AI atas kecocokan dengan bisnis; null berarti belum dinilai. */
+  aiVerdict?: "MATCH" | "NO_MATCH" | "UNSURE" | null;
+  /** Alasan singkat dari AI, bila ada. */
+  aiReason?: string | null;
+  /** Kesimpulan gabungan vonis AI dan ambang angka. */
+  matched?: boolean;
   status: "Baru" | "Tersimpan" | "Dibalas";
   flagged?: boolean;
 };

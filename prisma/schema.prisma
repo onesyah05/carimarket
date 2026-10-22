@@ -418,6 +418,14 @@ model ThreadPost {
   @@index([authorHandle])
 }
 
+/// Vonis AI atas kecocokan lead dengan bisnis. UNSURE berarti model menjawab
+/// tetapi ragu; tidak adanya baris sama sekali berarti AI belum menilai.
+enum LeadAiVerdict {
+  MATCH
+  NO_MATCH
+  UNSURE
+}
+
 model Lead {
   id                String             @id @default(cuid())
   userId            String
@@ -432,6 +440,14 @@ model Lead {
   updatedAt         DateTime           @updatedAt @db.DateTime(3)
   /// Jasa pemilik lead. Null hanya pada baris lama milik akun tanpa profil.
   businessProfileId String?            @db.VarChar(191)
+  /// Penilaian AI atas kecocokan lead dengan bisnis pemiliknya. Null berarti
+  /// belum pernah dinilai — misalnya baris lama, atau penyedia AI sedang mati
+  /// sehingga pencarian jatuh ke skor heuristik.
+  aiVerdict         LeadAiVerdict?
+  aiScore           Int?               @db.SmallInt
+  aiReason          String?            @db.VarChar(255)
+  aiModel           String?            @db.VarChar(100)
+  aiEvaluatedAt     DateTime?          @db.DateTime(3)
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   businessProfile   BusinessProfile?   @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
   threadPost        ThreadPost         @relation(fields: [threadPostId], references: [id], onDelete: Restrict)
@@ -442,6 +458,7 @@ model Lead {
   @@index([userId, status, discoveredAt])
   @@index([businessProfileId, status, discoveredAt])
   @@index([relevanceScore])
+  @@index([businessProfileId, aiVerdict, discoveredAt])
 }
 
 model LeadKeywordMatch {

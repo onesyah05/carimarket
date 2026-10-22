@@ -40,7 +40,14 @@ export function LeadCard({ lead, compact = false, onMarkRead }: {
     </header>
     <p>{lead.text}</p>
     <div className="lead-tags">
-      <span className="score-chip">{lead.score}% cocok</span>
+      {/* Vonis AI menggantikan angka ketika ada: "88% cocok" adalah skor
+          kemiripan kata, sedangkan yang ingin diketahui pemilik bisnis adalah
+          apakah orang ini calon pelanggannya. Angka tetap ditampilkan sebagai
+          cadangan ketika AI belum menilai. */}
+      {lead.aiVerdict === "MATCH" && <span className="match-chip match-chip--yes" title={lead.aiReason ?? undefined}>Cocok</span>}
+      {lead.aiVerdict === "NO_MATCH" && <span className="match-chip match-chip--no" title={lead.aiReason ?? undefined}>Tidak cocok</span>}
+      {lead.aiVerdict === "UNSURE" && <span className="match-chip match-chip--maybe" title={lead.aiReason ?? undefined}>Belum pasti</span>}
+      {!lead.aiVerdict && <span className="score-chip">{lead.score}% cocok</span>}
       <span className={`intent-chip intent-chip--${lead.intent.replace(" ", "-")}`}>{LEAD_INTENT_LABEL[lead.intent]}</span>
       <span className="keyword-chip">“{lead.keyword}”</span>
       <span className={`lead-status lead-status--${lead.status.toLowerCase()}`}>{lead.status}</span>

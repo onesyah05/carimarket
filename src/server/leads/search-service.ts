@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { getThreadsAdapter } from "@/server/integrations/threads";
 import { isThreadsAvailable } from "@/server/integrations/threads/config";
 import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
-import { createNotification } from "@/server/notifications/service";
 import { hasSearchQuota, releaseSearchQuota, reserveSearchQuota, resolveSearchIntervalHours } from "@/server/usage/limits";
 import { logUsageEvent } from "@/server/usage/service";
+import { judgeLead, type AiVerdict, type BusinessContext } from "./ai-matching";
+import { sendLeadDigest } from "./digest";
 import { matchedExcludedTerm, relevanceScore } from "./matching";
 import { nextRunAt } from "./schedule";
 
@@ -19,7 +20,46 @@ export type KeywordSearchResult = {
   excludedCount: number;
   /** Jumlah lead yang benar-benar baru pada pencarian ini. */
   createdCount: number;
+  /** Id lead yang baru dibuat, untuk diringkas jadi satu email oleh pemanggil. */
+  createdLeadIds: string[];
+  /** Terisi bila penilaian AI tidak dapat dijalankan dan skor turun ke heuristik. */
+  aiFailure?: string | null;
 };
+
+/** Profil bisnis sebagai konteks penilaian; kolom kosong diisi penanda netral. */
+async function loadBusinessContext(profileId: string): Promise<BusinessContext> {
+  const profile = await prisma.businessProfile.findUnique({
+    where: { id: profileId },
+    select: { name: true, category: true, serviceArea: true, description: true },
+  });
+  return {
+    name: profile?.name ?? "(tidak diisi)",
+    category: profile?.category ?? "(tidak diisi)",
+    serviceArea: profile?.serviceArea ?? "(tidak diisi)",
+    description: profile?.description ?? "(tidak diisi)",
+  };
+}
+
+/**
+ * Batas jumlah postingan yang dinilai AI dalam satu pencarian.
+ *
+ * Postingan selebihnya tetap menjadi lead dengan skor heuristik: menahan
+ * seluruh hasil hanya karena anggaran penilaian habis akan menyembunyikan
+ * lead yang mungkin justru dicari.
+ */
+const AI_JUDGEMENT_LIMIT = 25;
+
+async function judgeResults(business: BusinessContext, phrase: string, results: Array<{ externalPostId: string; body: string }>) {
+  const judgements = new Map<string, Awaited<ReturnType<typeof judgeLead>>>();
+  for (const result of results.slice(0, AI_JUDGEMENT_LIMIT)) {
+    const judgement = await judgeLead(business, phrase, result.body);
+    judgements.set(result.externalPostId, judgement);
+    // Satu kegagalan yang bersifat akun — saldo habis, key ditolak — akan
+    // terulang pada tiap postingan berikutnya, jadi sisanya tidak dicoba.
+    if (judgement.failure === "NO_FUNDS" || judgement.failure === "UNAUTHORIZED" || judgement.failure === "UNCONFIGURED" || judgement.failure === "FREE_TIER_BLOCKED") break;
+  }
+  return judgements;
+}
 
 /** Kata kunci negatif aktif milik pengguna, dipakai untuk menyaring hasil pencarian. */
 export async function loadExcludedTerms(profileId: string) {
@@ -49,9 +89,10 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
   // tercatat sebagai percobaan pencarian, dan agar dua pencarian bersamaan
   // tidak sama-sama lolos batas.
   await reserveSearchQuota(keyword.userId);
-  const [excludedTerms, planIntervalHours] = await Promise.all([
+  const [excludedTerms, planIntervalHours, business] = await Promise.all([
     loadExcludedTerms(profileId),
     resolveSearchIntervalHours(keyword.userId),
+    loadBusinessContext(profileId),
   ]);
 
   const run = await prisma.searchRun.create({
@@ -79,7 +120,15 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
       results.push(result);
     }
 
+    // Penilaian AI dijalankan sebelum transaksi, bukan di dalamnya: satu
+    // panggilan jaringan per lead di dalam transaksi akan menahan kunci baris
+    // selama penyedia AI berpikir. Batasnya menjaga satu kata kunci yang
+    // mengembalikan ratusan postingan tidak menghabiskan saldo sekaligus.
+    const judgements = await judgeResults(business, keyword.phrase, results);
+    const aiFailure = [...judgements.values()].find(judgement => judgement.failure !== null)?.failure ?? null;
+
     let createdCount = 0;
+    const createdLeadIds: string[] = [];
     for (const result of results) {
       const created = await prisma.$transaction(async tx => {
         // Metrik keterlibatan hanya ditulis bila adapter benar-benar
@@ -106,20 +155,31 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
           where: { businessProfileId_threadPostId: { businessProfileId: profileId, threadPostId: post.id } },
           select: { id: true },
         });
-        const score = relevanceScore(result.body, keyword.phrase);
+        const judgement = judgements.get(result.externalPostId);
+        const score = judgement?.score ?? relevanceScore(result.body, keyword.phrase);
+        // Vonis hanya ditulis bila AI benar-benar menjawab; `UNKNOWN` tidak
+        // disimpan agar baris yang belum pernah dinilai tetap dapat dibedakan
+        // dari baris yang dinilai dan dianggap tidak cocok.
+        const ai = judgement && judgement.verdict !== "UNKNOWN"
+          ? { aiVerdict: judgement.verdict as Exclude<AiVerdict, "UNKNOWN">, aiScore: judgement.score, aiReason: judgement.reason, aiModel: judgement.model, aiEvaluatedAt: new Date() }
+          : {};
+        const reason = judgement?.reason ?? `Cocok dengan kata kunci ${keyword.phrase}`;
         const lead = await tx.lead.upsert({
           where: { businessProfileId_threadPostId: { businessProfileId: profileId, threadPostId: post.id } },
-          update: { relevanceScore: score, matchReason: `Cocok dengan kata kunci ${keyword.phrase}`, sourceMode: result.capability },
-          create: { userId: keyword.userId, businessProfileId: profileId, threadPostId: post.id, relevanceScore: score, matchReason: `Cocok dengan kata kunci ${keyword.phrase}`, sourceMode: result.capability },
+          update: { relevanceScore: score, matchReason: reason, sourceMode: result.capability, ...ai },
+          create: { userId: keyword.userId, businessProfileId: profileId, threadPostId: post.id, relevanceScore: score, matchReason: reason, sourceMode: result.capability, ...ai },
         });
         await tx.leadKeywordMatch.upsert({
           where: { leadId_keywordId: { leadId: lead.id, keywordId: keyword.id } },
           update: { score },
           create: { leadId: lead.id, keywordId: keyword.id, score },
         });
-        return existing === null;
+        return existing === null ? lead.id : null;
       });
-      if (created) createdCount += 1;
+      if (created) {
+        createdCount += 1;
+        createdLeadIds.push(created);
+      }
     }
 
     await prisma.$transaction([
@@ -128,17 +188,7 @@ export async function runKeywordSearch(keywordId: string): Promise<KeywordSearch
     ]);
     await logUsageEvent(keyword.userId, "SEARCH", 1, run.id);
 
-    if (createdCount > 0) {
-      await createNotification({
-        userId: keyword.userId,
-        type: "LEAD_DISCOVERED",
-        title: `${createdCount} lead baru ditemukan`,
-        body: `Kata kunci “${keyword.phrase}” menemukan ${createdCount} percakapan baru yang relevan.`,
-        href: "/dashboard/leads",
-      });
-    }
-
-    return { resultCount: results.length, excludedCount, createdCount };
+    return { resultCount: results.length, excludedCount, createdCount, createdLeadIds, aiFailure };
   } catch (error) {
     // Pencarian yang gagal tidak boleh memakan kuota: jatah yang sudah dipesan
     // dikembalikan sebelum kegagalannya diteruskan.
@@ -237,6 +287,7 @@ export async function runAllActiveKeywords(profileId: string): Promise<BulkSearc
   }
 
   const totals: BulkSearchResult = { ran: 0, total: keywords.length, resultCount: 0, excludedCount: 0, createdCount: 0, stopped: null, deferred: 0 };
+  const createdLeadIds: string[] = [];
   const deadline = Date.now() + REQUEST_TIME_BUDGET_MS;
   const pending: string[] = [];
 
@@ -253,6 +304,7 @@ export async function runAllActiveKeywords(profileId: string): Promise<BulkSearc
       totals.resultCount += result.resultCount;
       totals.excludedCount += result.excludedCount;
       totals.createdCount += result.createdCount;
+      createdLeadIds.push(...result.createdLeadIds);
     } catch (error) {
       // Penyebabnya dicatat supaya kegagalan massal dapat didiagnosis; pesan
       // untuk pengguna tetap umum bila errornya bukan error integrasi.
@@ -276,6 +328,11 @@ export async function runAllActiveKeywords(profileId: string): Promise<BulkSearc
     totals.deferred = pending.length;
     totals.stopped ??= `${totals.ran} dari ${totals.total} kata kunci selesai dicari. ${pending.length} sisanya dijalankan otomatis oleh sistem dalam beberapa menit.`;
   }
+
+  // Satu ringkasan untuk seluruh siklus, setelah semua kata kunci selesai.
+  // Kegagalannya tidak boleh menggagalkan pencarian yang sudah tersimpan.
+  const userId = await prisma.businessProfile.findUnique({ where: { id: profileId }, select: { userId: true } }).then(row => row?.userId ?? null).catch(() => null);
+  if (userId) await sendLeadDigest(userId, createdLeadIds).catch(() => undefined);
 
   return totals;
 }
