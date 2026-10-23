@@ -52,6 +52,10 @@
   font: inherit; transition: border-color .15s ease, background .15s ease;
 }
 .support-ticket-row:hover:not(:disabled) { border-color: var(--c-brand-ink); }
+.app-shell--user .data-table .support-ticket-row { width: 100%; border: 0; border-top: 1px solid var(--c-hairline); border-radius: 0; text-align: left; }
+.app-shell--user .data-table .support-ticket-row:hover:not(:disabled) { background: var(--c-sunken); }
+.app-shell--user .data-table .support-ticket-row em { font-style: normal; }
+.support-back { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; color: var(--c-brand-ink); font-size: .84rem; font-weight: 700; }
 .support-ticket-row.is-active { border-color: var(--c-brand-ink); background: var(--c-wash); }
 .support-ticket-row:focus-visible { outline: 3px solid color-mix(in srgb, var(--c-brand-ink) 72%, white); outline-offset: 2px; }
 .support-ticket-subject { font-weight: 600; }
@@ -77,8 +81,10 @@ html[data-theme="dark"] .support-badge--open { background: #3a2f12; color: #f2d9
 /* `.form-grid` meregangkan setiap anaknya selebar kolom, yang benar untuk
    kolom isian tetapi membuat tombol kirim membentang penuh selebar kartu.
    Di kartu selebar ini tombol itu terbaca seperti bilah, bukan tombol. */
+/* `.support-reply` dipasang pada elemen <form> itu sendiri, jadi tombolnya
+   adalah anak langsungnya — bukan cucu lewat `.form-grid` di dalamnya. */
 .support-compose .form-grid > .button,
-.support-reply .form-grid > .button { justify-self: start; min-width: 180px; }
+.support-reply > .button { justify-self: start; min-width: 180px; }
 
 @media (max-width: 640px) {
   .support-ticket-row { grid-template-columns: 1fr; }
@@ -236,3 +242,49 @@ html[data-theme="dark"] .chart-tooltip { background: #101d38; }
   padding: 1px 6px; border-radius: 5px;
   background: var(--brand-soft); font-size: 12px; letter-spacing: .02em;
 }
+
+
+/* ── Isian teks berformat ─────────────────────────────────────────────────── */
+
+.rich-editor { display: grid; gap: 8px; }
+.rich-editor__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.rich-editor__bar button {
+  min-width: 34px; height: 34px; padding: 0 8px;
+  border: 1px solid var(--c-hairline); border-radius: var(--c-radius-sm);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  color: var(--c-ink-soft); background: var(--c-surface);
+  font-size: .76rem; font-weight: 650; cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.rich-editor__bar button:hover:not(:disabled) { color: var(--c-brand-ink); border-color: var(--c-brand-ink); background: var(--c-wash); }
+.rich-editor__bar button:disabled { opacity: .5; cursor: default; }
+/* Tombol pratinjau didorong ke ujung supaya tidak tertukar dengan tombol
+   format: ia mengubah tampilan, bukan isi tulisannya. */
+.rich-editor__preview { margin-left: auto; }
+.rich-editor__preview.is-on { color: var(--c-brand-ink); border-color: var(--c-brand-ink); background: var(--c-wash); }
+.rich-editor__area { min-height: 120px; padding: 12px 14px; line-height: 1.65; resize: vertical; }
+.rich-editor__preview-pane {
+  min-height: 120px; padding: 12px 14px;
+  border: 1px solid var(--c-hairline); border-radius: var(--c-radius-sm);
+  background: var(--c-sunken);
+}
+.rich-editor__empty { margin: 0; color: var(--c-ink-muted); font-size: .84rem; }
+
+/* ── Penampil teks berformat ──────────────────────────────────────────────── */
+
+.rich-text { display: grid; gap: 10px; font-size: .88rem; line-height: 1.7; }
+.rich-text p { margin: 0; }
+/* Penanda butir dinyatakan ulang: banyak daftar di aplikasi ini mematikannya,
+   dan tanpa penanda daftar di sini terbaca sebagai paragraf menjorok. */
+.rich-text ul { margin: 0; padding-left: 22px; display: grid; gap: 4px; list-style: disc; }
+.rich-text ol { margin: 0; padding-left: 22px; display: grid; gap: 4px; list-style: decimal; }
+.rich-text li { display: list-item; }
+.rich-text li::marker { color: var(--c-ink-muted); }
+.rich-text strong { font-weight: 750; }
+.rich-text code {
+  padding: 1px 5px; border-radius: 5px;
+  background: var(--c-sunken); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em;
+}
+.rich-text a { color: var(--c-brand-ink); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+/* Tautan yang ditempel orang bisa sangat panjang dan tidak punya spasi. */
+.rich-text a { overflow-wrap: anywhere; }

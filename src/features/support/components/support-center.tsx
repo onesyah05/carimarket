@@ -1,119 +1,68 @@
 "use client";
 
 import { useState } from "react";
-import { CircleHelp, Lock, MessageSquarePlus, Send, UserCog } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CircleHelp, Lock, MessageSquarePlus } from "lucide-react";
+import { FormModal } from "@/components/form-modal";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { formatDateTime, statusLabel } from "@/lib/format";
+import { richTextToPlain } from "@/lib/rich-text";
 import type { TicketDetail, TicketSummary } from "@/server/support/tickets";
 
 /**
- * Pusat bantuan pengguna.
+ * Daftar tiket milik pengguna.
  *
- * Satu halaman untuk tiga hal yang selalu berurutan: melihat tiket yang
- * berjalan, membuka tiket baru, dan melanjutkan percakapan. Memisahkannya ke
- * beberapa halaman hanya menambah klik pada orang yang sedang terhambat.
+ * Dulu halaman ini melakukan tiga hal sekaligus di satu kolom: daftar,
+ * formulir tiket baru, dan utas percakapan yang terbuka di bawahnya. Akibatnya
+ * utas tidak punya alamat sendiri — tertutup setiap kali halaman dimuat ulang
+ * dan tidak dapat ditempelkan ke siapa pun — sedangkan formulirnya mendorong
+ * daftar turun lalu melompat balik ketika tersimpan.
+ *
+ * Sekarang daftarnya sebuah tabel, tiap barisnya menuju halaman tiketnya
+ * sendiri, dan tiket baru dibuka sebagai dialog di atas daftar.
  */
 
 type Props = { tickets: TicketSummary[]; emailReachable: boolean };
 
-const CLOSED_STATUSES = new Set(["RESOLVED", "CLOSED"]);
-
-export function SupportCenter({ tickets: initialTickets, emailReachable }: Props) {
-  const [tickets, setTickets] = useState(initialTickets);
-  const [detail, setDetail] = useState<TicketDetail | null>(null);
-  const [composing, setComposing] = useState(initialTickets.length === 0);
+export function SupportCenter({ tickets, emailReachable }: Props) {
+  const router = useRouter();
+  const [composing, setComposing] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  function mergeSummary(updated: TicketDetail) {
-    setDetail(updated);
-    setTickets(current => {
-      const summary: TicketSummary = {
-        id: updated.id,
-        subject: updated.subject,
-        status: updated.status,
-        priority: updated.priority,
-        messageCount: updated.messageCount,
-        lastMessageAt: updated.lastMessageAt,
-        createdAt: updated.createdAt,
-        updatedAt: updated.updatedAt,
-      };
-      const without = current.filter(ticket => ticket.id !== updated.id);
-      return [summary, ...without];
-    });
-  }
-
-  async function send(url: string, method: "POST" | "PATCH", payload?: unknown) {
-    setPending(true);
-    setError(null);
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: payload ? { "Content-Type": "application/json" } : undefined,
-        body: payload ? JSON.stringify(payload) : undefined,
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok) {
-        setError(result?.error ?? "Permintaan belum berhasil. Silakan coba lagi.");
-        return null;
-      }
-      return result?.data as TicketDetail;
-    } catch {
-      setError("Tidak dapat menghubungi server. Periksa koneksi Anda.");
-      return null;
-    } finally {
-      setPending(false);
-    }
-  }
-
-  async function openTicket(id: string) {
-    setPending(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/support/tickets/${id}`);
-      const result = await response.json().catch(() => null);
-      if (!response.ok) {
-        setError(result?.error ?? "Tiket tidak dapat dibuka.");
-        return;
-      }
-      setDetail(result.data as TicketDetail);
-      setComposing(false);
-    } catch {
-      setError("Tidak dapat menghubungi server. Periksa koneksi Anda.");
-    } finally {
-      setPending(false);
-    }
-  }
+  const [body, setBody] = useState("");
 
   async function createTicket(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const created = await send("/api/support/tickets", "POST", {
-      subject: form.get("subject"),
-      body: form.get("body"),
-      priority: form.get("priority"),
-    });
-    if (created) {
-      mergeSummary(created);
+    if (richTextToPlain(body).length < 20) {
+      setError("Jelaskan kendalanya lebih dulu, minimal 20 karakter.");
+      return;
+    }
+
+    setPending(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/support/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject: form.get("subject"), body, priority: form.get("priority") }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(result?.error ?? "Tiket belum dapat dibuat. Silakan coba lagi.");
+        return;
+      }
+      // Langsung ke tiketnya: yang dibutuhkan berikutnya adalah balasan tim,
+      // dan itu ada di halaman tiket, bukan di daftar.
+      const created = result?.data as TicketDetail;
       setComposing(false);
+      setBody("");
+      router.push(`/dashboard/bantuan/${created.id}`);
+    } catch {
+      setError("Tidak dapat menghubungi server. Periksa koneksi Anda.");
+    } finally {
+      setPending(false);
     }
-  }
-
-  async function reply(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!detail) return;
-    const form = event.currentTarget;
-    const body = String(new FormData(form).get("body") ?? "");
-    const updated = await send(`/api/support/tickets/${detail.id}`, "POST", { body });
-    if (updated) {
-      mergeSummary(updated);
-      form.reset();
-    }
-  }
-
-  async function closeTicket() {
-    if (!detail) return;
-    const updated = await send(`/api/support/tickets/${detail.id}`, "PATCH");
-    if (updated) mergeSummary(updated);
   }
 
   return (
@@ -131,45 +80,33 @@ export function SupportCenter({ tickets: initialTickets, emailReachable }: Props
             <h2>Tiket Anda</h2>
             <p>Percakapan dengan tim dukungan Cari Market.</p>
           </div>
-          <button
-            className="button button--ghost"
-            type="button"
-            onClick={() => { setComposing(true); setDetail(null); setError(null); }}
-            disabled={pending}
-          >
+          <button className="button button--primary" type="button" onClick={() => { setComposing(true); setError(null); }} disabled={pending}>
             <MessageSquarePlus size={16} /> Tiket baru
           </button>
         </header>
 
-        {tickets.length === 0
-          ? <p className="support-empty"><CircleHelp size={16} /> Belum ada tiket. Buka tiket baru dan jelaskan kendala Anda.</p>
-          : <ul className="support-ticket-list">
-            {tickets.map(ticket => (
-              <li key={ticket.id}>
-                <button
-                  type="button"
-                  className={`support-ticket-row ${detail?.id === ticket.id ? "is-active" : ""}`}
-                  onClick={() => void openTicket(ticket.id)}
-                  disabled={pending}
-                >
-                  <span className="support-ticket-subject">{ticket.subject}</span>
-                  <span className={`support-badge support-badge--${CLOSED_STATUSES.has(ticket.status) ? "done" : "open"}`}>
-                    {statusLabel(ticket.status)}
-                  </span>
-                  <span className="support-ticket-meta">
-                    {ticket.messageCount} pesan · diperbarui {formatDateTime(ticket.updatedAt)}
-                  </span>
-                </button>
-              </li>
+        <div className="data-table">
+          <div className="data-row data-head data-row--4"><span>Judul</span><span>Status</span><span>Pesan</span><span>Diperbarui</span></div>
+          {tickets.length === 0
+            ? <div className="data-row table-empty-row data-row--4"><span><CircleHelp size={15} /> Belum ada tiket. Buka tiket baru dan jelaskan kendala Anda.</span></div>
+            : tickets.map(ticket => (
+              <button
+                key={ticket.id}
+                type="button"
+                className="data-row data-row--4 support-ticket-row"
+                onClick={() => router.push(`/dashboard/bantuan/${ticket.id}`)}
+              >
+                <span className="support-ticket-subject">{ticket.subject}</span>
+                <span><em className={`support-badge support-badge--${CLOSED.has(ticket.status) ? "done" : "open"}`}>{statusLabel(ticket.status)}</em></span>
+                <span>{ticket.messageCount} pesan</span>
+                <span>{formatDateTime(ticket.updatedAt)}</span>
+              </button>
             ))}
-          </ul>}
+        </div>
       </section>
 
-      {error && <p className="form-error" role="alert">{error}</p>}
-
       {composing && (
-        <section className="panel support-compose">
-          <h2>Buka tiket baru</h2>
+        <FormModal title="Buka tiket baru" description="Jelaskan kendalanya sejelas mungkin agar tim tidak perlu bertanya balik." busy={pending} onClose={() => setComposing(false)}>
           <form className="form-grid" onSubmit={createTicket}>
             <div className="field">
               <label htmlFor="subject">Judul singkat</label>
@@ -185,69 +122,26 @@ export function SupportCenter({ tickets: initialTickets, emailReachable }: Props
             </div>
             <div className="field">
               <label htmlFor="body">Jelaskan kendalanya</label>
-              <textarea
-                className="input"
+              <RichTextEditor
                 id="body"
-                name="body"
+                value={body}
+                onChange={setBody}
                 rows={6}
-                minLength={20}
                 maxLength={4000}
-                placeholder="Sebutkan apa yang Anda lakukan, apa yang terjadi, dan apa yang Anda harapkan. Sertakan nama kata kunci atau waktu kejadian bila ada."
-                required
                 disabled={pending}
+                placeholder="Sebutkan apa yang Anda lakukan, apa yang terjadi, dan apa yang Anda harapkan. Sertakan nama kata kunci atau waktu kejadian bila ada."
               />
             </div>
+            {error && <p className="form-error" role="alert">{error}</p>}
             <button className="button button--primary" type="submit" disabled={pending}>
               {pending ? "Mengirim…" : "Kirim tiket"}
             </button>
           </form>
           <p className="support-hint">Jangan sertakan kata sandi atau token. Tim dukungan tidak pernah memintanya.</p>
-        </section>
-      )}
-
-      {detail && (
-        <section className="panel support-thread">
-          <header className="panel-head">
-            <div>
-              <h2>{detail.subject}</h2>
-              <p>
-                {statusLabel(detail.status)} · prioritas {statusLabel(detail.priority)}
-                {detail.assigneeName ? ` · ditangani ${detail.assigneeName}` : " · menunggu penugasan"}
-              </p>
-            </div>
-            {!CLOSED_STATUSES.has(detail.status) && (
-              <button className="button button--ghost" type="button" onClick={() => void closeTicket()} disabled={pending}>
-                Tandai selesai
-              </button>
-            )}
-          </header>
-
-          <ol className="support-messages">
-            {detail.messages.map(message => (
-              <li key={message.id} className={message.fromStaff ? "is-staff" : "is-user"}>
-                <p className="support-message-head">
-                  {message.fromStaff ? <UserCog size={14} /> : null}
-                  <strong>{message.fromStaff ? `${message.authorName} · Tim dukungan` : message.authorName}</strong>
-                  <span>{formatDateTime(message.createdAt)}</span>
-                </p>
-                <p className="support-message-body">{message.body}</p>
-              </li>
-            ))}
-          </ol>
-
-          {detail.status === "CLOSED"
-            ? <p className="support-hint">Tiket ini sudah ditutup. Buka tiket baru bila masih ada kendala.</p>
-            : <form className="form-grid support-reply" onSubmit={reply}>
-              <div className="field">
-                <label htmlFor="reply-body">Balas</label>
-                <textarea className="input" id="reply-body" name="body" rows={4} minLength={2} maxLength={4000} placeholder="Tulis balasan Anda…" required disabled={pending} />
-              </div>
-              <button className="button button--primary" type="submit" disabled={pending}>
-                <Send size={16} /> {pending ? "Mengirim…" : "Kirim balasan"}
-              </button>
-            </form>}
-        </section>
+        </FormModal>
       )}
     </div>
   );
 }
+
+const CLOSED = new Set(["RESOLVED", "CLOSED"]);

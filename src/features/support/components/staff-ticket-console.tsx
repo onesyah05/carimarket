@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { Inbox, Lock, Send, UserCog } from "lucide-react";
+import { RichText } from "@/components/rich-text";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { formatDateTime, statusLabel } from "@/lib/format";
+import { richTextToPlain } from "@/lib/rich-text";
 import type { InternalTicketSummary, TicketDetail } from "@/server/support/tickets";
 
 /**
@@ -30,6 +33,7 @@ export function StaffTicketConsole({ tickets: initialTickets }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentAt, setSentAt] = useState<string | null>(null);
+  const [body, setBody] = useState("");
 
   async function openTicket(id: string) {
     setPending(true);
@@ -55,6 +59,10 @@ export function StaffTicketConsole({ tickets: initialTickets }: Props) {
     if (!detail) return;
     const form = event.currentTarget;
     const data = new FormData(form);
+    if (richTextToPlain(body).length < 2) {
+      setError("Tulis balasannya lebih dulu.");
+      return;
+    }
     setPending(true);
     setError(null);
     try {
@@ -63,7 +71,7 @@ export function StaffTicketConsole({ tickets: initialTickets }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ticketId: detail.id,
-          body: data.get("body"),
+          body,
           isInternal: internal,
           status: data.get("status"),
           priority: data.get("priority"),
@@ -79,6 +87,8 @@ export function StaffTicketConsole({ tickets: initialTickets }: Props) {
       setDetail(updated);
       setSentAt(new Date().toISOString());
       form.reset();
+      // Editornya terkendali, jadi form.reset() tidak mengosongkannya.
+      setBody("");
       setTickets(current => current.map(ticket => ticket.id === updated.id
         ? {
           ...ticket,
@@ -167,7 +177,7 @@ export function StaffTicketConsole({ tickets: initialTickets }: Props) {
                   {message.isInternal && <span className="support-badge support-badge--internal"><Lock size={11} /> Catatan internal</span>}
                   <span>{formatDateTime(message.createdAt)}</span>
                 </p>
-                <p className="support-message-body">{message.body}</p>
+                <RichText className="support-message-body" value={message.body} />
               </li>
             ))}
           </ol>
@@ -204,15 +214,13 @@ export function StaffTicketConsole({ tickets: initialTickets }: Props) {
 
             <div className="field">
               <label htmlFor="staff-body">{internal ? "Catatan" : "Balasan"}</label>
-              <textarea
-                className="input"
+              <RichTextEditor
                 id="staff-body"
-                name="body"
+                value={body}
+                onChange={setBody}
                 rows={5}
-                minLength={2}
                 maxLength={4000}
                 placeholder={internal ? "Konteks penanganan untuk tim…" : "Tulis jawaban untuk pengguna…"}
-                required
                 disabled={pending}
               />
             </div>
