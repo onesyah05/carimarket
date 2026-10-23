@@ -127,8 +127,11 @@ async function main() {
 
   // Metode pembayaran fiktif agar alur upgrade dapat dicoba tanpa rekening
   // sungguhan. Produksi mengisinya dari Superadmin, Pembayaran.
+  //
+  // Transfer bank tidak lagi di-seed: saluran itu sudah tidak dapat dibuat.
+  // QRIS juga tidak, karena metode QRIS yang berguna memerlukan gambar QR yang
+  // sungguhan — pasang lewat `scripts/set-qris.ts`.
   for (const method of [
-    { channel: "BANK_TRANSFER" as const, label: "Bank Contoh", accountName: "PT Cari Market Fiktif", accountNumber: "0000111122", instructions: "Rekening contoh untuk pengembangan lokal. Jangan pakai di produksi.", sortOrder: 0 },
     { channel: "EWALLET" as const, label: "E-wallet Contoh", accountName: "Cari Market Fiktif", accountNumber: "08000000000", instructions: null, sortOrder: 1 },
   ]) {
     const existing = await prisma.paymentMethod.findFirst({ where: { label: method.label } });

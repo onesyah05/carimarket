@@ -2,7 +2,7 @@
 
 import { RichTextEditor } from "@/components/rich-text-editor";
 import { FormEvent, useCallback, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Image as ImageIcon, Pencil, Plus, QrCode, Trash2 } from "lucide-react";
 import { FormModal } from "@/components/form-modal";
 import type { AdminPaymentMethod } from "@/server/billing/payment-methods";
 
@@ -12,10 +12,17 @@ import type { AdminPaymentMethod } from "@/server/billing/payment-methods";
  * Isi form ini tampil apa adanya sebagai instruksi transfer kepada pelanggan,
  * jadi nomor rekening dan nama pemilik ditampilkan penuh di sini, bukan
  * disamarkan: Superadmin perlu memeriksa kebenarannya.
+ *
+ * Dikirim sebagai FormData, bukan JSON, karena metode QRIS dan gambarnya harus
+ * tersimpan dalam satu tindakan: QRIS yang aktif tanpa gambar tidak menyisakan
+ * apa pun untuk dibayar, jadi keadaan itu tidak boleh sempat ada.
  */
 
+/** Saluran yang masih boleh dibuat. Lihat catatan pada CHANNELS. */
+type Channel = "QRIS" | "EWALLET";
+
 type FormState = {
-  channel: AdminPaymentMethod["channel"];
+  channel: Channel;
   label: string;
   accountName: string;
   accountNumber: string;
@@ -25,7 +32,8 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = {
-  channel: "BANK_TRANSFER",
+  // QRIS lebih dulu karena itulah cara bayar utamanya sekarang.
+  channel: "QRIS",
   label: "",
   accountName: "",
   accountNumber: "",
@@ -34,15 +42,25 @@ const EMPTY_FORM: FormState = {
   sortOrder: "0",
 };
 
-const CHANNELS: Array<{ value: FormState["channel"]; label: string; numberLabel: string; numberHint: string }> = [
-  { value: "BANK_TRANSFER", label: "Transfer bank", numberLabel: "Nomor rekening", numberHint: "Mis. 1234567890" },
+/**
+ * Transfer bank sengaja tidak ada di sini.
+ *
+ * Nilainya tetap hidup di basis data supaya tagihan lama yang memakainya masih
+ * terbaca di histori; yang berhenti hanyalah pembuatan metode bank yang baru.
+ */
+const CHANNELS: Array<{ value: Channel; label: string; numberLabel: string; numberHint: string }> = [
+  { value: "QRIS", label: "QRIS", numberLabel: "NMID (opsional)", numberHint: "Mis. ID1026622753196" },
   { value: "EWALLET", label: "E-wallet", numberLabel: "Nomor e-wallet", numberHint: "Mis. 081234567890" },
-  { value: "QRIS", label: "QRIS", numberLabel: "Keterangan QRIS", numberHint: "Mis. Scan QRIS Cari Market pada lampiran" },
 ];
+
+/** Metode bertsaluran lama (transfer bank) tidak dapat diubah lagi, hanya dihapus. */
+function isEditable(method: AdminPaymentMethod) {
+  return CHANNELS.some(entry => entry.value === method.channel);
+}
 
 function toForm(method: AdminPaymentMethod): FormState {
   return {
-    channel: method.channel,
+    channel: isEditable(method) ? method.channel as Channel : "QRIS",
     label: method.label,
     accountName: method.accountName,
     accountNumber: method.accountNumber,
@@ -56,11 +74,17 @@ export function PaymentMethodsManager({ methods }: { methods: AdminPaymentMethod
   const [items, setItems] = useState(methods);
   const [mode, setMode] = useState<{ kind: "closed" } | { kind: "create" } | { kind: "edit"; method: AdminPaymentMethod }>({ kind: "closed" });
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  // Berkas disimpan terpisah dari FormState: ia tidak pernah datang dari
+  // server, dan membiarkannya di sana membuat "belum memilih berkas baru"
+  // tercampur dengan "gambar lama dihapus".
+  const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState<string>();
 
   const channel = CHANNELS.find(entry => entry.value === form.channel) ?? CHANNELS[0];
+  const isQris = form.channel === "QRIS";
+  const existingQr = mode.kind === "edit" ? mode.method.qrImageUrl : null;
   // Menutup saat penyimpanan berjalan akan menyembunyikan hasilnya, jadi
   // tombol tutup, Escape, dan klik latar sama-sama menunggu proses selesai.
   const close = useCallback(() => {
@@ -82,23 +106,29 @@ export function PaymentMethodsManager({ methods }: { methods: AdminPaymentMethod
     setError(undefined);
     try {
       const creating = mode.kind === "create";
+      const body = new FormData();
+      body.set("channel", form.channel);
+      body.set("label", form.label.trim());
+      body.set("accountName", form.accountName.trim());
+      body.set("accountNumber", form.accountNumber.trim());
+      body.set("instructions", form.instructions.trim());
+      body.set("isActive", String(form.isActive));
+      body.set("sortOrder", String(Number(form.sortOrder) || 0));
+      // Tanpa berkas baru, medannya tidak dikirim sama sekali dan gambar yang
+      // sudah tersimpan dibiarkan apa adanya.
+      if (file) body.set("qris", file);
+
+      // Content-Type sengaja tidak disetel: peramban yang menuliskannya
+      // lengkap dengan boundary multipart.
       const response = await fetch(creating ? "/api/admin/payment-methods" : `/api/admin/payment-methods/${encodeURIComponent(mode.method.id)}`, {
         method: creating ? "POST" : "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          channel: form.channel,
-          label: form.label.trim(),
-          accountName: form.accountName.trim(),
-          accountNumber: form.accountNumber.trim(),
-          instructions: form.instructions.trim(),
-          isActive: form.isActive,
-          sortOrder: Number(form.sortOrder) || 0,
-        }),
+        body,
       });
       const payload = await response.json().catch(() => null) as { data?: AdminPaymentMethod[]; error?: string } | null;
       if (!response.ok || !payload?.data) throw new Error(payload?.error ?? "Metode pembayaran belum dapat disimpan.");
       setItems(payload.data);
       setSaved(creating ? `Metode ${form.label} ditambahkan.` : `Metode ${form.label} diperbarui.`);
+      setFile(null);
       setMode({ kind: "closed" });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Metode pembayaran belum dapat disimpan.");
@@ -123,7 +153,7 @@ export function PaymentMethodsManager({ methods }: { methods: AdminPaymentMethod
 
   return <>
     <div className="plans-actions">
-      <button className="button button--primary" type="button" onClick={() => { setForm(EMPTY_FORM); setMode({ kind: "create" }); setError(undefined); setSaved(undefined); }}>
+      <button className="button button--primary" type="button" onClick={() => { setForm(EMPTY_FORM); setFile(null); setMode({ kind: "create" }); setError(undefined); setSaved(undefined); }}>
         <Plus size={16} /> Tambah metode
       </button>
       {saved && <span className="form-feedback form-feedback--success" role="status">{saved}</span>}
@@ -149,8 +179,31 @@ export function PaymentMethodsManager({ methods }: { methods: AdminPaymentMethod
           </div>
           <div className="field">
             <label htmlFor="method-number">{channel.numberLabel}</label>
-            <input className="input" id="method-number" value={form.accountNumber} onChange={event => update("accountNumber", event.target.value)} placeholder={channel.numberHint} minLength={2} maxLength={80} disabled={busy} required />
+            {/* Pada QRIS yang dibayar adalah gambarnya, bukan sebuah nomor,
+                jadi isian ini tidak diwajibkan di sana. Memaksanya hanya
+                membuat isian karangan yang tampil apa adanya ke pelanggan. */}
+            <input className="input" id="method-number" value={form.accountNumber} onChange={event => update("accountNumber", event.target.value)} placeholder={channel.numberHint} minLength={isQris ? 0 : 2} maxLength={80} disabled={busy} required={!isQris} />
           </div>
+
+          {isQris && <div className="field qr-field">
+            <label htmlFor="method-qris"><QrCode size={15} /> Gambar QRIS</label>
+            {existingQr && !file && <div className="qr-field__current">
+              {/* eslint-disable-next-line @next/next/no-img-element -- gambar dilayani route terautentikasi dengan ukuran yang tidak diketahui di muka. */}
+              <img src={existingQr} alt={`QRIS ${mode.kind === "edit" ? mode.method.label : ""}`} />
+              <small>Gambar yang terpasang sekarang. Pilih berkas baru hanya bila ingin menggantinya.</small>
+            </div>}
+            <input
+              className="input qr-field__input"
+              id="method-qris"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={busy}
+              onChange={event => { setFile(event.target.files?.[0] ?? null); setError(undefined); setSaved(undefined); }}
+            />
+            <small className="field-hint">
+              {file ? `${file.name} siap dikirim. ` : ""}JPG, PNG, atau WebP maksimal 2 MB. Gambar inilah yang dipindai pelanggan, jadi metode QRIS yang aktif harus memilikinya.
+            </small>
+          </div>}
           <div className="field">
             <label htmlFor="method-account-name">Atas nama</label>
             <input className="input" id="method-account-name" value={form.accountName} onChange={event => update("accountName", event.target.value)} placeholder="PT Cari Market Indonesia" minLength={2} maxLength={120} disabled={busy} required />
@@ -191,12 +244,18 @@ export function PaymentMethodsManager({ methods }: { methods: AdminPaymentMethod
             <small>{method.channelLabel}{method.isActive ? "" : " · tidak aktif"} · urutan {method.sortOrder}</small>
           </span>
           <span data-label="Tujuan">
-            {method.accountNumber}<br />
+            {method.qrImageUrl
+              ? <a className="qr-chip" href={method.qrImageUrl} target="_blank" rel="noreferrer"><ImageIcon size={14} /> Lihat QRIS</a>
+              : method.accountNumber || <em>—</em>}
+            {method.qrImageUrl && method.accountNumber ? <><br />{method.accountNumber}</> : null}
+            <br />
             <small>{method.accountName}</small>
           </span>
           <span data-label="Tagihan">{method.transactions.toLocaleString("id-ID")}</span>
           <span data-label="Aksi" className="row-actions">
-            <button className="button button--ghost button--small" type="button" onClick={() => { setForm(toForm(method)); setMode({ kind: "edit", method }); setError(undefined); setSaved(undefined); }}><Pencil size={15} /> Ubah</button>
+            {isEditable(method)
+              ? <button className="button button--ghost button--small" type="button" onClick={() => { setForm(toForm(method)); setFile(null); setMode({ kind: "edit", method }); setError(undefined); setSaved(undefined); }}><Pencil size={15} /> Ubah</button>
+              : <small className="qr-legacy">Saluran lama, hanya dapat dihapus.</small>}
             {method.transactions === 0 && <button className="button button--danger button--small" type="button" onClick={() => void remove(method)}><Trash2 size={15} /> Hapus</button>}
           </span>
         </div>)}

@@ -239,20 +239,38 @@ function Invoice({ transaction, busy, copied, payer, windowHours, proofFile, onP
           </button>
         </div>
 
-        <p className="invoice__warning"><AlertTriangle size={15} /> Transfer tepat sampai tiga angka terakhir. Kode unik itulah yang membuat pembayaran Anda dikenali otomatis pada mutasi.</p>
+        <p className="invoice__warning"><AlertTriangle size={15} /> {method?.channel === "QRIS"
+          ? "Masukkan nominalnya tepat sampai tiga angka terakhir. Kode unik itulah yang membedakan pembayaran Anda dari pembayaran lain yang nominalnya mirip."
+          : "Transfer tepat sampai tiga angka terakhir. Kode unik itulah yang membuat pembayaran Anda dikenali otomatis pada mutasi."}</p>
 
         {method
-          ? <dl className="invoice__method">
-            <div><dt>Metode</dt><dd>{method.channelLabel} · {method.label}</dd></div>
-            <div><dt>{method.channel === "QRIS" ? "Keterangan" : "Nomor tujuan"}</dt><dd>
-              <span className="invoice__account">{method.accountNumber}</span>
-              <button className="button button--ghost button--small" type="button" onClick={() => void onCopy(method.accountNumber, "account")}>
-                <ClipboardCopy size={14} /> {copied === "account" ? "Tersalin" : "Salin"}
-              </button>
-            </dd></div>
-            <div><dt>Atas nama</dt><dd>{method.accountName}</dd></div>
-            {method.instructions && <div><dt>Catatan</dt><dd>{method.instructions}</dd></div>}
-          </dl>
+          ? <div className="invoice__method-block">
+            {/* Gambar QR mendahului rinciannya: pada QRIS inilah yang
+                sebenarnya dipakai membayar, dan menaruhnya di bawah daftar
+                membuat orang mencari nomor rekening yang tidak ada. */}
+            {method.qrImageUrl && <figure className="invoice__qr">
+              {/* eslint-disable-next-line @next/next/no-img-element -- gambar dilayani route terautentikasi dengan ukuran yang tidak diketahui di muka. */}
+              <img src={method.qrImageUrl} alt={`Kode QRIS ${method.label}`} />
+              <figcaption>
+                Pindai dengan aplikasi bank atau e-wallet apa pun yang mendukung QRIS, lalu masukkan nominalnya secara manual
+                — termasuk tiga angka kode unik.
+                <a href={method.qrImageUrl} target="_blank" rel="noreferrer">Buka gambar</a>
+              </figcaption>
+            </figure>}
+            <dl className="invoice__method">
+              <div><dt>Metode</dt><dd>{method.channelLabel} · {method.label}</dd></div>
+              {/* QRIS boleh tanpa nomor tujuan; barisnya disembunyikan alih-alih
+                  menampilkan label bertitik dua yang tidak berisi apa-apa. */}
+              {method.accountNumber && <div><dt>{method.channel === "QRIS" ? "NMID" : "Nomor tujuan"}</dt><dd>
+                <span className="invoice__account">{method.accountNumber}</span>
+                <button className="button button--ghost button--small" type="button" onClick={() => void onCopy(method.accountNumber, "account")}>
+                  <ClipboardCopy size={14} /> {copied === "account" ? "Tersalin" : "Salin"}
+                </button>
+              </dd></div>}
+              <div><dt>Atas nama</dt><dd>{method.accountName}</dd></div>
+              {method.instructions && <div><dt>Catatan</dt><dd>{method.instructions}</dd></div>}
+            </dl>
+          </div>
           : <p className="billing-empty">Metode pembayaran tagihan ini sudah dihapus tim. Batalkan tagihan lalu buat ulang dengan metode yang tersedia.</p>}
 
         <p className="invoice__expiry"><Clock size={15} /> {waiting

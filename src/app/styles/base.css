@@ -1957,6 +1957,23 @@ html[data-theme="dark"] .intent-chip--menawarkan { color: #ffd79a; background: #
 .invoice__method dt { color: var(--muted); font-size: .76rem; }
 .invoice__method dd { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; overflow-wrap: anywhere; font-size: .8rem; font-weight: 650; line-height: 1.5; }
 .invoice__account { font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.invoice__method-block { display: grid; gap: 14px; }
+/* Latar putih dan tinta gelapnya sengaja dipaku, tidak mengikuti tema.
+   Pemindai QRIS membaca kontras gelap-di-atas-terang; membalik warnanya di
+   mode gelap menghasilkan kode yang tidak terbaca kamera mana pun. */
+.invoice__qr { margin: 0; padding: 16px; display: grid; gap: 10px; justify-items: center; border: 1px solid var(--line); border-radius: 14px; background: white; }
+.invoice__qr img { width: min(268px, 100%); height: auto; display: block; }
+.invoice__qr figcaption { display: grid; gap: 6px; color: var(--on-light); font-size: .76rem; line-height: 1.55; text-align: center; }
+.invoice__qr figcaption a { color: var(--brand-deep); font-weight: 700; }
+
+.qr-field { display: grid; gap: 7px; }
+.qr-field label { display: flex; gap: 7px; align-items: center; }
+.qr-field__current { display: grid; gap: 7px; justify-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: white; }
+.qr-field__current img { width: 124px; height: auto; display: block; }
+.qr-field__current small { color: var(--on-light); font-size: .74rem; line-height: 1.5; }
+.qr-chip { display: inline-flex; gap: 6px; align-items: center; font-weight: 700; }
+.qr-legacy { color: var(--muted); font-size: .74rem; line-height: 1.5; }
+
 .invoice__expiry { margin: 0; display: flex; gap: 8px; align-items: flex-start; color: var(--muted); font-size: .77rem; line-height: 1.55; }
 .invoice__confirm { gap: 12px; }
 .invoice__actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }

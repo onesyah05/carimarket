@@ -7,7 +7,7 @@ import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 import { createNotification } from "@/server/notifications/service";
 import { getQuotaSnapshot } from "@/server/usage/limits";
 import { describeQuota } from "@/server/plans/queries";
-import { listActivePaymentMethods, type PublicPaymentMethod } from "./payment-methods";
+import { listActivePaymentMethods, qrImageUrl, type PublicPaymentMethod } from "./payment-methods";
 import {
   OPEN_TRANSACTION_STATUSES,
   PAYMENT_WINDOW_HOURS,
@@ -100,7 +100,13 @@ export type BillingOverview = {
   periodChoices: number[];
 };
 
-const withRelations = { plan: { select: { code: true, name: true } }, paymentMethod: true } as const;
+// Hanya cap waktu gambar QR yang ikut terbaca, tidak pernah isinya: blob-nya
+// tinggal di tabel terpisah justru supaya tidak terseret ke tiap pemuatan
+// halaman Langganan.
+const withRelations = {
+  plan: { select: { code: true, name: true } },
+  paymentMethod: { include: { qr: { select: { updatedAt: true } } } },
+} as const;
 
 type TransactionWithRelations = Prisma.TransactionGetPayload<{ include: typeof withRelations }>;
 
@@ -126,6 +132,7 @@ function serialize(transaction: TransactionWithRelations): BillingTransaction {
         accountName: method.accountName,
         accountNumber: method.accountNumber,
         instructions: method.instructions,
+        qrImageUrl: qrImageUrl(method),
       }
       : null,
     payerName: transaction.payerName,

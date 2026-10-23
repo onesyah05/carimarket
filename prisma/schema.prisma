@@ -585,8 +585,32 @@ model PaymentMethod {
   createdAt     DateTime       @default(now()) @db.DateTime(3)
   updatedAt     DateTime       @updatedAt @db.DateTime(3)
   transactions  Transaction[]
+  qr            PaymentMethodQr?
 
   @@index([isActive, sortOrder])
+}
+
+/**
+ * Gambar QR milik satu metode pembayaran.
+ *
+ * Ditaruh di tabel terpisah, bukan sebagai kolom di PaymentMethod, karena
+ * tagihan memuat metodenya lewat `include: { paymentMethod: true }`. Kolom
+ * blob di tabel induk akan ikut terbaca pada tiap pemuatan halaman Langganan
+ * meski gambarnya tidak dipakai; relasi terpisah membuat hal itu mustahil
+ * tanpa diminta.
+ *
+ * Isinya disimpan di basis data, bukan di disk, karena deploy mengganti
+ * seluruh direktori aplikasi — gambar QRIS yang tersimpan sebagai berkas akan
+ * hilang tiap kali rilis, dan itu memutus satu-satunya cara pelanggan
+ * membayar.
+ */
+model PaymentMethodQr {
+  paymentMethodId String        @id
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id], onDelete: Cascade)
+  content         Bytes
+  mimeType        String        @db.VarChar(80)
+  size            Int
+  updatedAt       DateTime      @updatedAt @db.DateTime(3)
 }
 
 /**
