@@ -49,15 +49,44 @@ async function loadBusinessContext(profileId: string): Promise<BusinessContext> 
  */
 const AI_JUDGEMENT_LIMIT = 25;
 
+/**
+ * Banyaknya postingan yang dinilai sekaligus.
+ *
+ * Penilaian dulu berjalan satu per satu, dan itu tidak terasa selama penyedia
+ * AI-nya menolak permintaan pertama — gagalnya seketika. Begitu penilaiannya
+ * benar-benar berjalan, satu panggilan memakan 5–9 detik, jadi 25 postingan
+ * berurutan menjadi hampir tiga menit sementara tombol "Cari leads sekarang"
+ * menunggu di hadapan pengguna.
+ *
+ * Enam permintaan serentak terukur tidak memperlambat penyedianya maupun
+ * memicu pembatasan laju, dan membuat satu kata kunci penuh selesai di bawah
+ * setengah menit.
+ */
+const AI_CONCURRENCY = 6;
+
+/** Kegagalan tingkat akun: akan terulang pada tiap postingan berikutnya. */
+function isAccountFailure(failure: Awaited<ReturnType<typeof judgeLead>>["failure"]) {
+  return failure === "NO_FUNDS" || failure === "UNAUTHORIZED" || failure === "UNCONFIGURED" || failure === "FREE_TIER_BLOCKED";
+}
+
 async function judgeResults(business: BusinessContext, phrase: string, results: Array<{ externalPostId: string; body: string }>) {
   const judgements = new Map<string, Awaited<ReturnType<typeof judgeLead>>>();
-  for (const result of results.slice(0, AI_JUDGEMENT_LIMIT)) {
-    const judgement = await judgeLead(business, phrase, result.body);
-    judgements.set(result.externalPostId, judgement);
-    // Satu kegagalan yang bersifat akun — saldo habis, key ditolak — akan
-    // terulang pada tiap postingan berikutnya, jadi sisanya tidak dicoba.
-    if (judgement.failure === "NO_FUNDS" || judgement.failure === "UNAUTHORIZED" || judgement.failure === "UNCONFIGURED" || judgement.failure === "FREE_TIER_BLOCKED") break;
+  const queue = results.slice(0, AI_JUDGEMENT_LIMIT);
+
+  // Dikerjakan per rombongan, bukan semuanya sekaligus: rombongan memberi
+  // titik berhenti. Kegagalan yang bersifat akun tidak ada gunanya diulang 24
+  // kali, dan menyetop setelah rombongan berjalan berarti paling banyak enam
+  // permintaan yang terbuang alih-alih seluruh sisanya.
+  for (let index = 0; index < queue.length; index += AI_CONCURRENCY) {
+    const batch = queue.slice(index, index + AI_CONCURRENCY);
+    // `judgeLead` sudah tidak pernah melempar — ia menangkap kegagalannya
+    // sendiri dan turun ke heuristik — jadi satu postingan yang bermasalah
+    // tidak dapat menggagalkan rombongannya.
+    const judged = await Promise.all(batch.map(async result => [result.externalPostId, await judgeLead(business, phrase, result.body)] as const));
+    for (const [externalPostId, judgement] of judged) judgements.set(externalPostId, judgement);
+    if (judged.some(([, judgement]) => isAccountFailure(judgement.failure))) break;
   }
+
   return judgements;
 }
 
