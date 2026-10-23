@@ -17,6 +17,16 @@ import "server-only";
 const DEFAULT_MODEL = "mimo-v2.6-flash-free";
 
 /**
+ * Penyedia cadangan: OpenCode Zen yang resmi.
+ *
+ * Alamat dan modelnya boleh punya nilai bawaan — tidak seperti penyedia utama
+ * — karena keduanya milik layanan publik yang sama bagi siapa pun, jadi
+ * memasangnya cukup dengan mengisi satu kunci.
+ */
+const DEFAULT_FALLBACK_BASE_URL = "https://opencode.ai/zen/v1";
+const DEFAULT_FALLBACK_MODEL = "claude-haiku-5-5";
+
+/**
  * Anggaran token jawaban.
  *
  * Besar karena model penalaran membelanjakan token untuk berpikir SEBELUM
@@ -62,11 +72,22 @@ export type AiClient = {
   complete(prompt: string, maxTokens?: number): Promise<AiCompletion>;
 };
 
-export function aiConfig() {
+export type ProviderConfig = { apiKey: string; baseUrl: string; model: string };
+
+export function aiConfig(): { primary: ProviderConfig; fallback: ProviderConfig } {
+  const trimmed = (name: string) => process.env[name]?.trim() ?? "";
+  const withoutTrailingSlash = (value: string) => value.replace(/\/+$/, "");
   return {
-    apiKey: process.env.AI_API_KEY?.trim() ?? "",
-    baseUrl: (process.env.AI_BASE_URL?.trim() ?? "").replace(/\/+$/, ""),
-    model: process.env.AI_MODEL?.trim() || DEFAULT_MODEL,
+    primary: {
+      apiKey: trimmed("AI_API_KEY"),
+      baseUrl: withoutTrailingSlash(trimmed("AI_BASE_URL")),
+      model: trimmed("AI_MODEL") || DEFAULT_MODEL,
+    },
+    fallback: {
+      apiKey: trimmed("AI_FALLBACK_API_KEY"),
+      baseUrl: withoutTrailingSlash(trimmed("AI_FALLBACK_BASE_URL") || DEFAULT_FALLBACK_BASE_URL),
+      model: trimmed("AI_FALLBACK_MODEL") || DEFAULT_FALLBACK_MODEL,
+    },
   };
 }
 
@@ -81,11 +102,14 @@ type ChatCompletion = {
   choices?: Array<{ message?: { content?: unknown; reasoning?: unknown } }>;
 };
 
-export function getAiClient(): AiClient {
-  const { apiKey, baseUrl, model } = aiConfig();
-  // Host ikut menentukan "terkonfigurasi": penyedianya tidak lagi punya alamat
-  // bawaan, jadi key tanpa host sama tidak dapat dipakainya dengan host tanpa
-  // key — dan diam-diam menembak alamat yang salah lebih sulit didiagnosis.
+/**
+ * Klien satu penyedia.
+ *
+ * Host ikut menentukan "terkonfigurasi": penyedia utama tidak punya alamat
+ * bawaan, jadi key tanpa host sama tidak dapat dipakainya dengan host tanpa
+ * key — dan diam-diam menembak alamat yang salah lebih sulit didiagnosis.
+ */
+export function providerClient({ apiKey, baseUrl, model }: ProviderConfig): AiClient {
   if (!apiKey || !baseUrl) return { configured: false, model, async complete() { return { ok: false, code: "UNCONFIGURED" }; } };
 
   return {
@@ -111,6 +135,45 @@ export function getAiClient(): AiClient {
       const text = messageText(payload);
       if (text === null) return { ok: false, code: "BAD_RESPONSE" };
       return { ok: true, text, model };
+    },
+  };
+}
+
+/**
+ * Klien yang dipakai aplikasi: penyedia utama dengan satu cadangan.
+ *
+ * Cadangan hanya dipakai saat penyedia utama membatasi laju (429). Sebab
+ * kegagalan lain tidak diteruskan ke sana dengan sengaja: key yang ditolak
+ * atau jawaban yang tidak terbaca adalah persoalan yang akan terulang sama
+ * persis pada penyedia kedua — meneruskannya hanya menggandakan penantian
+ * untuk tiap postingan tanpa mengubah hasilnya.
+ *
+ * Bila cadangan ikut gagal, yang dilaporkan adalah 429 milik penyedia utama,
+ * bukan kegagalan cadangannya. Ini disengaja: pembatasan laju bersifat
+ * sementara, sedangkan `NO_FUNDS` dianggap kegagalan tingkat akun yang
+ * menghentikan penilaian seluruh sisa postingan dalam satu pencarian. Satu
+ * 429 yang sekejap tidak boleh mematikan penilaian hanya karena akun
+ * cadangannya sedang kosong.
+ */
+export function getAiClient(): AiClient {
+  const { primary, fallback } = aiConfig();
+  const main = providerClient(primary);
+  const spare = providerClient(fallback);
+
+  if (!spare.configured) return main;
+  // Cadangan menggantikan sepenuhnya bila yang utama memang belum disetel,
+  // supaya mengisi satu kunci saja sudah membuat penilaian berjalan.
+  if (!main.configured) return spare;
+
+  return {
+    configured: true,
+    model: main.model,
+    async complete(prompt: string, maxTokens?: number): Promise<AiCompletion> {
+      const result = await main.complete(prompt, maxTokens);
+      if (result.ok || result.code !== "RATE_LIMITED") return result;
+
+      const retried = await spare.complete(prompt, maxTokens);
+      return retried.ok ? retried : result;
     },
   };
 }
@@ -151,7 +214,7 @@ export const AI_FAILURE_MESSAGE: Record<AiFailure, string> = {
   NO_FUNDS: "Saldo akun penyedia AI habis. Isi saldo agar penilaian AI berjalan kembali.",
   FREE_TIER_BLOCKED: "Penyedia menolak model ini dari server. Pilih model lain lewat AI_MODEL.",
   UNAUTHORIZED: "API key AI ditolak. Perbarui AI_API_KEY.",
-  RATE_LIMITED: "Permintaan ke penyedia AI dibatasi sementara.",
+  RATE_LIMITED: "Penyedia AI utama membatasi laju dan penyedia cadangan juga tidak dapat menjawab.",
   TIMEOUT: "Penyedia AI tidak menjawab tepat waktu.",
   BAD_RESPONSE: "Jawaban penyedia AI tidak dapat dibaca.",
   REQUEST_FAILED: "Permintaan ke penyedia AI gagal.",

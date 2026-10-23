@@ -64,9 +64,22 @@ const AI_JUDGEMENT_LIMIT = 25;
  */
 const AI_CONCURRENCY = 6;
 
-/** Kegagalan tingkat akun: akan terulang pada tiap postingan berikutnya. */
-function isAccountFailure(failure: Awaited<ReturnType<typeof judgeLead>>["failure"]) {
-  return failure === "NO_FUNDS" || failure === "UNAUTHORIZED" || failure === "UNCONFIGURED" || failure === "FREE_TIER_BLOCKED";
+/**
+ * Kegagalan yang akan terulang pada tiap postingan berikutnya.
+ *
+ * Selain kegagalan tingkat akun, `RATE_LIMITED` ikut di sini. Sebabnya bukan
+ * lonjakan sesaat melainkan jatah pemakaian yang habis, dan jatah tidak pulih
+ * dalam hitungan detik — meneruskan berarti 24 postingan berikutnya
+ * masing-masing menunggu dua panggilan yang sudah pasti gagal (penyedia utama
+ * lalu cadangannya) sebelum jatuh ke heuristik yang sama. Berhenti membuat
+ * sisanya memakai heuristik seketika.
+ */
+function willRepeat(failure: Awaited<ReturnType<typeof judgeLead>>["failure"]) {
+  return failure === "NO_FUNDS"
+    || failure === "UNAUTHORIZED"
+    || failure === "UNCONFIGURED"
+    || failure === "FREE_TIER_BLOCKED"
+    || failure === "RATE_LIMITED";
 }
 
 async function judgeResults(business: BusinessContext, phrase: string, results: Array<{ externalPostId: string; body: string }>) {
@@ -84,7 +97,7 @@ async function judgeResults(business: BusinessContext, phrase: string, results: 
     // tidak dapat menggagalkan rombongannya.
     const judged = await Promise.all(batch.map(async result => [result.externalPostId, await judgeLead(business, phrase, result.body)] as const));
     for (const [externalPostId, judgement] of judged) judgements.set(externalPostId, judgement);
-    if (judged.some(([, judgement]) => isAccountFailure(judgement.failure))) break;
+    if (judged.some(([, judgement]) => willRepeat(judgement.failure))) break;
   }
 
   return judgements;

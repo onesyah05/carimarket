@@ -24,6 +24,9 @@ beforeEach(() => {
   process.env.AI_API_KEY = "kunci-uji";
   process.env.AI_BASE_URL = "http://penyedia.uji/v1";
   process.env.AI_MODEL = "model-uji";
+  // Cadangan dimatikan secara bawaan; pengujian yang memerlukannya memasang
+  // sendiri, supaya pengujian lain benar-benar menguji penyedia utama saja.
+  process.env.AI_FALLBACK_API_KEY = "";
 });
 
 afterEach(() => {
@@ -34,7 +37,18 @@ afterEach(() => {
 describe("aiConfig", () => {
   it("membuang garis miring di ujung agar jalurnya tidak berganda", () => {
     process.env.AI_BASE_URL = "http://penyedia.uji/v1///";
-    expect(aiConfig().baseUrl).toBe("http://penyedia.uji/v1");
+    expect(aiConfig().primary.baseUrl).toBe("http://penyedia.uji/v1");
+  });
+
+  it("memberi cadangan alamat bawaan, jadi memasangnya cukup dengan satu kunci", () => {
+    process.env.AI_FALLBACK_API_KEY = "kunci-cadangan";
+    delete process.env.AI_FALLBACK_BASE_URL;
+    delete process.env.AI_FALLBACK_MODEL;
+    expect(aiConfig().fallback).toEqual({
+      apiKey: "kunci-cadangan",
+      baseUrl: "https://opencode.ai/zen/v1",
+      model: "claude-haiku-5-5",
+    });
   });
 });
 
@@ -126,5 +140,94 @@ describe("getAiClient", () => {
       expect(await client.complete("tanya")).toEqual({ ok: false, code: "UNCONFIGURED" });
     }
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Perilaku cadangan.
+ *
+ * Yang dikunci bukan sekadar "cadangan dipakai", melainkan kapan ia TIDAK
+ * dipakai dan kode apa yang dilaporkan saat ia ikut gagal — keduanya
+ * menentukan apakah satu 429 sekejap mematikan penilaian seluruh pencarian.
+ */
+describe("cadangan saat penyedia utama membatasi laju", () => {
+  const rateLimited = () => new Response("slow down", { status: 429 });
+
+  function twoProviders(second: () => Response | Promise<Response>) {
+    process.env.AI_FALLBACK_API_KEY = "kunci-cadangan";
+    process.env.AI_FALLBACK_BASE_URL = "https://cadangan.uji/v1";
+    process.env.AI_FALLBACK_MODEL = "model-cadangan";
+    const fetchMock = vi.fn()
+      .mockImplementationOnce(async () => rateLimited())
+      .mockImplementationOnce(async () => second());
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("mengulang ke penyedia cadangan dan memakai jawabannya", async () => {
+    const fetchMock = twoProviders(() => jsonResponse({ choices: [{ message: { content: "dari cadangan" } }] }));
+
+    const result = await getAiClient().complete("tanya");
+
+    expect(result).toEqual({ ok: true, text: "dari cadangan", model: "model-cadangan" });
+    expect(fetchMock.mock.calls[0][0]).toBe("http://penyedia.uji/v1/chat/completions");
+    expect(fetchMock.mock.calls[1][0]).toBe("https://cadangan.uji/v1/chat/completions");
+  });
+
+  it("mengirim kunci cadangan ke penyedia cadangan, bukan kunci utama", async () => {
+    const fetchMock = twoProviders(() => jsonResponse({ choices: [{ message: { content: "dari cadangan" } }] }));
+
+    await getAiClient().complete("tanya");
+
+    const headers = (fetchMock.mock.calls[1][1] as RequestInit).headers as Record<string, string>;
+    expect(headers.authorization).toBe("Bearer kunci-cadangan");
+  });
+
+  it("melaporkan 429 milik penyedia utama ketika cadangan ikut gagal", async () => {
+    // Bukan NO_FUNDS milik cadangan: kode itu dianggap kegagalan tingkat akun
+    // dan akan menghentikan penilaian seluruh sisa postingan, padahal yang
+    // sebenarnya terjadi di penyedia utama hanya pembatasan laju sementara.
+    twoProviders(() => new Response("Insufficient account funds", { status: 402 }));
+
+    expect(await getAiClient().complete("tanya")).toEqual({ ok: false, code: "RATE_LIMITED" });
+  });
+
+  it("tidak menyentuh cadangan untuk sebab kegagalan selain 429", async () => {
+    process.env.AI_FALLBACK_API_KEY = "kunci-cadangan";
+    const fetchMock = vi.fn().mockResolvedValue(new Response("nope", { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await getAiClient().complete("tanya")).toEqual({ ok: false, code: "UNAUTHORIZED" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("tidak menyentuh cadangan ketika penyedia utama menjawab", async () => {
+    process.env.AI_FALLBACK_API_KEY = "kunci-cadangan";
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ choices: [{ message: { content: "halo" } }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await getAiClient().complete("tanya")).toMatchObject({ ok: true, text: "halo" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("memakai cadangan sepenuhnya ketika penyedia utama belum disetel", async () => {
+    process.env.AI_API_KEY = "";
+    process.env.AI_FALLBACK_API_KEY = "kunci-cadangan";
+    process.env.AI_FALLBACK_BASE_URL = "https://cadangan.uji/v1";
+    process.env.AI_FALLBACK_MODEL = "model-cadangan";
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ choices: [{ message: { content: "halo" } }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = getAiClient();
+    expect(client.configured).toBe(true);
+    expect(await client.complete("tanya")).toMatchObject({ ok: true, model: "model-cadangan" });
+  });
+
+  it("tetap UNCONFIGURED bila keduanya kosong", async () => {
+    process.env.AI_API_KEY = "";
+    process.env.AI_FALLBACK_API_KEY = "";
+    const client = getAiClient();
+    expect(client.configured).toBe(false);
+    expect(await client.complete("tanya")).toEqual({ ok: false, code: "UNCONFIGURED" });
   });
 });
