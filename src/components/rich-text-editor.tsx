@@ -19,8 +19,11 @@ import { RichText } from "@/components/rich-text";
 type Props = {
   id?: string;
   name?: string;
-  value: string;
-  onChange: (value: string) => void;
+  /** Mode terkendali. Kosongkan keduanya untuk memakai `defaultValue`. */
+  value?: string;
+  onChange?: (value: string) => void;
+  /** Mode tak terkendali, untuk form yang dibaca lewat FormData. */
+  defaultValue?: string;
   rows?: number;
   placeholder?: string;
   disabled?: boolean;
@@ -29,11 +32,18 @@ type Props = {
   maxLength?: number;
 };
 
-export function RichTextEditor({ id, name, value, onChange, rows = 6, placeholder, disabled = false, required = false, minLength, maxLength }: Props) {
+export function RichTextEditor({ id, name, value, onChange, defaultValue = "", rows = 6, placeholder, disabled = false, required = false, minLength, maxLength }: Props) {
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const fallbackId = useId();
   const fieldId = id ?? fallbackId;
   const [preview, setPreview] = useState(false);
+  // Banyak form di aplikasi ini tak terkendali dan dibaca lewat FormData saat
+  // dikirim. Menjadikan editor ini wajib terkendali berarti menulis ulang
+  // form-form itu hanya untuk mengganti satu isian, jadi ia menyimpan
+  // nilainya sendiri ketika `value` tidak diberikan.
+  const [own, setOwn] = useState(defaultValue);
+  const text = value ?? own;
+  const setText = (next: string) => { setOwn(next); onChange?.(next); };
 
   /**
    * Membungkus teks terpilih, atau menyisipkan penanda lalu menaruh kursor di
@@ -44,9 +54,9 @@ export function RichTextEditor({ id, name, value, onChange, rows = 6, placeholde
     const area = areaRef.current;
     if (!area) return;
     const { selectionStart: start, selectionEnd: end } = area;
-    const selected = value.slice(start, end);
-    const next = `${value.slice(0, start)}${before}${selected}${after}${value.slice(end)}`;
-    onChange(next);
+    const selected = text.slice(start, end);
+    const next = `${text.slice(0, start)}${before}${selected}${after}${text.slice(end)}`;
+    setText(next);
     requestAnimationFrame(() => {
       area.focus();
       area.setSelectionRange(start + before.length, start + before.length + selected.length);
@@ -58,12 +68,12 @@ export function RichTextEditor({ id, name, value, onChange, rows = 6, placeholde
     const area = areaRef.current;
     if (!area) return;
     const { selectionStart: start, selectionEnd: end } = area;
-    const lineStart = value.lastIndexOf("\n", start - 1) + 1;
-    const lineEnd = value.indexOf("\n", end) === -1 ? value.length : value.indexOf("\n", end);
-    const block = value.slice(lineStart, lineEnd) || "";
+    const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+    const lineEnd = text.indexOf("\n", end) === -1 ? text.length : text.indexOf("\n", end);
+    const block = text.slice(lineStart, lineEnd) || "";
     const marked = block.split("\n").map((line, index) => `${marker(index)}${line}`).join("\n");
-    const next = `${value.slice(0, lineStart)}${marked}${value.slice(lineEnd)}`;
-    onChange(next);
+    const next = `${text.slice(0, lineStart)}${marked}${text.slice(lineEnd)}`;
+    setText(next);
     requestAnimationFrame(() => {
       area.focus();
       area.setSelectionRange(lineStart, lineStart + marked.length);
@@ -92,17 +102,17 @@ export function RichTextEditor({ id, name, value, onChange, rows = 6, placeholde
 
       {preview
         ? <div className="rich-editor__preview-pane">
-          {value.trim() === ""
+          {text.trim() === ""
             ? <p className="rich-editor__empty">Belum ada yang ditulis.</p>
-            : <RichText value={value} />}
+            : <RichText value={text} />}
         </div>
         : <textarea
           ref={areaRef}
           className="input rich-editor__area"
           id={fieldId}
           name={name}
-          value={value}
-          onChange={event => onChange(event.target.value)}
+          value={text}
+          onChange={event => setText(event.target.value)}
           rows={rows}
           placeholder={placeholder}
           disabled={disabled}

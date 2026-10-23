@@ -1,5 +1,6 @@
 "use client";
 
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { FormEvent, useCallback, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { FormModal } from "@/components/form-modal";
@@ -161,7 +162,7 @@ export function PaymentMethodsManager({ methods }: { methods: AdminPaymentMethod
           </div>
           <div className="field plan-form__toggle">
             <label htmlFor="method-instructions">Catatan untuk pelanggan (opsional)</label>
-            <textarea className="input" id="method-instructions" rows={2} value={form.instructions} onChange={event => update("instructions", event.target.value)} maxLength={1000} placeholder="Mis. transfer dari bank lain dikenai biaya admin yang ditanggung pengirim." disabled={busy} />
+            <RichTextEditor id="method-instructions" rows={3} value={form.instructions} onChange={value => update("instructions", value)} maxLength={1000} />
           </div>
           <label className="safety-toggle plan-form__toggle">
             <input type="checkbox" checked={form.isActive} onChange={event => update("isActive", event.target.checked)} disabled={busy} />

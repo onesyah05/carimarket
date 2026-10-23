@@ -4,18 +4,7 @@ import { PublicHeader } from "@/components/public-header";
 import { PublicFooter } from "@/components/public-footer";
 import { estimateReadMinutes, getPublicArticleBySlug } from "@/server/cms/articles";
 import { formatDate } from "@/lib/format";
-
-function ArticleBody({ content }: { content: string }) {
-  const blocks = content.split(/\n\s*\n/).map(block => block.trim()).filter(Boolean);
-  return (
-    <>
-      {blocks.map((block, index) => {
-        if (block.startsWith("## ")) return <h2 key={index}>{block.slice(3)}</h2>;
-        return <p key={index}>{block}</p>;
-      })}
-    </>
-  );
-}
+import { RichText } from "@/components/rich-text";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -56,7 +45,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <div className="content-page">
             <div className="content-narrow">
               <p className="article-date">Terbit {formatDate(article.publishedAt)}</p>
-              <div className="article-body"><ArticleBody content={article.content} /></div>
+              <RichText className="article-body" value={article.content} />
             </div>
           </div>
         </article>

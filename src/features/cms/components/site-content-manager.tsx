@@ -1,5 +1,6 @@
 "use client";
 
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, RotateCcw, Save, Trash2 } from "lucide-react";
@@ -188,15 +189,12 @@ export function SiteContentManager({ faqs, pages }: { faqs: ManagedFaq[]; pages:
             </div>
             <div className="field">
               <label htmlFor="faq-answer">Jawaban</label>
-              <textarea
-                className="input"
+              <RichTextEditor
                 id="faq-answer"
                 rows={5}
                 value={draft.answer}
-                onChange={event => setDraft({ ...draft, answer: event.target.value })}
-                minLength={20}
+                onChange={answer => setDraft({ ...draft, answer })}
                 maxLength={4000}
-                required
                 disabled={pending}
               />
             </div>
@@ -277,11 +275,11 @@ export function SiteContentManager({ faqs, pages }: { faqs: ManagedFaq[]; pages:
             </div>
             <div className="field">
               <label htmlFor={`intro-${page.slug}`}>Pembuka (opsional)</label>
-              <textarea className="input" id={`intro-${page.slug}`} name="intro" rows={2} maxLength={1000} defaultValue={page.intro ?? ""} disabled={pending} />
+              <RichTextEditor id={`intro-${page.slug}`} name="intro" rows={2} maxLength={1000} defaultValue={page.intro ?? ""} disabled={pending} />
             </div>
             <div className="field">
               <label htmlFor={`body-${page.slug}`}>Isi</label>
-              <textarea className="input" id={`body-${page.slug}`} name="body" rows={10} minLength={20} maxLength={20000} defaultValue={page.body} required disabled={pending} />
+              <RichTextEditor id={`body-${page.slug}`} name="body" rows={10} maxLength={20000} defaultValue={page.body} disabled={pending} />
               <span className="field-hint">
                 Pisahkan paragraf dengan satu baris kosong. Awali baris dengan <code>## </code> untuk membuat subjudul.
                 HTML tidak diproses, jadi teks di sini tidak pernah menjadi skrip di halaman publik.

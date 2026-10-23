@@ -22,10 +22,14 @@ export type RichInline =
 
 export type RichBlock =
   | { kind: "paragraph"; inlines: RichInline[] }
+  | { kind: "heading"; level: 2 | 3; inlines: RichInline[] }
   | { kind: "list"; ordered: boolean; items: RichInline[][] };
 
 const UNORDERED = /^\s*[-*]\s+(.*)$/;
 const ORDERED = /^\s*\d+[.)]\s+(.*)$/;
+/* Artikel CMS sudah memakai `## ` sebelum ada penampil bersama ini, jadi
+   judulnya harus ikut dikenali agar isi yang sudah terbit tidak berubah. */
+const HEADING = /^(#{2,3})\s+(.*)$/;
 
 /** Hanya skema yang aman dibuka dari tautan yang dibuat pengguna. */
 function safeHref(raw: string): string | null {
@@ -89,6 +93,14 @@ export function parseRichText(value: string): RichBlock[] {
       continue;
     }
 
+    const heading = HEADING.exec(line);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      blocks.push({ kind: "heading", level: heading[1].length === 2 ? 2 : 3, inlines: parseInline(heading[2].trim()) });
+      continue;
+    }
+
     const unordered = UNORDERED.exec(line);
     const ordered = unordered ? null : ORDERED.exec(line);
     if (unordered || ordered) {
@@ -116,7 +128,7 @@ export function parseRichText(value: string): RichBlock[] {
  */
 export function richTextToPlain(value: string): string {
   return parseRichText(value)
-    .flatMap(block => block.kind === "paragraph" ? [block.inlines] : block.items)
+    .flatMap(block => block.kind === "list" ? block.items : [block.inlines])
     .map(inlines => inlines.map(inline => inline.value).join(""))
     .join(" ")
     .replace(/\s+/g, " ")

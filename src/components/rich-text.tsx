@@ -16,6 +16,10 @@ export function RichText({ value, className }: { value: string; className?: stri
   return <div className={`rich-text ${className ?? ""}`.trim()}>
     {blocks.map((block, index) => block.kind === "paragraph"
       ? <p key={index}>{block.inlines.map(renderInline)}</p>
+      : block.kind === "heading"
+      ? block.level === 2
+        ? <h2 key={index}>{block.inlines.map(renderInline)}</h2>
+        : <h3 key={index}>{block.inlines.map(renderInline)}</h3>
       : block.ordered
         ? <ol key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}>{item.map(renderInline)}</li>)}</ol>
         : <ul key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}>{item.map(renderInline)}</li>)}</ul>)}

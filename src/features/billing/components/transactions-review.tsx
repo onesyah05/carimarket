@@ -1,5 +1,6 @@
 "use client";
 
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { useState } from "react";
 import { BadgeCheck, Paperclip, XCircle } from "lucide-react";
 import { formatDateTime, formatRupiah } from "@/lib/format";
@@ -64,7 +65,7 @@ export function TransactionsReview({ initial }: { initial: AdminTransactionList 
         : "Alasan di bawah dikirim ke pelanggan sebagai notifikasi, jadi tuliskan hal yang dapat mereka tindak lanjuti."}</p>
       <div className="field">
         <label htmlFor="review-note">{pending.action === "approve" ? "Catatan verifikasi (opsional)" : "Alasan penolakan"}</label>
-        <textarea className="input" id="review-note" rows={2} value={note} onChange={event => setNote(event.target.value)} maxLength={500} placeholder={pending.action === "approve" ? "Mis. cocok dengan mutasi BCA 11 Oktober 14.22" : "Mis. nominal tidak sesuai, kode unik 417 tidak ditemukan"} disabled={busy} />
+        <RichTextEditor id="review-note" rows={3} value={note} onChange={setNote} maxLength={500} />
       </div>
       <div className="plan-form__actions">
         <button className={`button ${pending.action === "approve" ? "button--primary" : "button--danger"}`} type="button" disabled={busy || (pending.action === "reject" && note.trim().length < 3)} onClick={() => void decide(pending, note)}>

@@ -1,5 +1,6 @@
 "use client";
 
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 
@@ -113,7 +114,7 @@ export function ArticleEditor({
             </div>
             <div className="field">
               <label htmlFor="article-content">Konten</label>
-              <textarea className="input" id="article-content" name="content" defaultValue={article.initial.content} required minLength={40} rows={14} />
+              <RichTextEditor id="article-content" name="content" rows={16} defaultValue={article.initial.content} />
               <small>Paragraf dipisah baris kosong. Baris diawali <code>## </code> menjadi subjudul.</small>
             </div>
           </div>
