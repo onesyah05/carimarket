@@ -65,15 +65,26 @@ describe("judgeLead", () => {
 });
 
 describe("isMatch", () => {
-  it("mengikuti vonis AI apa pun angkanya", () => {
-    expect(isMatch("MATCH", 0)).toBe(true);
-    expect(isMatch("NO_MATCH", 99)).toBe(false);
+  it("mengikuti vonis AI apa pun angka dan niatnya", () => {
+    expect(isMatch("MATCH", 0, "menawarkan")).toBe(true);
+    expect(isMatch("NO_MATCH", 99, "mencari")).toBe(false);
+  });
+
+  it("menolak postingan yang menawarkan jasa ketika AI belum menilai", () => {
+    // Inti produknya: yang dicari adalah orang yang MEMBUTUHKAN jasa. Pesaing
+    // yang sedang berjualan tidak pernah menjadi calon pelanggan.
+    expect(isMatch("UNKNOWN", 100, "menawarkan")).toBe(false);
+    expect(isMatch("UNSURE", 100, "menawarkan")).toBe(false);
+  });
+
+  it("menerima postingan yang mencari jasa", () => {
+    expect(isMatch("UNKNOWN", MATCH_THRESHOLD, "mencari")).toBe(true);
+    expect(isMatch("UNKNOWN", MATCH_THRESHOLD, "tidak jelas")).toBe(true);
   });
 
   it("jatuh ke ambang angka ketika AI ragu atau tidak menilai", () => {
-    expect(isMatch("UNKNOWN", MATCH_THRESHOLD)).toBe(true);
-    expect(isMatch("UNKNOWN", MATCH_THRESHOLD - 1)).toBe(false);
-    expect(isMatch("UNSURE", MATCH_THRESHOLD)).toBe(true);
+    expect(isMatch("UNKNOWN", MATCH_THRESHOLD - 1, "mencari")).toBe(false);
+    expect(isMatch("UNSURE", MATCH_THRESHOLD, "mencari")).toBe(true);
   });
 });
 

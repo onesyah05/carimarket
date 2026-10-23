@@ -1,5 +1,6 @@
 import "server-only";
 import { getAiClient, type AiClient, type AiFailure } from "@/server/integrations/ai/opencode-client";
+import type { LeadIntent } from "@/lib/lead-intent";
 import { relevanceScore } from "./matching";
 
 /**
@@ -117,10 +118,27 @@ export async function judgeLead(
   return { ...judgement, model: completion.model, failure: null };
 }
 
-/** Lead yang boleh disebut "cocok": vonis AI, atau heuristik bila AI mati. */
-export function isMatch(verdict: AiVerdict, score: number) {
+/**
+ * Lead yang boleh disebut "cocok".
+ *
+ * Produk ini mencari calon pelanggan, jadi yang dicari adalah orang yang
+ * sedang MEMBUTUHKAN jasa — bukan orang yang menawarkannya. Postingan yang
+ * menawarkan jasa sejenis adalah pesaing, dan sebelumnya ia tetap muncul
+ * sebagai "100% cocok" karena niat postingan hanya dipakai sebagai label dan
+ * tidak pernah ikut menentukan kecocokan.
+ *
+ * Angka saja tidak bisa menggantikannya: `relevanceScore` berlantai 70 karena
+ * rumusnya `70 + rasio * 30`, sehingga ambang berapa pun di bawah itu tidak
+ * pernah menolak apa pun. Tanpa AI, niat postingan adalah satu-satunya sinyal
+ * yang benar-benar membedakan.
+ *
+ * Vonis AI tetap menang bila ada, karena ia membaca isinya dan bukan menebak
+ * dari pola kalimat.
+ */
+export function isMatch(verdict: AiVerdict, score: number, intent: LeadIntent) {
   if (verdict === "MATCH") return true;
   if (verdict === "NO_MATCH") return false;
+  if (intent === "menawarkan") return false;
   // UNSURE dan UNKNOWN jatuh ke angka, supaya matinya AI tidak mengosongkan
   // feed maupun email ringkasan.
   return score >= MATCH_THRESHOLD;

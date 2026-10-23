@@ -288,3 +288,11 @@ html[data-theme="dark"] .chart-tooltip { background: #101d38; }
 .rich-text a { color: var(--c-brand-ink); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
 /* Tautan yang ditempel orang bisa sangat panjang dan tidak punya spasi. */
 .rich-text a { overflow-wrap: anywhere; }
+
+/* Area klik kartu lead: kepala dan isi postingan menjadi satu tautan ke
+   Threads. Warna tidak diubah supaya kartunya tidak berubah menjadi sepetak
+   teks tautan biru; yang menandakannya dapat diklik adalah kursor dan
+   perubahan latar saat disentuh tetikus. */
+.lead-card__open { display: block; color: inherit; border-radius: var(--c-radius-sm); cursor: pointer; }
+.lead-card__open:hover header strong { color: var(--c-brand-ink); text-decoration: underline; text-underline-offset: 3px; }
+.lead-card__open:focus-visible { outline: 3px solid color-mix(in srgb, var(--c-brand-ink) 72%, white); outline-offset: 3px; }

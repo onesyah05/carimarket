@@ -124,8 +124,11 @@ export function LeadFeed() {
     // Lead tanpa metrik tidak dapat dibandingkan, jadi hanya disaring saat
     // pengguna benar-benar meminta ambang engagement.
     .filter(lead => minEngagement === 0 || (lead.likes ?? 0) + (lead.replies ?? 0) >= minEngagement)
+    // Yang dinilai bukan calon pelanggan selalu turun, berapa pun skornya:
+    // skor itu kemiripan kata, dan pesaing yang sedang berjualan memakai kata
+    // yang sama persis dengan calon pelanggan.
     .sort((a, b) => sort === "relevansi"
-      ? b.score - a.score
+      ? Number(b.matched !== false) - Number(a.matched !== false) || b.score - a.score
       : new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()), [items, keywordFilter, status, intent, sort, minEngagement]);
 
   return <>

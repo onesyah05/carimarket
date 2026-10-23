@@ -46,6 +46,12 @@ export function DashboardOverview({ children }: { children: React.ReactNode }) {
     return () => { active = false; };
   }, []);
 
+  /** Membuka postingannya berarti sudah dibaca, sama seperti di feed. */
+  async function markRead(leadId: string) {
+    setLeads(current => current.map(lead => lead.id === leadId ? { ...lead, viewedAt: new Date().toISOString() } : lead));
+    await fetch(`/api/leads/${encodeURIComponent(leadId)}/dibaca`, { method: "POST" }).catch(() => undefined);
+  }
+
   const pending = leads.filter(lead => lead.status === "Baru");
   const matched = leads.filter(lead => lead.matched !== false);
   const unread = leads.filter(lead => lead.viewedAt === null);
@@ -65,7 +71,7 @@ export function DashboardOverview({ children }: { children: React.ReactNode }) {
     <section className="dashboard-priority-grid">
       <div className="panel panel--leads">
         <div className="panel-heading"><div><h2>Lead prioritas</h2><p>{loading ? "Memuat lead..." : pending.length > 0 ? `${preview.length} dari ${pending.length} lead baru, yang cocok lebih dulu.` : "Belum ada lead baru."}</p></div><Link href="/dashboard/leads">Lihat semua lead</Link></div>
-        <div className="compact-leads">{preview.map(lead => <LeadCard key={lead.id} lead={lead} compact />)}{!loading && pending.length === 0 && <div className="empty-state empty-state--compact"><h2>Belum ada lead tersimpan</h2><p>Cari percakapan publik dari halaman Lead.</p></div>}</div>
+        <div className="compact-leads">{preview.map(lead => <LeadCard key={lead.id} lead={lead} compact onMarkRead={markRead} />)}{!loading && pending.length === 0 && <div className="empty-state empty-state--compact"><h2>Belum ada lead tersimpan</h2><p>Cari percakapan publik dari halaman Lead.</p></div>}</div>
       </div>
       <aside className="dashboard-rail">{children}</aside>
     </section>

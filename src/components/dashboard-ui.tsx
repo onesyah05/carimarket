@@ -32,13 +32,30 @@ export function LeadCard({ lead, compact = false, onMarkRead }: {
   // Metrik hanya ditampilkan bila Threads benar-benar mengirimkannya.
   const hasEngagement = lead.likes !== null || lead.replies !== null;
   const unread = lead.viewedAt === null;
-  return <article className={`lead-card ${compact ? "lead-card--compact" : ""} ${unread ? "lead-card--unread" : ""}`.trim()}>
+
+  /**
+   * Membuka postingannya di Threads sekaligus menandainya sudah dibaca.
+   *
+   * Sebuah <a> betulan, bukan onClick pada <article>: menengah-klik dan
+   * ctrl-klik tetap bekerja, alamatnya terlihat di bilah status, dan pembaca
+   * layar menyebutnya sebagai tautan. Menandai baca dilakukan di sini karena
+   * membuka postingannya memang berarti sudah dibaca — tombol "Tandai sudah
+   * dibaca" tinggal untuk yang memutuskan tanpa membuka.
+   */
+  const openInThreads = () => { if (unread) onMarkRead?.(lead.id); };
+  const body = <>
     <header>
       <span className="lead-avatar">{lead.avatar}</span>
       <div><strong>{lead.author}</strong><span>{lead.handle} · {lead.time} · {leadThreadContext(lead)}</span></div>
       {unread && <span className="lead-unread" title="Belum dibaca">Belum dibaca</span>}
     </header>
     <p>{lead.text}</p>
+  </>;
+
+  return <article className={`lead-card ${compact ? "lead-card--compact" : ""} ${unread ? "lead-card--unread" : ""}`.trim()}>
+    {lead.permalink
+      ? <a className="lead-card__open" href={lead.permalink} target="_blank" rel="noreferrer" onClick={openInThreads} title="Buka postingan ini di Threads">{body}</a>
+      : body}
     <div className="lead-tags">
       {/* Vonis AI menggantikan angka ketika ada: "88% cocok" adalah skor
           kemiripan kata, sedangkan yang ingin diketahui pemilik bisnis adalah
@@ -47,7 +64,8 @@ export function LeadCard({ lead, compact = false, onMarkRead }: {
       {lead.aiVerdict === "MATCH" && <span className="match-chip match-chip--yes" title={lead.aiReason ?? undefined}>Cocok</span>}
       {lead.aiVerdict === "NO_MATCH" && <span className="match-chip match-chip--no" title={lead.aiReason ?? undefined}>Tidak cocok</span>}
       {lead.aiVerdict === "UNSURE" && <span className="match-chip match-chip--maybe" title={lead.aiReason ?? undefined}>Belum pasti</span>}
-      {!lead.aiVerdict && <span className="score-chip">{lead.score}% cocok</span>}
+      {!lead.aiVerdict && lead.matched === false && <span className="match-chip match-chip--no" title="Postingan ini menawarkan jasa, bukan mencarinya">Bukan calon pelanggan</span>}
+      {!lead.aiVerdict && lead.matched !== false && <span className="score-chip">{lead.score}% cocok</span>}
       <span className={`intent-chip intent-chip--${lead.intent.replace(" ", "-")}`}>{LEAD_INTENT_LABEL[lead.intent]}</span>
       <span className="keyword-chip">“{lead.keyword}”</span>
       <span className={`lead-status lead-status--${lead.status.toLowerCase()}`}>{lead.status}</span>

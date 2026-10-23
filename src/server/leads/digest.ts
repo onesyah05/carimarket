@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { classifyLeadIntent } from "@/lib/lead-intent";
 import { createNotification } from "@/server/notifications/service";
 import { isMatch, type AiVerdict } from "./ai-matching";
 
@@ -42,6 +43,7 @@ export async function sendLeadDigest(userId: string, leadIds: string[]): Promise
   const matched = leads.filter(lead => isMatch(
     (lead.aiVerdict ?? "UNKNOWN") as AiVerdict,
     lead.aiScore ?? Number(lead.relevanceScore),
+    classifyLeadIntent(lead.threadPost.body),
   ));
   if (matched.length === 0) return { matched: 0, skipped: leads.length };
 

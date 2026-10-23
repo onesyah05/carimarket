@@ -60,7 +60,7 @@ export function serializeLead(lead: StoredLead, options?: { flagged?: boolean })
     // aturan yang sama persis.
     aiVerdict: (lead.aiVerdict ?? null) as "MATCH" | "NO_MATCH" | "UNSURE" | null,
     aiReason: lead.aiReason,
-    matched: isMatch((lead.aiVerdict ?? "UNKNOWN") as AiVerdict, lead.aiScore ?? Number(lead.relevanceScore)),
+    matched: isMatch((lead.aiVerdict ?? "UNKNOWN") as AiVerdict, lead.aiScore ?? Number(lead.relevanceScore), classifyLeadIntent(lead.threadPost.body)),
     sourceMode: lead.sourceMode,
     flagged: options?.flagged ?? false,
   };
