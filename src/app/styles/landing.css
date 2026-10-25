@@ -1314,45 +1314,19 @@ html[data-theme="dark"] .site-footer .brand-logo__tile { background: var(--c-bra
 .site .form-grid { display: grid; gap: 16px; max-width: 520px; }
 
 /* ── Gerak ───────────────────────────────────────────────────────────────────
-   Arahnya tetap tenang: satu jenis gerak saja — naik sedikit sambil memudar
-   masuk — dengan durasi panjang dan easing yang melambat di akhir. Tidak ada
-   yang berputar, berdenyut, atau berulang tanpa henti.
+   DESIGN.md menetapkan MOTION 1: perubahan hover, focus, panel, dan theme
+   saja. Scroll reveal disebut namanya sebagai hal yang tidak dipakai, jadi
+   tidak ada lagi di sini.
 
-   Keadaan tersembunyi hanya berlaku ketika `ScrollReveal` sudah memasang
-   penanda di <html>. Tanpa JavaScript, tidak ada elemen yang tersangkut
-   tak terlihat. */
+   Yang dihapus bukan sekadar gaya. Aturan lamanya menyembunyikan isi
+   (`opacity: 0`) sampai IntersectionObserver menandainya, dan 28 elemen di
+   beranda semuanya berada di bawah lipatan. Siapa pun yang observernya tidak
+   menyala — mode baca, cetak, sebagian teknologi bantu, penangkap layar —
+   mendapat halaman yang bagian tengahnya kosong. Isi tidak boleh bergantung
+   pada animasi untuk terlihat.
 
-html[data-reveal-ready] .site [data-reveal] {
-  opacity: 0;
-  translate: 0 18px;
-  transition:
-    opacity .72s var(--c-ease),
-    translate .72s var(--c-ease);
-}
-
-html[data-reveal-ready] .site [data-reveal].is-revealed {
-  opacity: 1;
-  translate: 0 0;
-}
-
-/* Hero berada di atas lipatan, jadi ia tidak menunggu gulungan: masuk sendiri
-   saat halaman dimuat, bertahap dari atas ke bawah. */
-@keyframes site-enter {
-  from { opacity: 0; translate: 0 20px; }
-  to { opacity: 1; translate: 0 0; }
-}
-
-.site .hero__copy > *,
-.site .hero__visual {
-  animation: site-enter .82s var(--c-ease) both;
-}
-
-.site .hero__copy > *:nth-child(1) { animation-delay: .04s; }
-.site .hero__copy > *:nth-child(2) { animation-delay: .12s; }
-.site .hero__copy > *:nth-child(3) { animation-delay: .20s; }
-.site .hero__copy > *:nth-child(4) { animation-delay: .28s; }
-.site .hero__copy > *:nth-child(5) { animation-delay: .36s; }
-.site .hero__visual { animation-delay: .22s; }
+   Atribut `data-reveal` dan komponen ScrollReveal menjadi tidak berefek
+   setelah aturan ini hilang; keduanya aman dibersihkan menyusul. */
 
 /* Latar hero bergeser sangat lambat. Satu-satunya gerak berulang di halaman
    ini, dan sengaja dibuat terlalu pelan untuk ditonton — yang terasa hanya
