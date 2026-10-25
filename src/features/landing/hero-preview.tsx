@@ -99,7 +99,7 @@ export function HeroPreview() {
 
   return (
     <div className="preview">
-      <p className="preview__label">Contoh tampilan — nama, akun, dan postingan di bawah ini fiktif</p>
+      <p className="preview__label">Data simulasi. Nama, akun, dan postingan di bawah ini fiktif.</p>
 
       <div className="preview__tabs" role="tablist" aria-label="Pilih bidang usaha untuk contoh">
         {EXAMPLES.map(item => (
@@ -159,7 +159,7 @@ export function HeroPreview() {
 
           <p className="preview__draft-foot">
             <PencilLine size={13} aria-hidden="true" />
-            Menunggu tinjauan Anda — tidak ada yang terkirim sebelum Anda menyetujuinya.
+            Menunggu tinjauan Anda. Tidak ada yang terkirim sebelum Anda menyetujuinya.
           </p>
         </div>
       </article>

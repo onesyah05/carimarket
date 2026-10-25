@@ -252,8 +252,8 @@ function Invoice({ transaction, busy, copied, payer, windowHours, proofFile, onP
               {/* eslint-disable-next-line @next/next/no-img-element -- gambar dilayani route terautentikasi dengan ukuran yang tidak diketahui di muka. */}
               <img src={method.qrImageUrl} alt={`Kode QRIS ${method.label}`} />
               <figcaption>
-                Pindai dengan aplikasi bank atau e-wallet apa pun yang mendukung QRIS, lalu masukkan nominalnya secara manual
-                — termasuk tiga angka kode unik.
+                Pindai dengan aplikasi bank atau e-wallet apa pun yang mendukung QRIS, lalu masukkan nominalnya secara manual,
+                termasuk tiga angka kode unik.
                 <a href={method.qrImageUrl} target="_blank" rel="noreferrer">Buka gambar</a>
               </figcaption>
             </figure>}

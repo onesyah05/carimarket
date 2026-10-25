@@ -41,7 +41,7 @@ const FEATURES = [
   {
     icon: Bell,
     title: "Notifikasi yang bisa diatur",
-    body: "Pemberitahuan lead baru, balasan terkirim, dan kuota hampir habis — di aplikasi dan lewat email sesuai preferensi Anda.",
+    body: "Pemberitahuan lead baru, balasan terkirim, dan kuota hampir habis. Semuanya di aplikasi dan lewat email sesuai preferensi Anda.",
   },
   {
     icon: Smartphone,

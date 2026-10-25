@@ -22,7 +22,7 @@ export function PlanPreview({ plans }: { plans: PublicPlan[] }) {
           <h2 className="site-h2">Mulai gratis, naik saat lead-nya memang sudah ramai.</h2>
           <p className="site-lead">
             Kuota tertulis sejak awal dan ditegakkan di server. Paket berbayar diaktifkan tim setelah pembayaran
-            diverifikasi — belum ada penagihan otomatis, dan kami menyebutkannya apa adanya.
+            diverifikasi. Belum ada penagihan otomatis, dan kami menyebutkannya apa adanya.
           </p>
         </div>
 

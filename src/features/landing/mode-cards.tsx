@@ -32,7 +32,7 @@ export function ModeCards() {
           <p className="site-eyebrow">Kendali</p>
           <h2 className="site-h2">Otomatis sampai batas yang Anda tentukan sendiri.</h2>
           <p className="site-lead">
-            Pencarian berjalan sendiri; pengiriman tidak, kecuali Anda memintanya. Itu pilihan yang disengaja — balasan
+            Pencarian berjalan sendiri; pengiriman tidak, kecuali Anda memintanya. Itu pilihan yang disengaja. Balasan
             promosi yang salah nada merugikan Anda lebih dulu daripada siapa pun.
           </p>
         </div>
@@ -58,7 +58,7 @@ export function ModeCards() {
             <span className="mode__tag mode__tag--quiet">Opsional</span>
             <h3 className="site-h3">Balas otomatis, berpagar</h3>
             <p className="site-body">
-              Setelah kata kunci Anda stabil dan nada balasannya cocok, sebagian pekerjaan dapat diserahkan — dengan
+              Setelah kata kunci Anda stabil dan nada balasannya cocok, sebagian pekerjaan dapat diserahkan, dengan
               pagar yang tetap Anda pegang.
             </p>
             <ul className="mode__list">
