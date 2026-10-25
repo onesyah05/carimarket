@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { PageHeading } from "@/components/dashboard-ui";
 import { ReplyModeSummary } from "@/features/replies/components/reply-mode-summary";
 import { DashboardOverview, ThreadsStatusCard } from "@/features/dashboard/components/dashboard-data-panels";
+
+export const metadata: Metadata = { title: "Ringkasan", robots: { index: false, follow: false } };
 
 export default function DashboardPage() {
   return <>

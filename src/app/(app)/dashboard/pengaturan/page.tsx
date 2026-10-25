@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { PageHeading } from "@/components/dashboard-ui";
 import { SettingsPanel } from "@/features/settings/components/settings-panel";
 import { prisma } from "@/lib/prisma";
 import { requirePageRole } from "@/server/auth/page-guards";
 import { hasCompleteBusinessProfile } from "@/server/settings/business-profile";
 import { getAccountOverview } from "@/server/settings/account";
+
+export const metadata: Metadata = { title: "Pengaturan", robots: { index: false, follow: false } };
 
 export default async function SettingsPage() {
   const user = await requirePageRole(["USER"], "/dashboard/pengaturan");

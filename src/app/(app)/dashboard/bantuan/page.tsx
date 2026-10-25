@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { PageHeading } from "@/components/dashboard-ui";
 import { SupportCenter } from "@/features/support/components/support-center";
 import { requirePageRole } from "@/server/auth/page-guards";
 import { listMyTickets } from "@/server/support/tickets";
+
+export const metadata: Metadata = { title: "Bantuan", robots: { index: false, follow: false } };
 
 /**
  * Halaman ini sengaja berada di luar grup `(ready)`, sejajar dengan Pengaturan:

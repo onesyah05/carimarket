@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { PageHeading } from "@/components/dashboard-ui";
 import { getWorkspaceUser } from "@/server/workspace-user";
 import { resolveActiveProfile } from "@/server/workspace/profiles";
 import { listReplyHistory, replyHistoryLabel, replyHistoryTone } from "@/server/replies/queries";
+
+export const metadata: Metadata = { title: "Riwayat", robots: { index: false, follow: false } };
 
 function formatTimestamp(date: Date) {
   return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);

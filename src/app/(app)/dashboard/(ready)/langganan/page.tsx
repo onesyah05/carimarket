@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Check, CircleDollarSign } from "lucide-react";
 import { PageHeading, QuotaMeter } from "@/components/dashboard-ui";
@@ -6,6 +7,8 @@ import { getBillingOverview } from "@/server/billing/transactions";
 import { getQuotaSnapshot } from "@/server/usage/limits";
 import { getWorkspaceUser } from "@/server/workspace-user";
 import { UpgradeCenter } from "@/features/billing/components/upgrade-center";
+
+export const metadata: Metadata = { title: "Langganan", robots: { index: false, follow: false } };
 
 const PLAN_FEATURES = ["Profil bisnis", "Kata kunci pencarian", "Feed lead", "Mode tinjau dan otomatis"];
 
