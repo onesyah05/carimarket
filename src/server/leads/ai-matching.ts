@@ -35,8 +35,37 @@ export type BusinessContext = {
   description: string;
 };
 
-/** Ambang vonis "cocok" yang dipakai feed dan email ringkasan. */
-export const MATCH_THRESHOLD = 60;
+/**
+ * Ambang vonis "cocok" yang dipakai feed dan email ringkasan.
+ *
+ * 80, bukan 60. Dua alasan. Pertama, yang diminta pemilik bisnis adalah lead
+ * yang benar-benar layak ditanggapi, bukan daftar panjang yang harus disaring
+ * ulang dengan mata. Kedua, `relevanceScore` berlantai 70 karena rumusnya
+ * `70 + rasio * 30`, jadi ambang 60 tidak pernah menolak apa pun pada jalur
+ * heuristik; 80 membuat angka itu akhirnya berarti.
+ */
+export const MATCH_THRESHOLD = 80;
+
+/**
+ * Banyaknya postingan yang dinilai dalam satu permintaan ke penyedia AI.
+ *
+ * Dulu satu postingan berarti satu permintaan. Dengan 25 postingan per kata
+ * kunci itu 25 permintaan, dan yang dibatasi kuota penyedia adalah jumlah
+ * permintaan, bukan jumlah token. Itulah yang memicu 429 berulang kali.
+ *
+ * Delapan sekaligus membuat 25 postingan selesai dalam 4 permintaan. Tidak
+ * lebih besar dari itu karena satu jawaban harus memuat seluruh vonis
+ * rombongannya, dan jawaban yang terpotong lebih mahal daripada satu
+ * permintaan tambahan.
+ */
+export const AI_BATCH_SIZE = 8;
+
+/** Satu postingan yang menunggu dinilai. */
+export type LeadCandidate = {
+  externalPostId: string;
+  keyword: string;
+  body: string;
+};
 
 export function buildPrompt(business: BusinessContext, keyword: string, postBody: string) {
   // Postingan dipotong karena hanya pembukanya yang menentukan maksud, dan
@@ -61,6 +90,45 @@ export function buildPrompt(business: BusinessContext, keyword: string, postBody
     "Postingan di bidang yang berbeda juga bukan calon pelanggan meski memuat kata kunci yang sama.",
     "",
     'Jawab HANYA satu objek JSON tanpa teks lain, berbentuk: {"score": <0-100>, "verdict": "MATCH"|"NO_MATCH"|"UNSURE", "reason": "<alasan maksimal 12 kata, bahasa Indonesia>"}',
+  ].join("\n");
+}
+
+/**
+ * Prompt untuk satu rombongan postingan sekaligus.
+ *
+ * Profil bisnisnya ditulis sekali di atas, lalu postingannya bernomor. Itu
+ * sebabnya menggabungkan lebih murah: konteks bisnis tidak diulang untuk tiap
+ * postingan seperti ketika tiap postingan punya permintaannya sendiri.
+ *
+ * Kutipannya lebih pendek daripada mode tunggal (600, bukan 1200) karena yang
+ * menentukan maksud hampir selalu ada di kalimat pembuka, dan memendekkannya
+ * memberi ruang untuk lebih banyak postingan dalam satu permintaan.
+ */
+export function buildBatchPrompt(business: BusinessContext, items: LeadCandidate[]) {
+  const posts = items.map((item, index) => [
+    `--- POSTINGAN ${index + 1} ---`,
+    `Kata kunci yang menemukannya: ${item.keyword}`,
+    item.body.slice(0, 600),
+  ].join("\n"));
+
+  return [
+    "Anda menilai beberapa postingan Threads sekaligus untuk satu bisnis.",
+    "",
+    "BISNIS",
+    `Nama: ${business.name}`,
+    `Kategori: ${business.category}`,
+    `Area layanan: ${business.serviceArea}`,
+    `Deskripsi: ${business.description}`,
+    "",
+    ...posts,
+    "",
+    `Nilai SETIAP postingan di atas, seluruhnya ${items.length} buah.`,
+    "Tentukan apakah penulis tiap postingan berpotensi menjadi pelanggan bisnis di atas.",
+    "Penting: postingan yang justru MENAWARKAN jasa sejenis bukan calon pelanggan.",
+    "Postingan di bidang yang berbeda juga bukan calon pelanggan meski memuat kata kunci yang sama.",
+    "",
+    'Jawab HANYA satu array JSON tanpa teks lain, satu objek per postingan, berbentuk:',
+    '[{"i": <nomor postingan>, "score": <0-100>, "verdict": "MATCH"|"NO_MATCH"|"UNSURE", "reason": "<alasan maksimal 12 kata, bahasa Indonesia>"}]',
   ].join("\n");
 }
 
@@ -92,30 +160,137 @@ export function parseJudgement(text: string): { score: number; verdict: AiVerdic
   return { score: Math.max(0, Math.min(100, Math.round(rawScore))), verdict: rawVerdict, reason };
 }
 
-export async function judgeLead(
+/**
+ * Vonis per nomor postingan dari satu jawaban rombongan.
+ *
+ * Hasil sebagian sengaja diterima. Jawaban yang terpotong di tengah array
+ * tetap memuat vonis yang sudah utuh di depannya, dan membuang semuanya
+ * berarti menilai ulang postingan yang sebenarnya sudah dijawab. Yang tidak
+ * terbaca dibiarkan kosong, lalu jatuh ke heuristik satu per satu.
+ *
+ * Objek tunggal tanpa array juga diterima, karena untuk rombongan berisi satu
+ * postingan model kerap menjawab begitu.
+ */
+export function parseBatchJudgements(text: string): Map<number, { score: number; verdict: AiVerdict; reason: string | null }> {
+  const out = new Map<number, { score: number; verdict: AiVerdict; reason: string | null }>();
+
+  // Tiap objek dipindai sendiri, bukan lewat satu JSON.parse atas seluruh
+  // array, supaya ekor yang terpotong tidak menjatuhkan awal yang baik.
+  const objects = text.match(/\{[^{}]*\}/g);
+  if (!objects) return out;
+
+  objects.forEach((chunk, order) => {
+    const judgement = parseJudgement(chunk);
+    if (!judgement) return;
+    let index: number;
+    try {
+      const raw = (JSON.parse(chunk) as Record<string, unknown>).i;
+      const parsed = typeof raw === "number" ? raw : Number(raw);
+      index = Number.isFinite(parsed) ? parsed : order + 1;
+    } catch {
+      index = order + 1;
+    }
+    if (!out.has(index)) out.set(index, judgement);
+  });
+
+  return out;
+}
+
+/** Kegagalan yang akan terulang pada permintaan berikutnya ke penyedia yang sama. */
+function willRepeat(failure: AiFailure) {
+  return failure === "NO_FUNDS"
+    || failure === "UNAUTHORIZED"
+    || failure === "UNCONFIGURED"
+    || failure === "FREE_TIER_BLOCKED"
+    || failure === "RATE_LIMITED";
+}
+
+/**
+ * Menilai banyak postingan dengan sesedikit mungkin permintaan.
+ *
+ * Mengembalikan peta berkunci `externalPostId`, selalu lengkap: postingan yang
+ * tidak terjawab AI tetap mendapat skor heuristik dengan vonis `UNKNOWN`,
+ * supaya pencarian tidak pernah gagal hanya karena penyedia AI bermasalah.
+ *
+ * Begitu satu rombongan gagal dengan sebab yang pasti terulang, sisanya tidak
+ * dikirim sama sekali: kuota yang sudah habis tidak pulih di permintaan
+ * berikutnya, dan menabraknya berulang kali hanya memperlama pencarian.
+ */
+export async function judgeLeads(
   business: BusinessContext,
-  keyword: string,
-  postBody: string,
+  items: LeadCandidate[],
   client: AiClient = getAiClient(),
-): Promise<LeadJudgement> {
-  const fallback = (failure: AiFailure): LeadJudgement => ({
-    score: relevanceScore(postBody, keyword),
+): Promise<Map<string, LeadJudgement>> {
+  const out = new Map<string, LeadJudgement>();
+  const fallback = (item: LeadCandidate, failure: AiFailure): LeadJudgement => ({
+    score: relevanceScore(item.body, item.keyword),
     verdict: "UNKNOWN",
     reason: null,
     model: null,
     failure,
   });
 
-  if (!client.configured) return fallback("UNCONFIGURED");
+  if (items.length === 0) return out;
+  if (!client.configured) {
+    for (const item of items) out.set(item.externalPostId, fallback(item, "UNCONFIGURED"));
+    return out;
+  }
 
-  const completion = await client.complete(buildPrompt(business, keyword, postBody)).catch(() => null);
-  if (completion === null) return fallback("REQUEST_FAILED");
-  if (!completion.ok) return fallback(completion.code);
+  let stoppedBy: AiFailure | null = null;
 
-  const judgement = parseJudgement(completion.text);
-  if (judgement === null) return fallback("BAD_RESPONSE");
+  for (let start = 0; start < items.length; start += AI_BATCH_SIZE) {
+    const batch = items.slice(start, start + AI_BATCH_SIZE);
 
-  return { ...judgement, model: completion.model, failure: null };
+    if (stoppedBy) {
+      for (const item of batch) out.set(item.externalPostId, fallback(item, stoppedBy));
+      continue;
+    }
+
+    // Anggaran jawaban tumbuh bersama rombongan: satu vonis sekitar 40 token,
+    // ditambah ruang untuk penalaran model.
+    const maxTokens = 320 + batch.length * 120;
+    const completion = await client
+      .complete(buildBatchPrompt(business, batch), maxTokens)
+      .catch(() => null);
+
+    if (completion === null || !completion.ok) {
+      const failure: AiFailure = completion === null ? "REQUEST_FAILED" : completion.code;
+      if (willRepeat(failure)) stoppedBy = failure;
+      for (const item of batch) out.set(item.externalPostId, fallback(item, failure));
+      continue;
+    }
+
+    const judgements = parseBatchJudgements(completion.text);
+    batch.forEach((item, offset) => {
+      const judgement = judgements.get(offset + 1);
+      out.set(
+        item.externalPostId,
+        judgement
+          ? { ...judgement, model: completion.model, failure: null }
+          : fallback(item, "BAD_RESPONSE"),
+      );
+    });
+  }
+
+  return out;
+}
+
+/** Menilai satu postingan. Jalur ini dipakai probe dan pengujian. */
+export async function judgeLead(
+  business: BusinessContext,
+  keyword: string,
+  postBody: string,
+  client: AiClient = getAiClient(),
+): Promise<LeadJudgement> {
+  const id = "single";
+  const judged = await judgeLeads(business, [{ externalPostId: id, keyword, body: postBody }], client);
+  return judged.get(id) ?? {
+    score: relevanceScore(postBody, keyword),
+    verdict: "UNKNOWN",
+    reason: null,
+    model: null,
+    failure: "REQUEST_FAILED",
+  };
 }
 
 /**
@@ -136,10 +311,13 @@ export async function judgeLead(
  * dari pola kalimat.
  */
 export function isMatch(verdict: AiVerdict, score: number, intent: LeadIntent) {
-  if (verdict === "MATCH") return true;
+  // Vonis NO_MATCH menang mutlak: model sudah membaca isinya dan menolaknya.
   if (verdict === "NO_MATCH") return false;
   if (intent === "menawarkan") return false;
-  // UNSURE dan UNKNOWN jatuh ke angka, supaya matinya AI tidak mengosongkan
-  // feed maupun email ringkasan.
+  // Angkanya berlaku untuk semua vonis, MATCH sekalipun. Sebelumnya MATCH
+  // lolos berapa pun skornya, jadi "cocok menurut AI tapi hanya 45" tetap
+  // masuk kotak masuk orang. Yang diminta adalah lead yang layak ditanggapi,
+  // dan satu ambang untuk semua jalur membuat angka di kartu lead berarti
+  // sama di mana pun ia muncul.
   return score >= MATCH_THRESHOLD;
 }

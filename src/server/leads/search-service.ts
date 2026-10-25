@@ -6,7 +6,7 @@ import { isThreadsAvailable } from "@/server/integrations/threads/config";
 import { ThreadsIntegrationError } from "@/server/integrations/threads/errors";
 import { hasSearchQuota, releaseSearchQuota, reserveSearchQuota, resolveSearchIntervalHours } from "@/server/usage/limits";
 import { logUsageEvent } from "@/server/usage/service";
-import { judgeLead, type AiVerdict, type BusinessContext } from "./ai-matching";
+import { judgeLeads, type AiVerdict, type BusinessContext } from "./ai-matching";
 import { sendLeadDigest } from "./digest";
 import { matchedExcludedTerm, relevanceScore } from "./matching";
 import { nextRunAt } from "./schedule";
@@ -50,57 +50,22 @@ async function loadBusinessContext(profileId: string): Promise<BusinessContext> 
 const AI_JUDGEMENT_LIMIT = 25;
 
 /**
- * Banyaknya postingan yang dinilai sekaligus.
+ * Seluruh hasil scrape dikumpulkan dulu, baru dinilai bersama.
  *
- * Penilaian dulu berjalan satu per satu, dan itu tidak terasa selama penyedia
- * AI-nya menolak permintaan pertama — gagalnya seketika. Begitu penilaiannya
- * benar-benar berjalan, satu panggilan memakan 5–9 detik, jadi 25 postingan
- * berurutan menjadi hampir tiga menit sementara tombol "Cari leads sekarang"
- * menunggu di hadapan pengguna.
- *
- * Enam permintaan serentak terukur tidak memperlambat penyedianya maupun
- * memicu pembatasan laju, dan membuat satu kata kunci penuh selesai di bawah
- * setengah menit.
+ * `judgeLeads` yang mengatur pengelompokannya: delapan postingan per
+ * permintaan, berhenti sendiri bila kuota penyedia habis, dan selalu
+ * mengembalikan vonis untuk setiap postingan, termasuk yang jatuh ke
+ * heuristik. Yang dulu 25 permintaan untuk satu kata kunci kini 4.
  */
-const AI_CONCURRENCY = 6;
-
-/**
- * Kegagalan yang akan terulang pada tiap postingan berikutnya.
- *
- * Selain kegagalan tingkat akun, `RATE_LIMITED` ikut di sini. Sebabnya bukan
- * lonjakan sesaat melainkan jatah pemakaian yang habis, dan jatah tidak pulih
- * dalam hitungan detik — meneruskan berarti 24 postingan berikutnya
- * masing-masing menunggu dua panggilan yang sudah pasti gagal (penyedia utama
- * lalu cadangannya) sebelum jatuh ke heuristik yang sama. Berhenti membuat
- * sisanya memakai heuristik seketika.
- */
-function willRepeat(failure: Awaited<ReturnType<typeof judgeLead>>["failure"]) {
-  return failure === "NO_FUNDS"
-    || failure === "UNAUTHORIZED"
-    || failure === "UNCONFIGURED"
-    || failure === "FREE_TIER_BLOCKED"
-    || failure === "RATE_LIMITED";
-}
-
 async function judgeResults(business: BusinessContext, phrase: string, results: Array<{ externalPostId: string; body: string }>) {
-  const judgements = new Map<string, Awaited<ReturnType<typeof judgeLead>>>();
-  const queue = results.slice(0, AI_JUDGEMENT_LIMIT);
-
-  // Dikerjakan per rombongan, bukan semuanya sekaligus: rombongan memberi
-  // titik berhenti. Kegagalan yang bersifat akun tidak ada gunanya diulang 24
-  // kali, dan menyetop setelah rombongan berjalan berarti paling banyak enam
-  // permintaan yang terbuang alih-alih seluruh sisanya.
-  for (let index = 0; index < queue.length; index += AI_CONCURRENCY) {
-    const batch = queue.slice(index, index + AI_CONCURRENCY);
-    // `judgeLead` sudah tidak pernah melempar — ia menangkap kegagalannya
-    // sendiri dan turun ke heuristik — jadi satu postingan yang bermasalah
-    // tidak dapat menggagalkan rombongannya.
-    const judged = await Promise.all(batch.map(async result => [result.externalPostId, await judgeLead(business, phrase, result.body)] as const));
-    for (const [externalPostId, judgement] of judged) judgements.set(externalPostId, judgement);
-    if (judged.some(([, judgement]) => willRepeat(judgement.failure))) break;
-  }
-
-  return judgements;
+  return judgeLeads(
+    business,
+    results.slice(0, AI_JUDGEMENT_LIMIT).map(result => ({
+      externalPostId: result.externalPostId,
+      keyword: phrase,
+      body: result.body,
+    })),
+  );
 }
 
 /** Kata kunci negatif aktif milik pengguna, dipakai untuk menyaring hasil pencarian. */
