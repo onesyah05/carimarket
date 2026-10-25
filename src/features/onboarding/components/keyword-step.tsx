@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import { Lightbulb, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { checkKeywordCategory } from "@/lib/keyword-categories";
 
 type Draft = { phrase: string; negative: boolean };
@@ -141,7 +141,7 @@ export function KeywordStep() {
         {positives.length === 0 && <p className="keyword-column__empty">Minimal satu kata kunci pencarian diperlukan.</p>}
 
         {unusedSuggestions.length > 0 && !full && <div className="keyword-suggest-chips">
-          <span><Sparkles size={13} /> Saran untuk {meta.category}</span>
+          <span><Lightbulb size={13} /> Saran untuk {meta.category}</span>
           <div>{unusedSuggestions.map(suggestion => (
             <button key={suggestion} type="button" disabled={saving} onClick={() => add(suggestion, false)}>+ {suggestion}</button>
           ))}</div>

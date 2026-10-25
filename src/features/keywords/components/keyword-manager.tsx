@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { Lock, LoaderCircle, Plus, Search, SlidersHorizontal, Sparkles, Trash2 } from "lucide-react";
+import { Lightbulb, Lock, LoaderCircle, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { checkKeywordCategory } from "@/lib/keyword-categories";
 import { lockRemainingLabel } from "@/lib/keyword-lock";
 
@@ -190,7 +190,7 @@ export function KeywordManager() {
         </ul>
 
         {!negative && unused.length > 0 && !full && <div className="keyword-suggest-chips">
-          <span><Sparkles size={13} /> Saran untuk {meta.category}</span>
+          <span><Lightbulb size={13} /> Saran untuk {meta.category}</span>
           <div>{unused.map(suggestion => (
             <button key={suggestion} type="button" disabled={busy !== null} onClick={() => void add(suggestion, false)}>+ {suggestion}</button>
           ))}</div>

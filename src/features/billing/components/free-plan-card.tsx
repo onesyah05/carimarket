@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Gift } from "lucide-react";
 
 /**
  * Kartu paket gratis di halaman pemilihan paket.
@@ -39,7 +39,7 @@ export function FreePlanCard({ name, highlights }: { name: string; highlights: s
     <section className="panel free-plan">
       <div className="free-plan__head">
         <div>
-          <p className="eyebrow"><Sparkles size={14} /> Mulai tanpa biaya</p>
+          <p className="eyebrow"><Gift size={14} /> Mulai tanpa biaya</p>
           <h2>{name}</h2>
           <p>Aktif seketika, tanpa pembayaran. Anda dapat naik ke paket berbayar kapan saja dari halaman Langganan.</p>
         </div>
