@@ -171,6 +171,8 @@ enum NotificationType {
   MODERATION_DECISION
   QUOTA_WARNING
   PAYMENT_UPDATE
+  /// Tiket dukungan: dipakai dua arah, ke pengguna dan ke staf.
+  SUPPORT_UPDATE
 }
 
 model User {

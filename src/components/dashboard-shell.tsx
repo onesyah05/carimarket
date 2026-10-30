@@ -66,6 +66,7 @@ const superNav: NavGroup[] = [
     items: [
       { label: "Metrik", href: "/superadmin", icon: LayoutDashboard },
       { label: "Cari lead", href: "/superadmin/cari-lead", icon: Search },
+      { label: "Tiket", href: "/superadmin/tiket", icon: CircleHelp },
       { label: "Audit", href: "/superadmin/audit", icon: FileText },
     ],
   },

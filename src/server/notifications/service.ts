@@ -36,13 +36,17 @@ export type SerializedNotification = {
  * notifikasi itu transaksional: status pembayaran menentukan paket yang
  * berlaku, jadi tidak disembunyikan oleh preferensi pemasaran.
  */
-const PREFERENCE_BY_TYPE: Record<NotificationType, "emailLead" | "emailReply" | "emailQuota" | null> = {
+export const PREFERENCE_BY_TYPE: Record<NotificationType, "emailLead" | "emailReply" | "emailQuota" | null> = {
   LEAD_DISCOVERED: "emailLead",
   REPLY_SENT: "emailReply",
   REPLY_FAILED: "emailReply",
   MODERATION_DECISION: "emailReply",
   QUOTA_WARNING: "emailQuota",
   PAYMENT_UPDATE: null,
+  // Transaksional: jawaban atas pertanyaan yang orang itu sendiri ajukan.
+  // Dulu balasan tiket ikut `emailReply`, preferensi untuk notifikasi balasan
+  // Threads, jadi mematikan yang satu diam-diam mematikan yang lain.
+  SUPPORT_UPDATE: null,
 };
 
 export function serializeNotification(notification: Notification): SerializedNotification {

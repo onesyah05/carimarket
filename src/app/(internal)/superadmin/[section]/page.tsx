@@ -8,6 +8,8 @@ import { getAccountOverview } from "@/server/settings/account";
 import { InternalProfile } from "@/features/account/components/internal-profile";
 import { listFlaggedReplies, listModerationStats } from "@/server/admin/queries";
 import { runTable, tableSearchHint } from "@/server/admin/tables/registry";
+import { StaffTicketConsole } from "@/features/support/components/staff-ticket-console";
+import { listTicketsForInternal } from "@/server/support/tickets";
 import { listArticlesForCms } from "@/server/cms/articles";
 import { serializeCmsArticle } from "@/server/cms/serialize";
 import { getWorkerStatus } from "@/server/jobs/runtime";
@@ -48,6 +50,7 @@ import { platformUsageToday } from "@/server/usage/service";
 const HEADINGS: Record<string, { title: string; copy: string }> = {
   admin: { title: "Manajemen Admin", copy: "Promosikan akun pengguna menjadi Admin dan atur permission mereka." },
   "cari-lead": { title: "Cari lead", copy: "Telusuri percakapan Threads dengan kata kunci apa pun. Tanpa batas kata kunci dan tanpa memakai kuota, karena hasilnya tidak disimpan sebagai lead." },
+  tiket: { title: "Tiket dukungan", copy: "Tiket yang masuk dari pengguna, lengkap dengan catatan internal tim. Konsol yang sama dipakai Admin, jadi satu tiket tidak dijawab dua kali." },
   users: { title: "Manajemen Pengguna", copy: "Pantau akun, paket, dan status koneksi. Token tidak pernah ditampilkan di panel ini." },
   paket: { title: "Paket dan billing", copy: "Tambah dan ubah paket langganan. Harga serta kuota di sini langsung berlaku di halaman harga dan penegakan kuota." },
   pembayaran: { title: "Verifikasi pembayaran", copy: "Cocokkan nominal beserta kode uniknya dengan mutasi rekening. Menyetujui pembayaran langsung mengaktifkan paket pelanggan." },
@@ -218,6 +221,16 @@ export default async function SuperSection({ params }: { params: Promise<{ secti
     return <>
       <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
       <ContactTable initial={submissions} searchHint={tableSearchHint("contact")} />
+    </>;
+  }
+
+  // Konsol yang sama persis dengan milik Admin. API tiket sejak awal
+  // mengizinkan SUPERADMIN, yang hilang hanya pintunya.
+  if (section === "tiket") {
+    const tickets = await listTicketsForInternal();
+    return <>
+      <PageHeading eyebrow="Superadmin" title={heading.title} copy={heading.copy} />
+      <StaffTicketConsole tickets={tickets} />
     </>;
   }
 

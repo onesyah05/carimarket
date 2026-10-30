@@ -154,7 +154,42 @@ export async function createTicket(user: User, input: NewTicketInput): Promise<T
     metadata: { priority: ticket.priority },
   });
 
+  await notifyStaff(
+    "Tiket dukungan baru",
+    `${user.name ?? user.email} membuka tiket "${input.subject}".`,
+  );
+
   return requireTicketForUser(user.id, ticket.id);
+}
+
+/**
+ * Memberi tahu staf bahwa ada tiket yang menunggu.
+ *
+ * Sebelumnya tidak ada apa pun yang mengabari tim: tiket hanya terlihat kalau
+ * seseorang kebetulan membuka konsolnya. Pengguna sudah diberi tahu saat
+ * dijawab, tapi arah sebaliknya diam sepenuhnya, jadi tiket bisa menginap
+ * tanpa ada yang tahu.
+ *
+ * Kegagalan di sini tidak boleh menggagalkan pembuatan tiket: tiketnya sudah
+ * tersimpan, dan kehilangan pemberitahuan lebih ringan daripada menolak
+ * permintaan bantuan yang sudah berhasil masuk.
+ */
+async function notifyStaff(title: string, body: string) {
+  const staff = await prisma.user.findMany({
+    where: { role: { in: ["ADMIN", "SUPERADMIN"] }, deletedAt: null },
+    select: { id: true, role: true },
+  }).catch(() => []);
+
+  await Promise.all(staff.map(member => createNotification({
+    userId: member.id,
+    type: "SUPPORT_UPDATE",
+    title,
+    body,
+    // Tiap orang dibawa ke konsol miliknya sendiri. Superadmin memang boleh
+    // membuka /admin, tapi mendarat di sidebar yang bukan miliknya membuat
+    // orang mengira ia salah masuk.
+    href: member.role === "SUPERADMIN" ? "/superadmin/tiket" : "/admin/tiket",
+  }).catch(() => undefined)));
 }
 
 export async function listMyTickets(userId: string): Promise<TicketSummary[]> {
@@ -230,6 +265,11 @@ export async function replyAsUser(user: User, input: TicketReplyInput): Promise<
       data: { status: reopened ? TicketStatus.OPEN : ticket.status },
     });
   });
+
+  await notifyStaff(
+    "Balasan baru pada tiket",
+    `${user.name ?? user.email} membalas tiket yang sedang berjalan.`,
+  );
 
   return requireTicketForUser(user.id, ticket.id);
 }
@@ -349,10 +389,13 @@ export async function replyAsStaff(actor: User, input: StaffReplyInput): Promise
   if (!isInternal) {
     await createNotification({
       userId: ticket.requesterId,
-      type: "MODERATION_DECISION",
+      type: "SUPPORT_UPDATE",
       title: "Tiket dukungan Anda dijawab",
       body: `Tim dukungan membalas tiket "${ticket.subject}".`,
-      href: "/dashboard/bantuan",
+      // Tiket punya alamatnya sendiri sejak konsol dukungan dipecah per
+      // halaman, jadi notifikasinya membuka jawabannya, bukan daftar tiket
+      // yang masih harus dicari sendiri.
+      href: `/dashboard/bantuan/${ticket.id}`,
     }).catch(() => undefined);
   }
 
