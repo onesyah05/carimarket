@@ -45,10 +45,23 @@ describe("aiConfig", () => {
     delete process.env.AI_FALLBACK_BASE_URL;
     delete process.env.AI_FALLBACK_MODEL;
     expect(aiConfig().fallback).toEqual({
-      apiKey: "kunci-cadangan",
+      apiKeys: ["kunci-cadangan"],
       baseUrl: "https://opencode.ai/zen/v1",
       model: "claude-haiku-5-5",
     });
+  });
+
+  it("memecah beberapa kunci yang dipisah koma", () => {
+    process.env.AI_API_KEY = " kunci-satu , kunci-dua ,, ";
+    // Spasi dan koma menggantung dirapikan: nilai env sering disunting tangan
+    // langsung di server, dan satu koma tertinggal tidak boleh menjadi kunci
+    // kosong yang ikut dicoba.
+    expect(aiConfig().primary.apiKeys).toEqual(["kunci-satu", "kunci-dua"]);
+  });
+
+  it("menganggap kunci kosong sebagai belum disetel", () => {
+    process.env.AI_API_KEY = "  ,  ";
+    expect(aiConfig().primary.apiKeys).toEqual([]);
   });
 });
 
@@ -229,5 +242,84 @@ describe("cadangan saat penyedia utama membatasi laju", () => {
     const client = getAiClient();
     expect(client.configured).toBe(false);
     expect(await client.complete("tanya")).toEqual({ ok: false, code: "UNCONFIGURED" });
+  });
+});
+
+/**
+ * Pergantian kunci.
+ *
+ * Saldo OpenCode melekat pada akun, jadi satu akun habis berarti seluruh
+ * modelnya menolak. Yang diuji di sini: kapan kunci berikutnya dipakai, dan
+ * yang lebih penting, kapan TIDAK, supaya kuota akun kedua tidak ikut terbakar
+ * untuk persoalan yang bukan soal kunci.
+ */
+describe("beberapa kunci pada satu penyedia", () => {
+  function keyedFetch(byKey: Record<string, () => Response>) {
+    const used: string[] = [];
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      const auth = String((init.headers as Record<string, string>).authorization);
+      const key = auth.replace("Bearer ", "");
+      used.push(key);
+      return byKey[key]();
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return { used };
+  }
+
+  const funds = () => new Response(JSON.stringify({ error: { message: "Insufficient account funds" } }), { status: 402 });
+  const okReply = () => jsonResponse({ choices: [{ message: { content: "halo" } }] });
+
+  beforeEach(() => {
+    process.env.AI_API_KEY = "habis,bersaldo";
+    process.env.AI_BASE_URL = "https://opencode.uji/v1";
+  });
+
+  it("pindah ke kunci berikutnya ketika saldo habis", async () => {
+    const { used } = keyedFetch({ habis: funds, bersaldo: okReply });
+
+    const result = await getAiClient().complete("tanya");
+
+    expect(result).toMatchObject({ ok: true, text: "halo" });
+    expect(used).toEqual(["habis", "bersaldo"]);
+  });
+
+  it("berhenti di kunci pertama yang berhasil", async () => {
+    process.env.AI_API_KEY = "bersaldo,cadangan";
+    const { used } = keyedFetch({ bersaldo: okReply, cadangan: okReply });
+
+    await getAiClient().complete("tanya");
+
+    expect(used).toEqual(["bersaldo"]);
+  });
+
+  it("pindah kunci juga saat kena pembatasan laju", async () => {
+    // Kuota laju pun melekat pada akun, jadi akun lain adalah jalan keluarnya.
+    const { used } = keyedFetch({
+      habis: () => new Response("slow down", { status: 429 }),
+      bersaldo: okReply,
+    });
+
+    await getAiClient().complete("tanya");
+
+    expect(used).toEqual(["habis", "bersaldo"]);
+  });
+
+  it("tidak membakar kunci kedua untuk kegagalan yang bukan soal kunci", async () => {
+    // Timeout dan jawaban tak terbaca akan terulang sama persis di akun lain.
+    for (const failing of [
+      () => new Response("boom", { status: 500 }),
+      () => jsonResponse({ choices: [{ message: { content: null } }] }),
+    ]) {
+      const { used } = keyedFetch({ habis: failing, bersaldo: okReply });
+      await getAiClient().complete("tanya");
+      expect(used).toEqual(["habis"]);
+    }
+  });
+
+  it("melaporkan kegagalan kunci terakhir ketika semuanya habis", async () => {
+    const { used } = keyedFetch({ habis: funds, bersaldo: funds });
+
+    expect(await getAiClient().complete("tanya")).toEqual({ ok: false, code: "NO_FUNDS" });
+    expect(used).toEqual(["habis", "bersaldo"]);
   });
 });

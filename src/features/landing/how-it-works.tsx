@@ -18,7 +18,7 @@ const STEPS = [
   },
   {
     title: "Sistem mencari berkala",
-    body: "Kata kunci dijalankan sesuai jadwal paket, tiap 3 jam pada paket Pro. Pencarian manual tetap bisa Anda jalankan kapan saja.",
+    body: "Kata kunci dijalankan sesuai jadwal paket, tiap 5 jam pada paket Pro. Pencarian manual tetap bisa Anda jalankan kapan saja.",
   },
   {
     title: "Lead masuk dengan skor",

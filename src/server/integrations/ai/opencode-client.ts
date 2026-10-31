@@ -14,7 +14,7 @@ import "server-only";
  * memang tidak dapat dipakai dari server.
  */
 
-const DEFAULT_MODEL = "mimo-v2.6-flash-free";
+const DEFAULT_MODEL = "deepseek-v4.1-flash";
 
 /**
  * Penyedia cadangan: OpenCode Zen yang resmi.
@@ -72,23 +72,49 @@ export type AiClient = {
   complete(prompt: string, maxTokens?: number): Promise<AiCompletion>;
 };
 
-export type ProviderConfig = { apiKey: string; baseUrl: string; model: string };
+export type ProviderConfig = { apiKeys: string[]; baseUrl: string; model: string };
+
+/**
+ * Beberapa kunci untuk satu penyedia, dipisah koma.
+ *
+ * Saldo di OpenCode melekat pada akun, bukan pada model, jadi satu akun yang
+ * habis membuat seluruh modelnya ikut menolak. Kunci kedua adalah akun lain,
+ * dan itu satu-satunya hal yang benar-benar memulihkan keadaan tanpa menunggu
+ * pengisian saldo.
+ */
+function keyList(raw: string) {
+  return raw.split(",").map(key => key.trim()).filter(key => key !== "");
+}
 
 export function aiConfig(): { primary: ProviderConfig; fallback: ProviderConfig } {
   const trimmed = (name: string) => process.env[name]?.trim() ?? "";
   const withoutTrailingSlash = (value: string) => value.replace(/\/+$/, "");
   return {
     primary: {
-      apiKey: trimmed("AI_API_KEY"),
+      apiKeys: keyList(trimmed("AI_API_KEY")),
       baseUrl: withoutTrailingSlash(trimmed("AI_BASE_URL")),
       model: trimmed("AI_MODEL") || DEFAULT_MODEL,
     },
     fallback: {
-      apiKey: trimmed("AI_FALLBACK_API_KEY"),
+      apiKeys: keyList(trimmed("AI_FALLBACK_API_KEY")),
       baseUrl: withoutTrailingSlash(trimmed("AI_FALLBACK_BASE_URL") || DEFAULT_FALLBACK_BASE_URL),
       model: trimmed("AI_FALLBACK_MODEL") || DEFAULT_FALLBACK_MODEL,
     },
   };
+}
+
+/**
+ * Kegagalan yang melekat pada kuncinya, bukan pada permintaannya.
+ *
+ * Hanya sebab-sebab ini yang membuat kunci berikutnya dicoba. Timeout atau
+ * jawaban yang tidak terbaca bukan urusan kunci: mengulangnya dengan kunci
+ * lain hanya menghabiskan kuota akun kedua untuk persoalan yang sama.
+ */
+function keyExhausted(failure: AiFailure) {
+  return failure === "NO_FUNDS"
+    || failure === "UNAUTHORIZED"
+    || failure === "FREE_TIER_BLOCKED"
+    || failure === "RATE_LIMITED";
 }
 
 /**
@@ -109,32 +135,46 @@ type ChatCompletion = {
  * bawaan, jadi key tanpa host sama tidak dapat dipakainya dengan host tanpa
  * key — dan diam-diam menembak alamat yang salah lebih sulit didiagnosis.
  */
-export function providerClient({ apiKey, baseUrl, model }: ProviderConfig): AiClient {
-  if (!apiKey || !baseUrl) return { configured: false, model, async complete() { return { ok: false, code: "UNCONFIGURED" }; } };
+export function providerClient({ apiKeys, baseUrl, model }: ProviderConfig): AiClient {
+  if (apiKeys.length === 0 || !baseUrl) {
+    return { configured: false, model, async complete() { return { ok: false, code: "UNCONFIGURED" }; } };
+  }
+
+  async function attempt(apiKey: string, prompt: string, maxTokens: number): Promise<AiCompletion> {
+    let response: Response;
+    try {
+      response = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+        body: JSON.stringify({ model, max_tokens: maxTokens, temperature: 0, messages: [{ role: "user", content: prompt }] }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch (cause) {
+      return { ok: false, code: cause instanceof Error && cause.name === "TimeoutError" ? "TIMEOUT" : "REQUEST_FAILED" };
+    }
+
+    if (!response.ok) return { ok: false, code: await failureFor(response) };
+
+    const payload = await response.json().catch(() => null) as ChatCompletion | null;
+    const text = messageText(payload);
+    if (text === null) return { ok: false, code: "BAD_RESPONSE" };
+    return { ok: true, text, model };
+  }
 
   return {
     configured: true,
     model,
     async complete(prompt: string, maxTokens = DEFAULT_MAX_TOKENS): Promise<AiCompletion> {
-      let response: Response;
-      try {
-        response = await fetch(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
-          body: JSON.stringify({ model, max_tokens: maxTokens, temperature: 0, messages: [{ role: "user", content: prompt }] }),
-          cache: "no-store",
-          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        });
-      } catch (cause) {
-        return { ok: false, code: cause instanceof Error && cause.name === "TimeoutError" ? "TIMEOUT" : "REQUEST_FAILED" };
+      // Kunci dicoba berurutan, dan hanya kegagalan yang melekat pada kunci
+      // yang membuat kunci berikutnya dipakai. Kegagalan terakhirlah yang
+      // dilaporkan, karena itulah keadaan sesungguhnya setelah semua dicoba.
+      let last: AiCompletion = { ok: false, code: "UNCONFIGURED" };
+      for (const apiKey of apiKeys) {
+        last = await attempt(apiKey, prompt, maxTokens);
+        if (last.ok || !keyExhausted(last.code)) return last;
       }
-
-      if (!response.ok) return { ok: false, code: await failureFor(response) };
-
-      const payload = await response.json().catch(() => null) as ChatCompletion | null;
-      const text = messageText(payload);
-      if (text === null) return { ok: false, code: "BAD_RESPONSE" };
-      return { ok: true, text, model };
+      return last;
     },
   };
 }

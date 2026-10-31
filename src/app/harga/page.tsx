@@ -43,7 +43,7 @@ const FALLBACK_FAQ = [
   },
   {
     question: "Seberapa sering kata kunci dicari ulang?",
-    answer: "Jaraknya ditentukan paket: Starter sekali sehari, Bisnis tiap 6 jam, dan Pro tiap 3 jam. Jadwal ini dipilih agar kuota bulanan benar-benar cukup untuk seluruh kata kunci pada paket tersebut. Pencarian manual dari halaman Lead tetap dapat dijalankan kapan saja dan ikut memakai kuota.",
+    answer: "Jaraknya ditentukan paket: Starter sekali sehari, Bisnis tiap 6 jam, dan Pro tiap 5 jam. Jadwal ini dipilih agar kuota bulanan benar-benar cukup untuk seluruh kata kunci pada paket tersebut. Pencarian manual dari halaman Lead tetap dapat dijalankan kapan saja dan ikut memakai kuota.",
   },
   {
     question: "Apa yang terjadi jika kuota habis?",

@@ -84,7 +84,7 @@ export default async function HomePage() {
             <dl className="facts">
               <div className="facts__item" data-reveal>
                 <dt>Jadwal pencarian</dt>
-                <dd>Tiap 3 jam</dd>
+                <dd>Tiap 5 jam</dd>
                 <p>Interval tercepat pada paket Pro. Pencarian manual kapan saja.</p>
               </div>
               <div className="facts__item" data-reveal>
