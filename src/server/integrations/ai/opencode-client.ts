@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 
 /**
  * Klien penyedia AI yang berbicara protokol OpenAI (`/chat/completions`).
@@ -35,7 +36,18 @@ const DEFAULT_FALLBACK_MODEL = "claude-haiku-5-5";
  * `content` kembali null, dan tiap lead jatuh ke heuristik meski penyedianya
  * sehat. Pengukuran pada model sekarang: ~60 token penalaran + ~40 token JSON.
  */
-const DEFAULT_MAX_TOKENS = 600;
+const DEFAULT_MAX_TOKENS = 1200;
+
+/**
+ * Satu penanda sesi untuk seumur proses.
+ *
+ * Endpoint `/zen/go/v1` menolak permintaan tanpa `x-opencode-session` dengan
+ * `MissingSessionID`, karena penandanya dipakai untuk merutekan permintaan
+ * yang berkerabat ke tempat yang sama. Dibuat sekali, bukan per permintaan:
+ * nilai yang tetap membuat bagian prompt yang selalu sama berpeluang terlayani
+ * dari cache penyedia, dan prompt rombongan memang berbagi pembuka yang sama.
+ */
+const SESSION_ID = randomUUID();
 
 /**
  * Model penalaran menjawab lebih lama daripada model biasa — terukur 5–9 detik
@@ -43,7 +55,7 @@ const DEFAULT_MAX_TOKENS = 600;
  * bersamaan. Batas 20 detik yang lama memotong jawaban yang sebenarnya sudah
  * di jalan.
  */
-const REQUEST_TIMEOUT_MS = 45_000;
+const REQUEST_TIMEOUT_MS = 90_000;
 
 /**
  * Sebab kegagalan yang dibedakan karena tindakannya berbeda.
@@ -125,7 +137,7 @@ function keyExhausted(failure: AiFailure) {
  * terpotong, `content` bisa null sementara `reasoning` sudah terisi.
  */
 type ChatCompletion = {
-  choices?: Array<{ message?: { content?: unknown; reasoning?: unknown } }>;
+  choices?: Array<{ message?: { content?: unknown; reasoning?: unknown; reasoning_content?: unknown } }>;
 };
 
 /**
@@ -145,7 +157,7 @@ export function providerClient({ apiKeys, baseUrl, model }: ProviderConfig): AiC
     try {
       response = await fetch(`${baseUrl}/chat/completions`, {
         method: "POST",
-        headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+        headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json", "x-opencode-session": SESSION_ID },
         body: JSON.stringify({ model, max_tokens: maxTokens, temperature: 0, messages: [{ role: "user", content: prompt }] }),
         cache: "no-store",
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -230,7 +242,7 @@ export function getAiClient(): AiClient {
  */
 function messageText(payload: ChatCompletion | null): string | null {
   const message = payload?.choices?.[0]?.message;
-  for (const candidate of [message?.content, message?.reasoning]) {
+  for (const candidate of [message?.content, message?.reasoning, message?.reasoning_content]) {
     if (typeof candidate === "string" && candidate.trim() !== "") return candidate;
   }
   return null;

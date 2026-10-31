@@ -246,9 +246,13 @@ export async function judgeLeads(
       continue;
     }
 
-    // Anggaran jawaban tumbuh bersama rombongan: satu vonis sekitar 40 token,
-    // ditambah ruang untuk penalaran model.
-    const maxTokens = 320 + batch.length * 120;
+    // Anggaran jawaban tumbuh bersama rombongan, dan angkanya dari pengukuran,
+    // bukan perkiraan. deepseek-v4.1-flash menalar panjang sebelum menulis:
+    // 3 postingan terukur 627 token jawaban, 8 postingan 2443. Anggaran lama
+    // (320 + 120 per postingan, yaitu 1280 untuk delapan) terpotong di tengah
+    // penalaran dan menghasilkan NOL vonis terbaca dari delapan. Rumus ini
+    // memberi sekitar 20 persen ruang di atas angka terukur.
+    const maxTokens = 400 + batch.length * 320;
     const completion = await client
       .complete(buildBatchPrompt(business, batch), maxTokens)
       .catch(() => null);
