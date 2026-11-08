@@ -40,7 +40,11 @@ export function serializeLead(lead: StoredLead, options?: { flagged?: boolean })
     postedAt: lead.threadPost.postedAt.toISOString(),
     text: lead.threadPost.body,
     keyword: lead.keywordMatches[0]?.keyword.phrase ?? "Threads",
-    score: Math.round(Number(lead.relevanceScore)),
+    // Skor AI lebih dulu, karena itulah yang dibaca orang di kartu lead.
+    // `relevanceScore` hanya kemiripan kata dan berlantai 70, jadi memakainya
+    // sebagai angka yang ditampilkan membuat postingan yang sudah ditolak AI
+    // tetap terlihat tinggi. Heuristik dipakai hanya bila AI belum menilai.
+    score: lead.aiScore ?? Math.round(Number(lead.relevanceScore)),
     likes: lead.threadPost.likeCount,
     replies: lead.threadPost.replyCount,
     reposts: lead.threadPost.repostCount,

@@ -30,6 +30,8 @@ export type Lead = {
   aiVerdict?: "MATCH" | "NO_MATCH" | "UNSURE" | null;
   /** Alasan singkat dari AI, bila ada. */
   aiReason?: string | null;
+  /** Alasan heuristik, dipakai ketika AI belum menilai lead ini. */
+  matchReason?: string | null;
   /** Kesimpulan gabungan vonis AI dan ambang angka. */
   matched?: boolean;
   status: "Baru" | "Tersimpan" | "Dibalas";

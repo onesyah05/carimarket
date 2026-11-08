@@ -23,6 +23,35 @@ export function leadThreadContext(lead: Pick<Lead, "isReply" | "replyToHandle" |
   return "Postingan utas pembuka";
 }
 
+/**
+ * Cincin relevansi.
+ *
+ * DESIGN.md menetapkan lingkaran logo sebagai "progress ring, focus marker,
+ * dan indikator relevansi", tetapi motif itu belum pernah dipakai di mana pun.
+ * Di sinilah tempatnya: skor kecocokan adalah satu-satunya angka yang benar
+ * benar dihitung produk ini, dan sebelumnya ia hanya menjadi chip "Cocok"
+ * atau tidak muncul sama sekali.
+ *
+ * Warnanya membawa arti, bukan hiasan: aksen hanya untuk lead yang melewati
+ * ambang kirim, sisanya netral. Jadi satu layar penuh kartu tetap tenang dan
+ * yang layak dibuka langsung terlihat.
+ */
+function LeadScoreRing({ score, strong }: { score: number; strong: boolean }) {
+  const clamped = Math.max(0, Math.min(100, Math.round(score)));
+  // r dipilih agar keliling mendekati 100, sehingga dasharray dapat memakai
+  // nilai skor apa adanya tanpa perhitungan tambahan saat render.
+  const radius = 15.9155;
+  return (
+    <span className={`lead-ring ${strong ? "lead-ring--strong" : ""}`.trim()} title={`Skor kecocokan ${clamped} dari 100`}>
+      <svg viewBox="0 0 36 36" aria-hidden="true">
+        <circle className="lead-ring__track" cx="18" cy="18" r={radius} />
+        <circle className="lead-ring__value" cx="18" cy="18" r={radius} strokeDasharray={`${clamped} 100`} />
+      </svg>
+      <b>{clamped}</b>
+    </span>
+  );
+}
+
 export function LeadCard({ lead, compact = false, onMarkRead }: {
   lead: Lead;
   compact?: boolean;
@@ -43,31 +72,36 @@ export function LeadCard({ lead, compact = false, onMarkRead }: {
    * dibaca" tinggal untuk yang memutuskan tanpa membuka.
    */
   const openInThreads = () => { if (unread) onMarkRead?.(lead.id); };
+  // Alasan AI dulu hanya hidup di atribut title, jadi tidak pernah terbaca
+  // tanpa mengarahkan tetikus. Itu satu kalimat yang menjelaskan kenapa
+  // skornya begitu, dan justru itu yang dicari orang sebelum membuka lead.
+  const reason = lead.aiReason ?? lead.matchReason ?? null;
   const body = <>
     <header>
       <span className="lead-avatar">{lead.avatar}</span>
-      <div><strong>{lead.author}</strong><span>{lead.handle} · {lead.time} · {leadThreadContext(lead)}</span></div>
-      {unread && <span className="lead-unread" title="Belum dibaca">Belum dibaca</span>}
+      <div>
+        <strong>{unread && <i className="lead-dot" title="Belum dibaca" />}{lead.author}</strong>
+        <span>{lead.handle} · {lead.time} · {leadThreadContext(lead)}</span>
+      </div>
+      <LeadScoreRing score={lead.score} strong={lead.matched !== false && lead.aiVerdict !== "NO_MATCH"} />
     </header>
     <p>{lead.text}</p>
+    {reason && <p className="lead-reason">{reason}</p>}
   </>;
 
   return <article className={`lead-card ${compact ? "lead-card--compact" : ""} ${unread ? "lead-card--unread" : ""}`.trim()}>
     {lead.permalink
       ? <a className="lead-card__open" href={lead.permalink} target="_blank" rel="noreferrer" onClick={openInThreads} title="Buka postingan ini di Threads">{body}</a>
       : body}
+    {/* Chip kecocokan dan chip skor dua duanya hilang: keduanya mengatakan
+        hal yang kini dikatakan cincin, dan sebelumnya chip "Cocok" berdiri
+        tepat di sebelah chip niat dengan hijau yang nyaris sama, sehingga
+        tidak ada yang menonjol. Yang tersisa adalah tiga keterangan yang
+        masing masing menjawab pertanyaan berbeda: niat penulisnya, kata kunci
+        yang menemukannya, dan posisinya dalam alur kerja. */}
     <div className="lead-tags">
-      {/* Vonis AI menggantikan angka ketika ada: "88% cocok" adalah skor
-          kemiripan kata, sedangkan yang ingin diketahui pemilik bisnis adalah
-          apakah orang ini calon pelanggannya. Angka tetap ditampilkan sebagai
-          cadangan ketika AI belum menilai. */}
-      {lead.aiVerdict === "MATCH" && <span className="match-chip match-chip--yes" title={lead.aiReason ?? undefined}>Cocok</span>}
-      {lead.aiVerdict === "NO_MATCH" && <span className="match-chip match-chip--no" title={lead.aiReason ?? undefined}>Tidak cocok</span>}
-      {lead.aiVerdict === "UNSURE" && <span className="match-chip match-chip--maybe" title={lead.aiReason ?? undefined}>Belum pasti</span>}
-      {!lead.aiVerdict && lead.matched === false && <span className="match-chip match-chip--no" title="Postingan ini menawarkan jasa, bukan mencarinya">Bukan calon pelanggan</span>}
-      {!lead.aiVerdict && lead.matched !== false && <span className="score-chip">{lead.score}% cocok</span>}
       <span className={`intent-chip intent-chip--${lead.intent.replace(" ", "-")}`}>{LEAD_INTENT_LABEL[lead.intent]}</span>
-      <span className="keyword-chip">“{lead.keyword}”</span>
+      <span className="keyword-chip">{lead.keyword}</span>
       <span className={`lead-status lead-status--${lead.status.toLowerCase()}`}>{lead.status}</span>
     </div>
     <footer>

@@ -13,3 +13,4 @@ certificates/
 
 # bukti pembayaran yang diunggah pelanggan
 storage/
+.gstack/
