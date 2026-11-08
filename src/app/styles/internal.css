@@ -68,7 +68,7 @@
 
 .app-shell--internal .page-heading .eyebrow {
   color: var(--c-ink-muted);
-  font-size: 0.72rem;
+  font-size: .78rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -321,7 +321,7 @@
 .dt__row--head {
   background: var(--c-sunken);
   color: var(--c-ink-muted);
-  font-size: 0.74rem;
+  font-size: .78rem;
   font-weight: 600;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -422,7 +422,7 @@
 .detail-card h3 {
   margin: 0;
   color: var(--c-ink-muted);
-  font-size: 0.72rem;
+  font-size: .78rem;
   font-weight: 600;
   letter-spacing: 0.11em;
   text-transform: uppercase;
